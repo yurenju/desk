@@ -24,7 +24,7 @@
 | 層 | 技術 | 理由 |
 |---|---|---|
 | Framework | **React 18 + TypeScript + Vite** | 標準現代 stack |
-| Primitives | **Base UI** (`@base-ui-components/react`) | 比 Radix 套件數少、`render` prop API 更乾淨、Combobox/ContextMenu 更完整、與 Motion 整合好。**不需要 shadcn 層**。 |
+| Primitives | **Base UI** (`@base-ui/react`) | 比 Radix 套件數少、`render` prop API 更乾淨、Combobox/ContextMenu 更完整、與 Motion 整合好。**不需要 shadcn 層**。 |
 | Styling | **CSS Modules** | 跟 Base UI 的 `data-*` state attributes 自然合拍；不引入 Tailwind |
 | Tokens | **CSS Custom Properties** | 顏色、字級、間距、radius 全部走 CSS vars，主題切換用 `[data-theme]` 屬性 |
 | Animation | **motion** (framer-motion) | 透過 Base UI 的 `render` prop 包入 |
@@ -92,22 +92,47 @@ src/
 
 ### 4.2 字級 Scale
 
-採用 **modular scale ≈ 1.2（minor third）**，並對齊 4px grid。
+**字級採用 `--text-base-size` 為錨點 + 比例衍生**。改 `--text-base-size` 整套等比放大，其他 token 不必個別調整。比例選用乾淨的分數，不刻意 round 到整數 px——交給瀏覽器處理 sub-pixel rendering。
 
-| Token | px | line-height | 用途 | 原型對應 |
-|---|---:|---|---|---|
-| `--text-2xs`  | 10 | 1.2 | mono badge、micro caption | 9, 9.5, 10 |
-| `--text-xs`   | 11 | 1.3 | mono meta、tiny eyebrow | 10.5, 11 |
-| `--text-sm`   | 12 | 1.4 | secondary body、chip、button-sm | 11.5, 12 |
-| `--text-base` | 13 | 1.45 | task row、預設 body | 12.5, 13 |
-| `--text-md`   | 14 | 1.4 | task title、top3 row | 13.5, 14 |
-| `--text-lg`   | 16 | 1.35 | banner title、card title | 15, 16 |
-| `--text-xl`   | 20 | 1.2 | sub heading、Month digest title | 19, 22 |
-| `--text-2xl`  | 24 | 1.1 | section page title | 22, 26, 28 |
-| `--text-3xl`  | 32 | 1.05 | mobile day hero | (未用) |
-| `--text-4xl`  | 40 | 0.95 | day number (today) | 40 |
-| `--text-5xl`  | 48 | 0.95 | mobile "May 22" | 48 |
-| `--text-6xl`  | 64 | 0.9  | desktop "May 22" | 64 |
+```css
+:root {
+  --text-base-size: 13px;  /* 唯一錨點；換主題 / 不同裝置改這個 */
+
+  --text-2xs:  calc(var(--text-base-size) * 0.75);    /* 3/4 */
+  --text-xs:   calc(var(--text-base-size) * 0.8);     /* 4/5 */
+  --text-sm:   calc(var(--text-base-size) * 0.9);     /* 9/10 */
+  --text-base: var(--text-base-size);
+  --text-md:   calc(var(--text-base-size) * 1.1);     /* 11/10 */
+  --text-lg:   calc(var(--text-base-size) * 1.25);    /* 5/4 */
+  --text-xl:   calc(var(--text-base-size) * 1.5);     /* 3/2 */
+  --text-2xl:  calc(var(--text-base-size) * 1.875);   /* 15/8 */
+  --text-3xl:  calc(var(--text-base-size) * 2.5);     /* 5/2 */
+  --text-4xl:  calc(var(--text-base-size) * 3);
+  --text-5xl:  calc(var(--text-base-size) * 3.75);    /* 15/4 */
+  --text-6xl:  calc(var(--text-base-size) * 5);
+}
+```
+
+不同 base 下實際 px（僅供參考；實作別 hard-code）：
+
+| Token | multiplier | line-height | 用途 | @ 13 (default) | @ 14 | @ 16 |
+|---|---:|---|---|---:|---:|---:|
+| `--text-2xs`  | 0.75   | 1.2  | mono badge、micro caption          | 9.75  | 10.5  | 12 |
+| `--text-xs`   | 0.8    | 1.3  | mono meta、tiny eyebrow            | 10.4  | 11.2  | 12.8 |
+| `--text-sm`   | 0.9    | 1.4  | secondary body、chip、button-sm    | 11.7  | 12.6  | 14.4 |
+| `--text-base` | 1      | 1.45 | task row、預設 body                 | 13    | 14    | 16 |
+| `--text-md`   | 1.1    | 1.4  | task title、top3 row               | 14.3  | 15.4  | 17.6 |
+| `--text-lg`   | 1.25   | 1.35 | banner title、card title           | 16.25 | 17.5  | 20 |
+| `--text-xl`   | 1.5    | 1.2  | sub heading、Month digest title    | 19.5  | 21    | 24 |
+| `--text-2xl`  | 1.875  | 1.1  | section page title                 | 24.4  | 26.25 | 30 |
+| `--text-3xl`  | 2.5    | 1.05 | mobile day hero                    | 32.5  | 35    | 40 |
+| `--text-4xl`  | 3      | 0.95 | day number (today)                 | 39    | 42    | 48 |
+| `--text-5xl`  | 3.75   | 0.95 | mobile "May 22"                    | 48.75 | 52.5  | 60 |
+| `--text-6xl`  | 5      | 0.9  | desktop "May 22"                   | 65    | 70    | 80 |
+
+**設計直覺**：相鄰倍數比為 1.067 → 1.125 → 1.111 → 1.1 → 1.1 → 1.136 → 1.2 → 1.25 → 1.333 → 1.2 → 1.25 → 1.333——小字級之間細密、大字級之間跳得開，跟視覺感受一致。
+
+**為什麼不嚴格用 1.2 modular scale**：純 1.2 倍會在大字級壓縮太緊（hero 跟 banner 區隔不夠），所以選用「小字級偏好倍數小、大字級偏好倍數大」的設計式 scale 而非數學式 scale，但仍以 `--text-base-size` 為單一錨點。
 
 **Letter-spacing 規則**：
 - Display serif (≥ 32px)：`letter-spacing: -0.04em`（取代原型的 -1.5 ~ -2）
@@ -265,14 +290,15 @@ src/
 
 ### 必須（MVP）
 - [ ] 任務 CRUD：新增、編輯、完成、刪除
-- [ ] 標記計劃內 / 計劃外（每個任務有 `planned: boolean`）
+- [ ] 標記計劃內 / 計劃外（每個任務有 `is_adhoc` cf，詳見第 7 節）
+- [ ] Backlog 區（月度欄上方摺疊區）
 - [ ] 月度三件事 + 月度任務（其他）
 - [ ] 週每日三件事 + 主題
 - [ ] 日三件事 + 其他計劃內 + 臨時加的
 - [ ] 兩種模式切換（規劃 / 今天） + 持久化最後使用模式
-- [ ] Carryover：日界線、週界線、月界線時自動計算未完成事項
-- [ ] Carryover 三個動作：→ 三件事、→ 計劃內、略過
-- [ ] Daily task 完成時，若連結到 monthly *other* item，連動標記完成（**不要**自動完成 monthly top3，那是 aggregate）
+- [ ] 日 Carryover：新一天打開時自動計算未完成事項，三個動作：→ 三件事 / → 計劃內 / 略過
+- [ ] 月 Carryover：新一月打開時自動計算未完成事項（即月底 review 入口），三個動作：→ 本月三件事 / → 本月其他 / 丟回 backlog
+- [ ] 跨層級顯示：同一 task 可同時出現在月度欄與日欄（α 模式，由 `scheduled_months` / `scheduled_dates` 推導）
 - [ ] 主題切換：light / dark（accent 固定 moss，不開放切換）
 
 ### 建議（v1.1+）
@@ -290,51 +316,152 @@ src/
 
 ---
 
-## 7. 資料模型建議
+## 7. 資料模型
+
+> ⚠️ **本節已隨後端決定大幅改寫**。原型 (`shared.jsx`) 還是用早期的 `scope` / `date` / `planned` 平面結構，**那是設計探索期的 mock，不是要實作的目標**。實作請按本節（與 [ROADMAP.md](../../../ROADMAP.md) §1.3）為準。
+
+### 7.1 後端 = WSPC todo
+
+資料層使用 [WSPC](https://wspc.ai) `todo_items` API。所有 task 共用同一個 `DeskTask` 自訂型態，差別只在 custom fields。沒有 `month task` / `day task` 之分——**同一個 task entity 透過 cf 同時呈現在月度欄與日欄**。
+
+### 7.2 三層漏斗
+
+```
+Backlog  (scheduled_months 空，或 last <= unscheduled_month)
+   ↓ promote 進某個月（append 到 scheduled_months）
+Monthly  (last(scheduled_months) > unscheduled_month，且 scheduled_dates 空或已 unscheduled)
+   ↓ schedule 到某天（append 到 scheduled_dates）
+Daily    (last(scheduled_dates) > unscheduled_at)
+```
+
+### 7.3 Task 型別（TypeScript view）
 
 ```ts
-type TaskScope = 'month' | 'week-day' | 'day';
+type TaskStatus = 'open' | 'in_progress' | 'done' | 'cancelled';
 
 interface Task {
+  // WSPC 核心欄位
   id: string;
   title: string;
-  scope: TaskScope;
-  date: string;        // ISO; for month: 'YYYY-MM-01'; for week-day/day: 'YYYY-MM-DD'
-  
-  planned: boolean;    // 計劃內 vs. 計劃外
-  isTop3: boolean;     // 是否為該週期的三件事之一
-  top3Order?: 1 | 2 | 3;
-  
-  done: boolean;
-  doneOn?: string;     // ISO date when checked off
-  
-  // Cross-scope linking
-  parentTaskId?: string;     // daily task → monthly task
-  
-  // Misc
-  sub?: string;        // 副標
-  progress?: number;   // 0-1, 用於月度任務
-  createdAt: string;
-  updatedAt: string;
-}
+  description?: string;       // Markdown；對應設計中的「副標」
+  status: TaskStatus;
+  parent_id?: string | null;  // 父子任務（非跨層級，用於拆分子任務）
+  created_at: string;         // ISO datetime
+  updated_at: string;
 
-interface DayPlan {
-  date: string;        // ISO
-  theme?: string;      // "WSPC API 串接"
-}
-
-interface WeekPlan {
-  weekISO: string;     // "2026-W21"
-  // 主要由 DayPlan 組成
-}
-
-interface MonthPlan {
-  month: string;       // "2026-05"
+  // Custom fields（全部 string / string_array）
+  custom_fields: {
+    scheduled_months?: string[];   // ["2026-05", "2026-06"]; append-only
+    scheduled_dates?: string[];    // ["2026-05-22", "2026-05-23"]; append-only
+    unscheduled_month?: string;    // "2026-05"
+    unscheduled_at?: string;       // "2026-05-22"
+    monthly_priority?: '1' | '2' | '3';
+    daily_priority?: '1' | '2' | '3';
+    is_adhoc?: 'true' | 'false';
+    done_on?: string;              // ISO datetime
+    position?: string;             // v1.1+ lex-order
+  };
 }
 ```
 
-**Carryover 不是 stored entity**，而是 derived query：
-> 找出 `date < today && !done` 且 `planned === true` 的 tasks，依 scope 分組顯示。
+**不使用 WSPC 核心 `due_at`** —— 排定日期完全用 `scheduled_dates` 表達。
+
+### 7.4 「主要位置 (primary)」推導與軌跡顯示
+
+每個 task 在 `scheduled_*` array 內列出的**每一個**日期/月份的 view 都會出現，但只有 `last` 是 primary、其他是軌跡。前端依此分流樣式。
+
+```ts
+function primaryMonth(t: Task): string | null {
+  const arr = t.custom_fields.scheduled_months ?? [];
+  if (arr.length === 0) return null;
+  const last = arr[arr.length - 1];
+  const u = t.custom_fields.unscheduled_month ?? '';
+  return last > u ? last : null;  // null = 在 backlog
+}
+
+function primaryDate(t: Task): string | null {
+  const arr = t.custom_fields.scheduled_dates ?? [];
+  if (arr.length === 0) return null;
+  const last = arr[arr.length - 1];
+  const u = t.custom_fields.unscheduled_at ?? '';
+  return last > u ? last : null;  // null = 未排到任何日
+}
+
+function layer(t: Task): 'backlog' | 'monthly' | 'daily' {
+  if (primaryDate(t)) return 'daily';
+  if (primaryMonth(t)) return 'monthly';
+  return 'backlog';
+}
+
+// 在某個 date / month view 列出所有要顯示的 task，並標記樣式
+type TrailKind = 'primary' | 'forwarded' | 'dismissed';
+
+function tasksOnDate(all: Task[], date: string): Array<{ task: Task; kind: TrailKind }> {
+  return all
+    .filter(t => t.custom_fields.scheduled_dates?.includes(date))
+    .map(t => {
+      const arr = t.custom_fields.scheduled_dates!;
+      const last = arr[arr.length - 1];
+      const u = t.custom_fields.unscheduled_at ?? '';
+      if (date === last && last > u)  return { task: t, kind: 'primary' };
+      if (date === last && last === u) return { task: t, kind: 'dismissed' };
+      return { task: t, kind: 'forwarded' };  // 該日不是 last，已順延到後面
+    });
+}
+// tasksOnMonth 完全對稱。
+```
+
+#### 軌跡顯示樣式
+
+| kind | 條件 | UI |
+|---|---|---|
+| `primary` | 該日 == `last` 且 `last > unscheduled_at` | 一般 task row，完整互動 |
+| `forwarded` | 該日在 array 內但不是 `last` | 淡色 + 「↪ 已順延到 YYYY-MM-DD」標籤；只能勾選完成，不能編輯/刪除/略過 |
+| `dismissed` | 該日 == `last` 且 `last == unscheduled_at` | 淡色 + 刪除線 +「· 已略過」；只能勾選完成 |
+
+**完成（`status = "done"`）後**：軌跡仍然全部顯示。`done_on` 那天顯示為 ✓ 完成；`done_on` 之前的軌跡仍是 `forwarded` 樣式（表達「本來想在這天做，後來順延但最終完成」）。
+
+### 7.5 動作 → 寫入語意
+
+| 動作 | 寫入 |
+|---|---|
+| 新增到 Backlog | 不寫 `scheduled_*` |
+| 新增到本月 | `scheduled_months: [本月]` |
+| 新增到今天 | `scheduled_dates: [today]`（**不**自動補 `scheduled_months`） |
+| Backlog → 本月 | append 本月到 `scheduled_months` |
+| 本月 → 某天 | append 該日到 `scheduled_dates` |
+| 「略過」（從某天移走） | `unscheduled_at = today` |
+| 「丟回 backlog」（從某月移走）| `unscheduled_month = last(scheduled_months)`；同時 `unscheduled_at = today` |
+| 移到下月 | append 下月到 `scheduled_months` |
+| 完成 | `status = "done"` + `done_on = now()` |
+
+### 7.6 Carryover（皆為 derived query，前端 client-side filter）
+
+| 類型 | 條件（皆需 status 未完成） |
+|---|---|
+| 日 carryover | `scheduled_dates.length > 0` AND `last(scheduled_dates) < today` AND `last(scheduled_dates) > (unscheduled_at ?? "")` |
+| 月 carryover | `scheduled_months.length > 0` AND `last(scheduled_months) < current_month` AND `last(scheduled_months) > (unscheduled_month ?? "")` AND today 不在 `scheduled_dates` |
+
+「未完成」= `status ∈ {open, in_progress}`。
+
+### 7.7 是否「臨時插單」（`is_adhoc`）
+
+flag 在 task 建立或拉入「有時間窗的清單」時設定，**一次寫死不再變**。UI 染色由前端依當前 view 加額外條件判斷：
+
+- 月度欄染紅：`is_adhoc = "true"`（提醒月中清單膨脹）
+- 日欄染紅：`is_adhoc = "true"` AND `created_at` 是 today AND `scheduled_dates` 只有 today（提醒當日插單）
+
+### 7.8 跟原型 (`shared.jsx`) 的差異對照
+
+| 原型 mock 欄位 | 新模型對應 |
+|---|---|
+| `scope: 'month' \| 'week-day' \| 'day'` | 由 `currentMonth` / `currentDate` 推導，**不存** |
+| `date` | 月任務 → `last(scheduled_months)`；日任務 → `last(scheduled_dates)` |
+| `planned: boolean` | `is_adhoc === "false"` |
+| `isTop3` + `top3Order` | `monthly_priority` / `daily_priority` = `"1"/"2"/"3"` |
+| `parentTaskId`（cross-scope 連結）| **拿掉**——不再有跨層級連結概念，同一 task 直接跨層級顯示 |
+| `DayPlan.theme` | **拿掉**——使用者已澄清這是溝通誤會，不需要 |
+| `progress: 0-1` | 不存；月度任務的進度由子任務（`parent_id`）完成比例聚合 |
 
 ---
 
@@ -367,6 +494,6 @@ interface MonthPlan {
 
 ## 10. 給 Claude Code 的具體指令範本
 
-> 「請參考 `Todo Designs.html` 與 `HANDOFF.md`，將設計實作為一個 React + TypeScript + Vite 專案。Primitives 使用 Base UI (`@base-ui-components/react`)，樣式使用 CSS Modules。Design tokens 寫在 `src/tokens/*.css` 並用 CSS Custom Properties 暴露。先建立第 4 節的 token 檔案與第 3 節的目錄骨架，再依第 5 節的元件清單實作 `ui/` 層，最後拼出 `features/` 與 `pages/`。Mock data 直接從 `shared.jsx` 抄出來放到 `src/mock/data.ts`。」
+> 「請參考 `Todo Designs.html` 與 `HANDOFF.md`，將設計實作為一個 React + TypeScript + Vite 專案。Primitives 使用 Base UI (`@base-ui/react`)，樣式使用 CSS Modules。Design tokens 寫在 `src/tokens/*.css` 並用 CSS Custom Properties 暴露。先建立第 4 節的 token 檔案與第 3 節的目錄骨架，再依第 5 節的元件清單實作 `ui/` 層，最後拼出 `features/` 與 `pages/`。Mock data 直接從 `shared.jsx` 抄出來放到 `src/mock/data.ts`。」
 
 實作時如有設計細節不確定，**先參考 `Todo Designs.html` 在瀏覽器中看，再回頭問**。
