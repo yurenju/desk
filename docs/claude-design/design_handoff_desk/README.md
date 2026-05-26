@@ -74,7 +74,7 @@ design_handoff_desk/
 
 ### Tech Stack（建議）
 - React 18 + TypeScript + Vite
-- **Base UI** (`@base-ui-components/react`) — primitives
+- **Base UI** (`@base-ui/react`) — primitives
 - **CSS Modules** + CSS Custom Properties — styling
 - **不用 Tailwind、不用 shadcn**（已討論決定）
 - Animation：`motion` (framer-motion)
