@@ -1,0 +1,26 @@
+.row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.body { display: flex; flex-direction: column; gap: 2px; }
+.titleRow { display: flex; align-items: baseline; gap: var(--space-2); }
+
+.title { font-family: var(--font-sans); font-size: var(--text-base); color: var(--color-ink); }
+.desc { font-family: var(--font-sans); font-size: var(--text-sm); color: var(--color-ink-soft); }
+
+.trail {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-ink-faint);
+}
+
+.done .title { color: var(--color-ink-faint); text-decoration: line-through; }
+
+.k_forwarded .title, .k_dismissed .title { color: var(--color-ink-faint); }
+.k_dismissed .title { text-decoration: line-through; }
