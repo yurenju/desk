@@ -1,0 +1,29 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.v_unplanned {
+  background: var(--color-flag-soft);
+  color: var(--color-flag);
+}
+.v_plannedRef {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+  min-width: 22px;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+.v_neutral {
+  background: var(--color-paper-alt);
+  color: var(--color-ink-soft);
+}

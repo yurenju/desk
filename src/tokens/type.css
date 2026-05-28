@@ -1,0 +1,21 @@
+:root {
+  --font-sans: "Geist", "Noto Sans TC", "Inter", -apple-system, system-ui, sans-serif;
+  --font-serif: "Newsreader", "Noto Serif TC", "Source Serif 4", Georgia, serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+  --font-hand: "Caveat", "Comic Sans MS", cursive;
+
+  --text-base-size: 15px;
+
+  --text-2xs: calc(var(--text-base-size) * 0.75);
+  --text-xs: calc(var(--text-base-size) * 0.8);
+  --text-sm: calc(var(--text-base-size) * 0.9);
+  --text-base: var(--text-base-size);
+  --text-md: calc(var(--text-base-size) * 1.1);
+  --text-lg: calc(var(--text-base-size) * 1.25);
+  --text-xl: calc(var(--text-base-size) * 1.5);
+  --text-2xl: calc(var(--text-base-size) * 1.875);
+  --text-3xl: calc(var(--text-base-size) * 2.5);
+  --text-4xl: calc(var(--text-base-size) * 3);
+  --text-5xl: calc(var(--text-base-size) * 3.75);
+  --text-6xl: calc(var(--text-base-size) * 5);
+}

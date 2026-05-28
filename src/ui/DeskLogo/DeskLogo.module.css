@@ -1,0 +1,23 @@
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.mark {
+  flex-shrink: 0;
+}
+
+.wordmark {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.s_md .wordmark {
+  font-size: var(--text-xl);
+}
+.s_sm .wordmark {
+  font-size: var(--text-md);
+}

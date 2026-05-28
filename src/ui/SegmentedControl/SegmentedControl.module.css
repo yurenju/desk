@@ -1,0 +1,38 @@
+.root {
+  display: inline-flex;
+  background: var(--color-paper-alt);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+  gap: 2px;
+}
+
+.item {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: var(--color-ink-soft);
+  border-radius: var(--radius-pill);
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.s_md .item {
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--text-sm);
+}
+.s_sm .item {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+}
+
+.item[data-pressed] {
+  background: var(--color-accent);
+  color: var(--color-paper);
+}
+.item:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}

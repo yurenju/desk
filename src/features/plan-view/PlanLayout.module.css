@@ -1,0 +1,39 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.mobileTabs {
+  display: none;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.cell {
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .page {
+    padding: var(--space-3) var(--space-4);
+  }
+  .mobileTabs {
+    display: flex;
+    justify-content: center;
+  }
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .mobileHidden {
+    display: none;
+  }
+}

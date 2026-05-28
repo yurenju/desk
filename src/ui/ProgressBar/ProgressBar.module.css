@@ -1,0 +1,21 @@
+.track {
+  position: relative;
+  width: 100%;
+  height: 3px;
+  background: var(--color-rule-faint);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width var(--dur-slow) var(--ease-out);
+}
+
+.v_accent {
+  background: var(--color-accent);
+}
+.v_ink {
+  background: var(--color-ink-soft);
+}

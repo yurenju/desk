@@ -1,0 +1,125 @@
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-paper);
+  border-radius: var(--radius-sm);
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-ink-faint);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: var(--text-3xl);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  color: var(--color-ink);
+  line-height: 1.05;
+}
+
+.meta {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-ink-faint);
+  letter-spacing: 0.04em;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.day {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-rule-faint);
+}
+
+.day:first-child {
+  border-top: none;
+}
+
+.selected {
+  background: var(--color-accent-soft);
+  border-radius: var(--radius-sm);
+  padding-left: var(--space-3);
+  padding-right: var(--space-3);
+  border-top: none;
+}
+
+.selected + .day {
+  border-top: none;
+}
+
+.dayBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--font-serif);
+  color: var(--color-ink);
+}
+
+.dayNum {
+  font-size: var(--text-xl);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.dayWk {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--color-ink-faint);
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+
+.tasks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.task {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+}
+
+.taskOrder {
+  font-family: var(--font-mono);
+  color: var(--color-ink-faint);
+  margin-right: var(--space-1);
+}
+
+.done {
+  color: var(--color-ink-faint);
+  text-decoration: line-through;
+}
+
+.empty {
+  color: var(--color-ink-faint);
+  font-size: var(--text-sm);
+}
