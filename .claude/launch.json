@@ -1,0 +1,28 @@
+{
+  // Claude Code Desktop preview server config.
+  // Docs: https://code.claude.com/docs/en/desktop#configure-preview-servers
+  "version": "0.0.1",
+  "configurations": [
+    {
+      // Vite dev server (HMR, fast iteration). Cloudflare plugin is active so
+      // /api/* routes go through the worker; SPA fallback serves /plan and /today.
+      "name": "dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173,
+      // Vite auto-shifts ports when 5173 is busy; let preview follow.
+      "autoPort": true
+    },
+    {
+      // Production-like preview via Wrangler — runs the built worker + assets
+      // bundle. Slower iteration (requires `npm run build`) but exercises the
+      // real Cloudflare Workers runtime. Useful for verifying production
+      // behavior before deploy.
+      "name": "preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "preview"],
+      "port": 8787,
+      "autoPort": true
+    }
+  ]
+}
