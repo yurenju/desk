@@ -1,0 +1,30 @@
+.root {
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--color-rule);
+  border-radius: var(--radius-xs);
+  background: var(--color-paper);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.root:hover { border-color: var(--color-ink-faint); }
+
+.root[data-checked="true"] { background: var(--color-ink); border-color: var(--color-ink); }
+.v_accent.root[data-checked="true"] { background: var(--color-accent); border-color: var(--color-accent); }
+
+.indicator { display: flex; align-items: center; justify-content: center; }
+
+.mark {
+  font-family: var(--font-hand);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-paper);
+  line-height: 1;
+  transform: rotate(-8deg) translate(0.5px, -1px);
+}
+
+.root:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
