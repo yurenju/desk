@@ -80,3 +80,6 @@ dist-ssr/
 
 # Superpowers Brainstorming Session Cache
 .superpowers/
+
+# TanStack Router tmp files
+.tanstack/tmp/

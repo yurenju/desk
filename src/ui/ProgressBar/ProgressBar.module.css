@@ -13,5 +13,9 @@
   transition: width var(--dur-slow) var(--ease-out);
 }
 
-.v_accent { background: var(--color-accent); }
-.v_ink { background: var(--color-ink-soft); }
+.v_accent {
+  background: var(--color-accent);
+}
+.v_ink {
+  background: var(--color-ink-soft);
+}

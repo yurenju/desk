@@ -15,11 +15,7 @@ export function DayChip({ date, today, selected, allTasks }: DayChipProps) {
   const isToday = date === today;
   return (
     <div
-      className={[
-        styles.chip,
-        selected && styles.selected,
-        isToday && styles.today,
-      ]
+      className={[styles.chip, selected && styles.selected, isToday && styles.today]
         .filter(Boolean)
         .join(" ")}
     >

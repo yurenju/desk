@@ -53,5 +53,7 @@ export function tasksOnMonth(all: Task[], month: string): TaskWithTrail[] {
 }
 
 export function tasksInBacklog(all: Task[]): Task[] {
-  return all.filter((t) => layer(t) === "backlog" && t.status !== "done" && t.status !== "cancelled");
+  return all.filter(
+    (t) => layer(t) === "backlog" && t.status !== "done" && t.status !== "cancelled",
+  );
 }

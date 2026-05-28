@@ -42,13 +42,21 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
       </div>
 
       <div className={styles.grid}>
-        <div className={[styles.cell, tab !== "month" && styles.mobileHidden].filter(Boolean).join(" ")}>
+        <div
+          className={[styles.cell, tab !== "month" && styles.mobileHidden]
+            .filter(Boolean)
+            .join(" ")}
+        >
           <MonthColumn allTasks={allTasks} month={month} />
         </div>
-        <div className={[styles.cell, tab !== "week" && styles.mobileHidden].filter(Boolean).join(" ")}>
+        <div
+          className={[styles.cell, tab !== "week" && styles.mobileHidden].filter(Boolean).join(" ")}
+        >
           <WeekColumn allTasks={allTasks} selectedDate={selectedDate} />
         </div>
-        <div className={[styles.cell, tab !== "day" && styles.mobileHidden].filter(Boolean).join(" ")}>
+        <div
+          className={[styles.cell, tab !== "day" && styles.mobileHidden].filter(Boolean).join(" ")}
+        >
           <DayColumn allTasks={allTasks} selectedDate={selectedDate} variant="plan-narrow" />
         </div>
       </div>

@@ -7,7 +7,11 @@
   border-radius: var(--radius-sm);
 }
 
-.head { display: flex; flex-direction: column; gap: var(--space-1); }
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
 
 .eyebrow {
   font-family: var(--font-mono);
@@ -34,7 +38,14 @@
   letter-spacing: 0.04em;
 }
 
-.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0; }
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
 
 .day {
   display: grid;
@@ -44,7 +55,9 @@
   border-top: 1px solid var(--color-rule-faint);
 }
 
-.day:first-child { border-top: none; }
+.day:first-child {
+  border-top: none;
+}
 
 .selected {
   background: var(--color-accent-soft);
@@ -54,7 +67,9 @@
   border-top: none;
 }
 
-.selected + .day { border-top: none; }
+.selected + .day {
+  border-top: none;
+}
 
 .dayBox {
   display: flex;
@@ -64,7 +79,11 @@
   color: var(--color-ink);
 }
 
-.dayNum { font-size: var(--text-xl); font-weight: 500; line-height: 1; }
+.dayNum {
+  font-size: var(--text-xl);
+  font-weight: 500;
+  line-height: 1;
+}
 
 .dayWk {
   font-family: var(--font-mono);
@@ -83,7 +102,11 @@
   gap: var(--space-1);
 }
 
-.task { font-family: var(--font-sans); font-size: var(--text-sm); color: var(--color-ink); }
+.task {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+}
 
 .taskOrder {
   font-family: var(--font-mono);
@@ -91,6 +114,12 @@
   margin-right: var(--space-1);
 }
 
-.done { color: var(--color-ink-faint); text-decoration: line-through; }
+.done {
+  color: var(--color-ink-faint);
+  text-decoration: line-through;
+}
 
-.empty { color: var(--color-ink-faint); font-size: var(--text-sm); }
+.empty {
+  color: var(--color-ink-faint);
+  font-size: var(--text-sm);
+}

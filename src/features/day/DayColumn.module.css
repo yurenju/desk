@@ -7,7 +7,11 @@
   border-radius: var(--radius-sm);
 }
 
-.header { display: flex; flex-direction: column; gap: var(--space-1); }
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
 
 .eyebrow {
   font-family: var(--font-mono);
@@ -26,10 +30,18 @@
   line-height: 0.95;
 }
 
-.v_plan-narrow .bigDate { font-size: var(--text-3xl); }
-.v_today-hero .bigDate { font-size: var(--text-6xl); }
+.v_plan-narrow .bigDate {
+  font-size: var(--text-3xl);
+}
+.v_today-hero .bigDate {
+  font-size: var(--text-6xl);
+}
 
-.section { display: flex; flex-direction: column; gap: var(--space-1); }
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
 
 .sectionHead {
   display: flex;
@@ -50,4 +62,6 @@
   color: var(--color-ink-faint);
 }
 
-.adhocHead { color: var(--color-flag); }
+.adhocHead {
+  color: var(--color-flag);
+}

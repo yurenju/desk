@@ -12,13 +12,9 @@ function readPref(): ThemePref {
   return "auto";
 }
 
-function resolveAuto(): ResolvedTheme {
-  if (typeof window === "undefined" || !window.matchMedia) return "light";
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
-function resolve(pref: ThemePref): ResolvedTheme {
-  return pref === "auto" ? resolveAuto() : pref;
+function readSystemDark(): boolean {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
 function applyTheme(resolved: ResolvedTheme): void {
@@ -33,25 +29,24 @@ export function useTheme(): {
   setPref(p: ThemePref): void;
 } {
   const [pref, setPrefState] = useState<ThemePref>(() => readPref());
-  const [resolved, setResolved] = useState<ResolvedTheme>(() => resolve(readPref()));
+  const [systemDark, setSystemDark] = useState<boolean>(() => readSystemDark());
 
-  useEffect(() => {
-    const r = resolve(pref);
-    setResolved(r);
-    applyTheme(r);
-  }, [pref]);
+  // Derived value — no setState needed.
+  const resolved: ResolvedTheme = pref === "auto" ? (systemDark ? "dark" : "light") : pref;
 
+  // Sync DOM attribute when resolved theme changes.
   useEffect(() => {
-    if (pref !== "auto" || typeof window === "undefined" || !window.matchMedia) return;
+    applyTheme(resolved);
+  }, [resolved]);
+
+  // Subscribe to system color-scheme changes (only relevant for auto mode).
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = () => {
-      const r = resolveAuto();
-      setResolved(r);
-      applyTheme(r);
-    };
+    const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, [pref]);
+  }, []);
 
   const setPref = useCallback((p: ThemePref) => {
     localStorage.setItem(STORAGE_KEY, p);

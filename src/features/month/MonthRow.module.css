@@ -7,9 +7,15 @@
   font-size: var(--text-base);
 }
 
-.title { flex: 1; color: var(--color-ink); }
+.title {
+  flex: 1;
+  color: var(--color-ink);
+}
 
-.done .title { color: var(--color-ink-faint); text-decoration: line-through; }
+.done .title {
+  color: var(--color-ink-faint);
+  text-decoration: line-through;
+}
 
 .trail {
   font-family: var(--font-mono);

@@ -9,9 +9,7 @@ export interface ChipProps {
 
 export function Chip({ variant, children, className }: ChipProps) {
   return (
-    <span
-      className={[styles.chip, styles[`v_${variant}`], className].filter(Boolean).join(" ")}
-    >
+    <span className={[styles.chip, styles[`v_${variant}`], className].filter(Boolean).join(" ")}>
       {children}
     </span>
   );

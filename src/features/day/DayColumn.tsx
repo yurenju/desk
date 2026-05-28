@@ -25,8 +25,9 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
     )
     .map((e) => e.task);
 
-  const otherPlanned = primary
-    .filter((e) => !e.task.custom_fields.daily_priority && e.task.custom_fields.is_adhoc !== "true");
+  const otherPlanned = primary.filter(
+    (e) => !e.task.custom_fields.daily_priority && e.task.custom_fields.is_adhoc !== "true",
+  );
 
   const adhoc = primary.filter((e) => e.task.custom_fields.is_adhoc === "true");
 
@@ -94,6 +95,19 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
 
 function monthShort(iso: string): string {
   const [, m] = iso.split("-").map(Number);
-  const names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const names = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   return names[m - 1];
 }

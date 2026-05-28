@@ -14,7 +14,9 @@ export function TaskRow({ task, kind, showAdhocChip }: TaskRowProps) {
   const isAdhoc = task.custom_fields.is_adhoc === "true";
 
   return (
-    <div className={[styles.row, styles[`k_${kind}`], isDone && styles.done].filter(Boolean).join(" ")}>
+    <div
+      className={[styles.row, styles[`k_${kind}`], isDone && styles.done].filter(Boolean).join(" ")}
+    >
       <Checkbox checked={isDone} disabled />
       <div className={styles.body}>
         <div className={styles.titleRow}>

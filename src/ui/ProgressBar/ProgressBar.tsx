@@ -18,7 +18,10 @@ export function ProgressBar({ value, variant = "accent", ariaLabel, className }:
       aria-valuemax={100}
       className={[styles.track, className].filter(Boolean).join(" ")}
     >
-      <div className={[styles.fill, styles[`v_${variant}`]].join(" ")} style={{ width: `${pct}%` }} />
+      <div
+        className={[styles.fill, styles[`v_${variant}`]].join(" ")}
+        style={{ width: `${pct}%` }}
+      />
     </div>
   );
 }

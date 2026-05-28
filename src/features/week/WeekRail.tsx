@@ -40,11 +40,7 @@ export function WeekRail({ allTasks, selectedDate, today }: WeekRailProps) {
           return (
             <li
               key={date}
-              className={[
-                styles.day,
-                isSelected && styles.selected,
-                isToday && styles.today,
-              ]
+              className={[styles.day, isSelected && styles.selected, isToday && styles.today]
                 .filter(Boolean)
                 .join(" ")}
             >

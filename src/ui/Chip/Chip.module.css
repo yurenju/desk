@@ -11,7 +11,10 @@
   white-space: nowrap;
 }
 
-.v_unplanned { background: var(--color-flag-soft); color: var(--color-flag); }
+.v_unplanned {
+  background: var(--color-flag-soft);
+  color: var(--color-flag);
+}
 .v_plannedRef {
   background: var(--color-accent-soft);
   color: var(--color-accent-text);
@@ -20,4 +23,7 @@
   font-family: var(--font-mono);
   font-size: var(--text-xs);
 }
-.v_neutral { background: var(--color-paper-alt); color: var(--color-ink-soft); }
+.v_neutral {
+  background: var(--color-paper-alt);
+  color: var(--color-ink-soft);
+}

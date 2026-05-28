@@ -7,7 +7,11 @@
   border-radius: var(--radius-sm);
 }
 
-.head { display: flex; flex-direction: column; gap: var(--space-1); }
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
 
 .eyebrow {
   font-family: var(--font-mono);
@@ -27,7 +31,11 @@
   line-height: 1.05;
 }
 
-.section { display: flex; flex-direction: column; gap: 0; }
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
 
 .sectionHead {
   font-family: var(--font-sans);
@@ -40,4 +48,6 @@
   border-bottom: 1px solid var(--color-rule-faint);
 }
 
-.adhocHead { color: var(--color-flag); }
+.adhocHead {
+  color: var(--color-flag);
+}
