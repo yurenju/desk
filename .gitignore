@@ -69,6 +69,14 @@ build/
 
 # Cloudflare Wrangler
 .wrangler/
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
+
+# Vite
+dist-ssr/
+*.local
 
 # Superpowers Brainstorming Session Cache
 .superpowers/
