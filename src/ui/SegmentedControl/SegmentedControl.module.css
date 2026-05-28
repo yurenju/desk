@@ -28,7 +28,7 @@
   font-size: var(--text-xs);
 }
 
-.item[data-pressed="true"] {
+.item[data-pressed] {
   background: var(--color-accent);
   color: var(--color-paper);
 }

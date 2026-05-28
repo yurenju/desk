@@ -1,0 +1,8 @@
+.shortcut {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  margin-left: var(--space-2);
+  opacity: 0.7;
+  letter-spacing: 0.02em;
+}

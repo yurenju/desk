@@ -4,7 +4,7 @@
   --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
   --font-hand: "Caveat", "Comic Sans MS", cursive;
 
-  --text-base-size: 13px;
+  --text-base-size: 15px;
 
   --text-2xs: calc(var(--text-base-size) * 0.75);
   --text-xs: calc(var(--text-base-size) * 0.8);
