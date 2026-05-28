@@ -77,14 +77,17 @@
 }
 
 .task {
+  display: flex;
+  gap: var(--space-1);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   color: var(--color-ink-soft);
 }
 
 .task::before {
-  content: "- ";
+  content: "-";
   color: var(--color-ink-faint);
+  flex-shrink: 0;
 }
 
 .done {
