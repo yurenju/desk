@@ -82,6 +82,11 @@
   color: var(--color-ink-soft);
 }
 
+.task::before {
+  content: "- ";
+  color: var(--color-ink-faint);
+}
+
 .done {
   text-decoration: line-through;
   color: var(--color-ink-faint);
