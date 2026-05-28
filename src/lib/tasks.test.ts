@@ -4,12 +4,11 @@ import { primaryDate, primaryMonth, layer, tasksOnDate, tasksOnMonth } from "./t
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
   return {
-    id: overrides.id,
-    title: overrides.title ?? `task-${overrides.id}`,
-    status: overrides.status ?? "open",
-    created_at: overrides.created_at ?? "2026-05-01T00:00:00Z",
-    updated_at: overrides.updated_at ?? "2026-05-01T00:00:00Z",
-    custom_fields: overrides.custom_fields ?? {},
+    title: `task-${overrides.id}`,
+    status: "open",
+    created_at: "2026-05-01T00:00:00Z",
+    updated_at: "2026-05-01T00:00:00Z",
+    custom_fields: {},
     ...overrides,
   };
 }
