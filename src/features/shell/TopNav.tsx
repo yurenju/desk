@@ -1,7 +1,21 @@
+import { DeskLogo } from "@/ui/DeskLogo";
+import { ModeToggle } from "./ModeToggle";
+import { ThemeToggle } from "./ThemeToggle";
+import styles from "./TopNav.module.css";
+
 export function TopNav() {
   return (
-    <nav style={{ padding: 16, borderBottom: "1px solid var(--color-rule)" }}>
-      desk (placeholder TopNav)
-    </nav>
+    <header className={styles.root}>
+      <div className={styles.brand}>
+        <DeskLogo />
+        <span className={styles.subdomain}>desk.yurenju.me</span>
+      </div>
+      <div className={styles.mode}>
+        <ModeToggle />
+      </div>
+      <div className={styles.actions}>
+        <ThemeToggle />
+      </div>
+    </header>
   );
 }
