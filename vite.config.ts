@@ -11,7 +11,7 @@ export default defineConfig({
       autoCodeSplitting: true,
     }),
     react(),
-    cloudflare(),
+    ...(process.env.VITEST ? [] : [cloudflare()]),
   ],
   resolve: {
     alias: {
