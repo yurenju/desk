@@ -1,0 +1,20 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+}
+
+.title { flex: 1; color: var(--color-ink); }
+
+.done .title { color: var(--color-ink-faint); text-decoration: line-through; }
+
+.trail {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--color-ink-faint);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
