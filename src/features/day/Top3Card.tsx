@@ -30,6 +30,7 @@ export function Top3Card({
           <Top3Item
             key={t.id}
             task={t}
+            variant={variant}
             showParentRef={showParentRef}
             parentTitleById={parentTitleById}
             interactive={interactive}
@@ -42,11 +43,13 @@ export function Top3Card({
 
 function Top3Item({
   task: t,
+  variant,
   showParentRef,
   parentTitleById,
   interactive,
 }: {
   task: Task;
+  variant: "accent" | "plain";
   showParentRef?: boolean;
   parentTitleById?: Record<string, string>;
   interactive?: boolean;
@@ -63,7 +66,7 @@ function Top3Item({
   return (
     <li className={styles.item}>
       <Checkbox
-        variant="accent"
+        variant={variant === "accent" ? "accent" : "primary"}
         checked={t.status === "done"}
         disabled={!interactive}
         onCheckedChange={interactive ? row.toggle : undefined}

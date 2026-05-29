@@ -22,11 +22,13 @@
   background: color-mix(in oklch, var(--color-accent-soft), white 15%);
 }
 
-.root[data-checked="true"] {
+/* Base UI emits a valueless `data-checked` boolean attribute (not
+   data-checked="true"), so the selector must match attribute presence. */
+.root[data-checked] {
   background: var(--color-ink);
   border-color: var(--color-ink);
 }
-.v_accent.root[data-checked="true"] {
+.v_accent.root[data-checked] {
   background: var(--color-accent);
   border-color: var(--color-accent);
 }
