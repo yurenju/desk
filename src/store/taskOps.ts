@@ -50,5 +50,27 @@ export function addTodayTask(
 export function editTitle(tasks: Task[], id: string, title: string, now: string): Task[] {
   const trimmed = title.trim();
   if (!trimmed) return tasks;
+  if (!tasks.some((t) => t.id === id)) return tasks;
   return tasks.map((t) => (t.id === id ? { ...t, title: trimmed, updated_at: now } : t));
+}
+
+export interface RemovedTask {
+  task: Task;
+  index: number;
+}
+
+export function deleteTask(
+  tasks: Task[],
+  id: string,
+): { tasks: Task[]; removed: RemovedTask | null } {
+  const index = tasks.findIndex((t) => t.id === id);
+  if (index < 0) return { tasks, removed: null };
+  const removed: RemovedTask = { task: tasks[index], index };
+  return { tasks: tasks.filter((t) => t.id !== id), removed };
+}
+
+export function restoreTask(tasks: Task[], removed: RemovedTask): Task[] {
+  const next = [...tasks];
+  next.splice(removed.index, 0, removed.task);
+  return next;
 }

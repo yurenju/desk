@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Task } from "@/lib/types";
-import { toggleDone, addTodayTask, editTitle } from "./taskOps";
+import { toggleDone, addTodayTask, editTitle, deleteTask, restoreTask } from "./taskOps";
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
   return {
@@ -89,9 +89,39 @@ describe("editTitle", () => {
     expect(next[0].title).toBe("乾淨");
   });
 
-  it("leaves the task unchanged when the new title is blank", () => {
+  it("leaves the task unchanged and returns the original reference when the new title is blank", () => {
     const tasks = [makeTask({ id: "a", title: "保留" })];
     const next = editTitle(tasks, "a", "   ", NOW);
     expect(next[0].title).toBe("保留");
+    expect(next).toBe(tasks);
+  });
+
+  it("returns the original reference when the id is not found", () => {
+    const tasks = [makeTask({ id: "a", title: "保留" })];
+    const next = editTitle(tasks, "not-found", "新標題", NOW);
+    expect(next).toBe(tasks);
+  });
+});
+
+describe("deleteTask / restoreTask", () => {
+  it("removes the task and reports its original index", () => {
+    const tasks = [makeTask({ id: "a" }), makeTask({ id: "b" }), makeTask({ id: "c" })];
+    const { tasks: next, removed } = deleteTask(tasks, "b");
+    expect(next.map((t) => t.id)).toEqual(["a", "c"]);
+    expect(removed).toEqual({ task: tasks[1], index: 1 });
+  });
+
+  it("returns removed=null when id not found", () => {
+    const tasks = [makeTask({ id: "a" })];
+    const { tasks: next, removed } = deleteTask(tasks, "zzz");
+    expect(next).toHaveLength(1);
+    expect(removed).toBeNull();
+  });
+
+  it("restoreTask puts the task back at its original index", () => {
+    const tasks = [makeTask({ id: "a" }), makeTask({ id: "c" })];
+    const removed = { task: makeTask({ id: "b" }), index: 1 };
+    const next = restoreTask(tasks, removed);
+    expect(next.map((t) => t.id)).toEqual(["a", "b", "c"]);
   });
 });
