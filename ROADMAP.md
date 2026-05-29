@@ -20,7 +20,7 @@
 | Slice | 狀態 | 對應 PR |
 |---|---|---|
 | Slice 0 — 純前端骨架 | ✅ 完成 | [#2](https://github.com/yurenju/desk/pull/2) |
-| Slice 1 — Today 互動 + localStorage | ⏳ 待開始 | — |
+| Slice 1 — Today 互動 + localStorage | 📝 設計完成,待實作 | — |
 | Slice 2+ | ⏳ 規劃中 | — |
 
 **Slice 0 比原規劃多做的部分**(因為「中高保真度」視覺要做到位,自然把後面 slice 的純視覺工作也帶進來了):
@@ -96,6 +96,13 @@
 - [ ] WSPC `DeskTask` 自訂型態註冊（含完整 custom fields，雖然這片只用到一部分）
 - [ ] `/api/todo` 端點：list / create / patch（status, daily_priority, done_on）
 - [ ] 過濾條件先簡化：`scheduled_dates contains today`
+
+**從 Slice 1 銜接過來要處理**（Slice 1 刻意用最小前端做法,延後到接 WSPC 才補的衍生事項）:
+
+- [ ] `today` 真實化 + 可切換日期:Slice 1 固定 `MOCK_TODAY` 並集中在 store 單一欄位,這片換成真實今天並支援切換日期(`/today/:date` 之類)
+- [ ] 刪除改 soft-delete:Slice 1 是「直接刪 + undo」,這片改為 PATCH `status: cancelled`,取代從陣列直接移除
+- [ ] seed → 真實資料:store 的 initial `tasks = allTasks` 改由 `/api/todo` list 載入,persist 角色轉為快取 / 樂觀更新
+- [ ] `daily_priority` 騰位要 patch 兩筆:被騰位者的 `daily_priority` 清除也要對 server 發 PATCH,不能只改本地
 
 **可以看到什麼**：Slice 1 的畫面換成真實 WSPC 資料；auth 鏈整條跑通。
 **不做**：軌跡、略過、Monthly、Backlog。
