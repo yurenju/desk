@@ -1,6 +1,13 @@
 import { describe, it, expect } from "vitest";
 import type { Task } from "@/lib/types";
-import { toggleDone, addTodayTask, editTitle, deleteTask, restoreTask } from "./taskOps";
+import {
+  toggleDone,
+  addTodayTask,
+  editTitle,
+  deleteTask,
+  restoreTask,
+  setDailyPriority,
+} from "./taskOps";
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
   return {
@@ -118,10 +125,64 @@ describe("deleteTask / restoreTask", () => {
     expect(removed).toBeNull();
   });
 
+  it("does not mutate the original tasks array", () => {
+    const tasks = [makeTask({ id: "a" }), makeTask({ id: "b" })];
+    const originalJson = JSON.stringify(tasks);
+    const { tasks: next } = deleteTask(tasks, "a");
+    expect(JSON.stringify(tasks)).toBe(originalJson);
+    expect(next).not.toBe(tasks);
+  });
+
   it("restoreTask puts the task back at its original index", () => {
     const tasks = [makeTask({ id: "a" }), makeTask({ id: "c" })];
     const removed = { task: makeTask({ id: "b" }), index: 1 };
     const next = restoreTask(tasks, removed);
     expect(next.map((t) => t.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("returns the original array reference if removed is null or undefined", () => {
+    const tasks = [makeTask({ id: "a" })];
+    const nextNull = restoreTask(tasks, null);
+    const nextUndefined = restoreTask(tasks, undefined);
+    expect(nextNull).toBe(tasks);
+    expect(nextUndefined).toBe(tasks);
+  });
+});
+
+describe("setDailyPriority", () => {
+  const today = "2026-05-22";
+  const onToday = (id: string, p?: "1" | "2" | "3") =>
+    makeTask({
+      id,
+      custom_fields: { scheduled_dates: [today], ...(p ? { daily_priority: p } : {}) },
+    });
+
+  it("assigns a priority to a task that had none", () => {
+    const tasks = [onToday("a")];
+    const next = setDailyPriority(tasks, "a", "1", today);
+    expect(next[0].custom_fields.daily_priority).toBe("1");
+  });
+
+  it("evicts the task that already held that priority today", () => {
+    const tasks = [onToday("a", "1"), onToday("b")];
+    const next = setDailyPriority(tasks, "b", "1", today);
+    expect(next.find((t) => t.id === "b")!.custom_fields.daily_priority).toBe("1");
+    expect(next.find((t) => t.id === "a")!.custom_fields.daily_priority).toBeUndefined();
+  });
+
+  it("does not evict a same-priority task scheduled on a different day", () => {
+    const other = makeTask({
+      id: "x",
+      custom_fields: { scheduled_dates: ["2026-05-24"], daily_priority: "1" },
+    });
+    const tasks = [other, onToday("b")];
+    const next = setDailyPriority(tasks, "b", "1", today);
+    expect(next.find((t) => t.id === "x")!.custom_fields.daily_priority).toBe("1");
+  });
+
+  it("removes the priority when n is null", () => {
+    const tasks = [onToday("a", "2")];
+    const next = setDailyPriority(tasks, "a", null, today);
+    expect(next[0].custom_fields.daily_priority).toBeUndefined();
   });
 });

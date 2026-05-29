@@ -1,4 +1,5 @@
-import type { Task, TaskCustomFields } from "@/lib/types";
+import type { Task, TaskCustomFields, Priority } from "@/lib/types";
+import { primaryDate } from "@/lib/tasks";
 
 function patch(t: Task, cf: Partial<TaskCustomFields>, now?: string): Task {
   const newCustomFields = { ...t.custom_fields, ...cf };
@@ -69,8 +70,25 @@ export function deleteTask(
   return { tasks: tasks.filter((t) => t.id !== id), removed };
 }
 
-export function restoreTask(tasks: Task[], removed: RemovedTask): Task[] {
+export function restoreTask(tasks: Task[], removed: RemovedTask | null | undefined): Task[] {
+  if (!removed) return tasks;
   const next = [...tasks];
   next.splice(removed.index, 0, removed.task);
   return next;
+}
+
+export function setDailyPriority(
+  tasks: Task[],
+  id: string,
+  n: Priority | null,
+  today: string,
+): Task[] {
+  return tasks.map((t) => {
+    if (t.id === id) return patch(t, { daily_priority: n ?? undefined });
+    // 騰位:只在今天 primary 的 task 之間清掉撞號者
+    if (n !== null && primaryDate(t) === today && t.custom_fields.daily_priority === n) {
+      return patch(t, { daily_priority: undefined });
+    }
+    return t;
+  });
 }
