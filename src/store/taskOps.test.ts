@@ -185,4 +185,11 @@ describe("setDailyPriority", () => {
     const next = setDailyPriority(tasks, "a", null, today);
     expect(next[0].custom_fields.daily_priority).toBeUndefined();
   });
+
+  it("returns the original reference and does not evict other tasks if target ID is not found", () => {
+    const tasks = [onToday("a", "1")];
+    const next = setDailyPriority(tasks, "not-found", "1", today);
+    expect(next).toBe(tasks);
+    expect(next[0].custom_fields.daily_priority).toBe("1");
+  });
 });

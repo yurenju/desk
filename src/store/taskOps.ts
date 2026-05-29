@@ -83,6 +83,7 @@ export function setDailyPriority(
   n: Priority | null,
   today: string,
 ): Task[] {
+  if (!tasks.some((t) => t.id === id)) return tasks;
   return tasks.map((t) => {
     if (t.id === id) return patch(t, { daily_priority: n ?? undefined });
     // 騰位:只在今天 primary 的 task 之間清掉撞號者
