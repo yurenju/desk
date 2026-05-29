@@ -1,7 +1,10 @@
 import type { Priority } from "@/lib/types";
 import styles from "./PriorityRing.module.css";
 
-export interface PriorityRingProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "value"> {
+export interface PriorityRingProps extends Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  "value"
+> {
   value: Priority | null;
   onClick: () => void;
 }

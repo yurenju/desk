@@ -46,4 +46,20 @@ describe("TaskRow (interactive)", () => {
     expect(screen.getByRole("checkbox")).toBeDisabled();
     expect(screen.queryByLabelText("刪除")).toBeNull();
   });
+
+  it("renders priority ring when showRing is true and cycles priority on click", async () => {
+    const user = userEvent.setup();
+    const TestComponent = () => {
+      const task = useTasksStore((s) => s.tasks.find((t) => t.id === "d5"))!;
+      return <TaskRow task={task} kind="primary" interactive showRing />;
+    };
+    render(<TestComponent />);
+    const ring = screen.getByRole("button", { name: "設為今日重點" });
+    expect(ring).toBeDefined();
+    await user.click(ring);
+    expect(
+      useTasksStore.getState().tasks.find((t) => t.id === "d5")!.custom_fields.daily_priority,
+    ).toBe("1");
+    expect(screen.getByRole("button", { name: "今日重點第 1" })).toBeDefined();
+  });
 });
