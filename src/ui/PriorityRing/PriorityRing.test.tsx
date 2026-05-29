@@ -15,9 +15,18 @@ describe("PriorityRing", () => {
   });
 
   it("fires onClick", async () => {
+    const user = userEvent.setup();
     const onClick = vi.fn();
     render(<PriorityRing value="1" onClick={onClick} />);
-    await userEvent.click(screen.getByRole("button"));
+    await user.click(screen.getByRole("button"));
     expect(onClick).toHaveBeenCalledOnce();
+  });
+
+  it("does not fire onClick when disabled", async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    render(<PriorityRing value="1" onClick={onClick} disabled />);
+    await user.click(screen.getByRole("button"));
+    expect(onClick).not.toHaveBeenCalled();
   });
 });
