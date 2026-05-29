@@ -65,3 +65,17 @@
 .adhocHead {
   color: var(--color-flag);
 }
+
+.empty {
+  text-align: center;
+  padding: 28px 12px 12px;
+}
+.emptyBig {
+  font-size: 15px;
+  color: var(--color-ink, #2c2a25);
+  margin-bottom: 4px;
+}
+.emptySub {
+  font-size: 12px;
+  color: var(--color-muted, #8a7d63);
+}

@@ -34,6 +34,9 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
 
   const trails = entries.filter((e) => e.kind !== "primary");
 
+  const isEmpty =
+    top3.length === 0 && otherPlanned.length === 0 && adhoc.length === 0 && trails.length === 0;
+
   const parentTitleById = useMemo(() => {
     const map: Record<string, string> = {};
     for (const t of allTasks) map[t.id] = t.title;
@@ -105,6 +108,13 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
             <TaskRow key={e.task.id} task={e.task} kind={e.kind} />
           ))}
         </section>
+      )}
+
+      {interactive && isEmpty && (
+        <div className={styles.empty}>
+          <div className={styles.emptyBig}>今天還很空白</div>
+          <div className={styles.emptySub}>從下面加一件最想推進的事吧</div>
+        </div>
       )}
 
       {interactive && <AddTaskInput />}
