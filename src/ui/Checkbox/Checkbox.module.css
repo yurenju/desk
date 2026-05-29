@@ -15,6 +15,13 @@
   border-color: var(--color-ink-faint);
 }
 
+/* accent variant unchecked: lift the fill one step above the green card so it
+   reads as a raised surface in both themes. A fixed paper background goes
+   lighter than the card in light but darker (a "hole") in dark. */
+.v_accent.root {
+  background: color-mix(in oklch, var(--color-accent-soft), white 15%);
+}
+
 .root[data-checked="true"] {
   background: var(--color-ink);
   border-color: var(--color-ink);

@@ -4,9 +4,9 @@
   gap: 9px;
   padding: 9px 10px;
   margin-top: 8px;
-  border: 1.5px solid var(--color-border, #d8cdb6);
+  border: 1.5px solid var(--color-rule);
   border-radius: 7px;
-  background: var(--color-surface, #fffdf7);
+  background: var(--color-paper-alt);
 }
 .bar:focus-within {
   border-color: var(--color-flag, #c1432e);
@@ -14,7 +14,7 @@
 .box {
   width: 16px;
   height: 16px;
-  border: 1.5px solid var(--color-border, #b9ab8e);
+  border: 1.5px solid var(--color-rule);
   border-radius: 4px;
   flex: none;
 }

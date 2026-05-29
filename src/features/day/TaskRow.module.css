@@ -67,10 +67,10 @@
   height: 24px;
   border-radius: 5px;
   font-size: 13px;
-  color: var(--color-muted, #9a8e72);
+  color: var(--color-ink-faint);
 }
 .iconBtn:hover {
-  background: var(--color-surface-hover, rgba(0, 0, 0, 0.05));
+  background: var(--color-paper-alt);
 }
 .del {
   color: var(--color-flag, #c1432e);
@@ -81,7 +81,7 @@
   border: 1.5px solid var(--color-flag, #c1432e);
   border-radius: 5px;
   padding: 4px 8px;
-  background: var(--color-surface, #fffdf7);
+  background: var(--color-paper-alt);
   color: inherit;
 }
 @media (max-width: 640px) {

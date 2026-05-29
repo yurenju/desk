@@ -17,8 +17,8 @@
   color: var(--color-flag, #c1432e);
 }
 .empty {
-  border: 2px dashed var(--color-border, #b9ab8e);
-  color: var(--color-muted, #b9ab8e);
+  border: 2px dashed var(--color-rule);
+  color: var(--color-ink-faint);
   font-size: 14px;
 }
 .ring:disabled {
