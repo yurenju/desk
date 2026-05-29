@@ -37,4 +37,19 @@ describe("toggleDone", () => {
     toggleDone(tasks, "a", NOW);
     expect(tasks[0].status).toBe("open");
   });
+
+  it("returns the original array reference when the id is not found", () => {
+    const tasks = [makeTask({ id: "a" })];
+    const next = toggleDone(tasks, "not-found", NOW);
+    expect(next).toBe(tasks);
+  });
+
+  it("cleans up done_on property from custom_fields if it is undefined", () => {
+    const tasks = [
+      makeTask({ id: "a", status: "done", custom_fields: { done_on: NOW, is_adhoc: "true" } }),
+    ];
+    const next = toggleDone(tasks, "a", NOW);
+    expect("done_on" in next[0].custom_fields).toBe(false);
+  });
 });
+
