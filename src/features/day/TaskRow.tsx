@@ -44,7 +44,7 @@ export function TaskRow({ task, kind, showAdhocChip, interactive, showRing }: Ta
             onChange={(e) => row.changeDraft(e.target.value)}
             onBlur={row.cancelEdit}
             onKeyDown={(e) => {
-              if (e.key === "Enter") row.commitEdit();
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) row.commitEdit();
               if (e.key === "Escape") row.cancelEdit();
             }}
           />

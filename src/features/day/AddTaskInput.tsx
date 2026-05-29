@@ -23,8 +23,9 @@ export function AddTaskInput() {
         placeholder="+ 加一件今天的事…"
         value={value}
         onChange={(e) => setValue(e.target.value)}
+        aria-label="新增今天的事"
         onKeyDown={(e) => {
-          if (e.key === "Enter") submit();
+          if (e.key === "Enter" && !e.nativeEvent.isComposing) submit();
         }}
       />
     </div>
