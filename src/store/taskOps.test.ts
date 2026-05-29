@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Task } from "@/lib/types";
-import { toggleDone, addTodayTask } from "./taskOps";
+import { toggleDone, addTodayTask, editTitle } from "./taskOps";
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
   return {
@@ -24,9 +24,7 @@ describe("toggleDone", () => {
   });
 
   it("reopens a done task and clears done_on", () => {
-    const tasks = [
-      makeTask({ id: "a", status: "done", custom_fields: { done_on: NOW } }),
-    ];
+    const tasks = [makeTask({ id: "a", status: "done", custom_fields: { done_on: NOW } })];
     const next = toggleDone(tasks, "a", NOW);
     expect(next[0].status).toBe("open");
     expect(next[0].custom_fields.done_on).toBeUndefined();
@@ -77,4 +75,23 @@ describe("addTodayTask", () => {
   });
 });
 
+describe("editTitle", () => {
+  it("updates the title and updated_at", () => {
+    const tasks = [makeTask({ id: "a", title: "舊" })];
+    const next = editTitle(tasks, "a", "新標題", NOW);
+    expect(next[0].title).toBe("新標題");
+    expect(next[0].updated_at).toBe(NOW);
+  });
 
+  it("trims the new title", () => {
+    const tasks = [makeTask({ id: "a" })];
+    const next = editTitle(tasks, "a", "  乾淨  ", NOW);
+    expect(next[0].title).toBe("乾淨");
+  });
+
+  it("leaves the task unchanged when the new title is blank", () => {
+    const tasks = [makeTask({ id: "a", title: "保留" })];
+    const next = editTitle(tasks, "a", "   ", NOW);
+    expect(next[0].title).toBe("保留");
+  });
+});

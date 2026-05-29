@@ -2,7 +2,7 @@ import type { Task, TaskCustomFields } from "@/lib/types";
 
 function patch(t: Task, cf: Partial<TaskCustomFields>, now?: string): Task {
   const newCustomFields = { ...t.custom_fields, ...cf };
-  for (const key in newCustomFields) {
+  for (const key of Object.keys(newCustomFields)) {
     if (newCustomFields[key as keyof TaskCustomFields] === undefined) {
       delete newCustomFields[key as keyof TaskCustomFields];
     }
@@ -47,4 +47,8 @@ export function addTodayTask(
   return [...tasks, task];
 }
 
-
+export function editTitle(tasks: Task[], id: string, title: string, now: string): Task[] {
+  const trimmed = title.trim();
+  if (!trimmed) return tasks;
+  return tasks.map((t) => (t.id === id ? { ...t, title: trimmed, updated_at: now } : t));
+}
