@@ -4,6 +4,7 @@ import { tasksOnDate } from "@/lib/tasks";
 import { dayOfMonth, shortWeekday } from "@/lib/date";
 import { TaskRow } from "./TaskRow";
 import { Top3Card } from "./Top3Card";
+import { AddTaskInput } from "./AddTaskInput";
 import styles from "./DayColumn.module.css";
 
 export interface DayColumnProps {
@@ -33,11 +34,16 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
 
   const trails = entries.filter((e) => e.kind !== "primary");
 
+  const isEmpty =
+    top3.length === 0 && otherPlanned.length === 0 && adhoc.length === 0 && trails.length === 0;
+
   const parentTitleById = useMemo(() => {
     const map: Record<string, string> = {};
     for (const t of allTasks) map[t.id] = t.title;
     return map;
   }, [allTasks]);
+
+  const interactive = variant === "today-hero";
 
   return (
     <div className={[styles.col, styles[`v_${variant}`]].join(" ")}>
@@ -57,6 +63,7 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
           variant="accent"
           showParentRef
           parentTitleById={parentTitleById}
+          interactive={interactive}
         />
       )}
 
@@ -66,7 +73,13 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
             其他計劃內 <span className={styles.count}>{otherPlanned.length}</span>
           </header>
           {otherPlanned.map((e) => (
-            <TaskRow key={e.task.id} task={e.task} kind={e.kind} />
+            <TaskRow
+              key={e.task.id}
+              task={e.task}
+              kind={e.kind}
+              interactive={interactive}
+              showRing={interactive}
+            />
           ))}
         </section>
       )}
@@ -77,7 +90,14 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
             今天臨時加的 <span className={styles.count}>{adhoc.length}</span>
           </header>
           {adhoc.map((e) => (
-            <TaskRow key={e.task.id} task={e.task} kind={e.kind} showAdhocChip />
+            <TaskRow
+              key={e.task.id}
+              task={e.task}
+              kind={e.kind}
+              showAdhocChip
+              interactive={interactive}
+              showRing={interactive}
+            />
           ))}
         </section>
       )}
@@ -89,6 +109,15 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
           ))}
         </section>
       )}
+
+      {interactive && isEmpty && (
+        <div className={styles.empty}>
+          <div className={styles.emptyBig}>今天還很空白</div>
+          <div className={styles.emptySub}>從下面加一件最想推進的事吧</div>
+        </div>
+      )}
+
+      {interactive && <AddTaskInput />}
     </div>
   );
 }

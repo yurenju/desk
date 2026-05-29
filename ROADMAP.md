@@ -20,7 +20,7 @@
 | Slice | 狀態 | 對應 PR |
 |---|---|---|
 | Slice 0 — 純前端骨架 | ✅ 完成 | [#2](https://github.com/yurenju/desk/pull/2) |
-| Slice 1 — Today 互動 + localStorage | 📝 設計完成,待實作 | — |
+| Slice 1 — Today 互動 + localStorage | ✅ 完成 | — |
 | Slice 2+ | ⏳ 規劃中 | — |
 
 **Slice 0 比原規劃多做的部分**(因為「中高保真度」視覺要做到位,自然把後面 slice 的純視覺工作也帶進來了):
@@ -62,23 +62,23 @@
 
 **沒做**:拖曳、CRUD mutation、WSPC、auth、Zustand、motion library、年規劃、快捷鍵實作
 
-### Slice 1 — Today 互動 + localStorage ⏳
+### Slice 1 — Today 互動 + localStorage ✅
 
 **目標**:在沒有 auth 噪音的情況下確認「最小可用單元」的 UX 與資料寫入流程。
 
 > **跟原計畫的差異**:原本寫「單欄 Today」,但 Slice 0 已經把完整 Plan/Today 三欄版型都做出來了。Slice 1 改為直接把 Today mode 的 task 變成可互動,Plan mode 跟 Backlog 暫時還是唯讀。
 
-- [ ] 引入 Zustand store(`useTasksStore`),取代直接 import mock data
-- [ ] localStorage persistence(`zustand/middleware/persist`,key `desk.tasks`)
-- [ ] Today mode 的 task:
-  - [ ] 勾選完成(寫入 `status: "done"` + `done_on`)
-  - [ ] 取消完成(`status: "open"`,清掉 `done_on`)
-  - [ ] 新增任務(從「+ 加一件今天的事」入口,`scheduled_dates = [today]`、`is_adhoc = true`)
-  - [ ] inline 編輯 title(雙擊或點 edit 進入)
-  - [ ] 刪除(右鍵 menu 或行尾按鈕)
-- [ ] `daily_priority` 1/2/3 切換(點 ring 切下一個值,或選單)
-- [ ] 第一次載入時 seed mock data 進 store(只有當 store 是空的)
-- [ ] Plan mode 的 task **仍唯讀**(下一片再開放),但要能正確讀 store
+- [x] 引入 Zustand store(`useTasksStore`),取代直接 import mock data
+- [x] localStorage persistence(`zustand/middleware/persist`,key `desk.tasks`)
+- [x] Today mode 的 task:
+  - [x] 勾選完成(寫入 `status: "done"` + `done_on`)
+  - [x] 取消完成(`status: "open"`,清掉 `done_on`)
+  - [x] 新增任務(從「+ 加一件今天的事」入口,`scheduled_dates = [today]`、`is_adhoc = true`)
+  - [x] inline 編輯 title(雙擊或點 edit 進入)
+  - [x] 刪除(右鍵 menu 或行尾按鈕)
+- [x] `daily_priority` 1/2/3 切換(點 ring 切下一個值,或選單)
+- [x] 第一次載入時 seed mock data 進 store(只有當 store 是空的)
+- [x] Plan mode 的 task **仍唯讀**(下一片再開放),但要能正確讀 store
 
 **可以看到什麼**:每日焦點的互動手感(完成動畫、空狀態、`is_adhoc` chip 怎麼出現),刷新後資料還在。
 **不做**:WSPC、auth、Plan mode 的拖曳、Backlog 互動、軌跡的寫入。

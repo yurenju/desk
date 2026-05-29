@@ -1,0 +1,24 @@
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--color-ink, #2c2a25);
+  color: var(--color-paper, #f5f1e8);
+  font-size: 13px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  z-index: 50;
+}
+.undo {
+  border: none;
+  background: transparent;
+  color: var(--color-flag, #e0876f);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}

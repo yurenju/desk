@@ -1,12 +1,13 @@
 .row {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: start;
+  display: flex;
+  align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) 0;
 }
 
 .body {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -47,4 +48,44 @@
 }
 .k_dismissed .title {
   text-decoration: line-through;
+}
+
+.actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.row:hover .actions {
+  opacity: 1;
+}
+.iconBtn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  font-size: 13px;
+  color: var(--color-muted, #9a8e72);
+}
+.iconBtn:hover {
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.05));
+}
+.del {
+  color: var(--color-flag, #c1432e);
+}
+.editInput {
+  width: 100%;
+  font: inherit;
+  border: 1.5px solid var(--color-flag, #c1432e);
+  border-radius: 5px;
+  padding: 4px 8px;
+  background: var(--color-surface, #fffdf7);
+  color: inherit;
+}
+@media (max-width: 640px) {
+  .actions {
+    opacity: 1;
+  }
 }

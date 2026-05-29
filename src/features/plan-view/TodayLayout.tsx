@@ -6,6 +6,7 @@ import { MonthDigest } from "@/features/month/MonthDigest";
 import { DayChip } from "@/features/week/DayChip";
 import { weekOf } from "@/lib/date";
 import { MOCK_CARRYOVER_DAY } from "@/mock/data";
+import { DeleteUndoToast } from "@/features/day/DeleteUndoToast";
 import styles from "./TodayLayout.module.css";
 
 export interface TodayLayoutProps {
@@ -50,6 +51,8 @@ export function TodayLayout({ allTasks, selectedDate, today, month }: TodayLayou
           />
         ))}
       </div>
+
+      <DeleteUndoToast />
     </main>
   );
 }

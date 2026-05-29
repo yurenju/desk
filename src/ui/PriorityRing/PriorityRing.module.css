@@ -1,0 +1,27 @@
+.ring {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.solid {
+  border: 2px solid var(--color-flag, #c1432e);
+  color: var(--color-flag, #c1432e);
+}
+.empty {
+  border: 2px dashed var(--color-border, #b9ab8e);
+  color: var(--color-muted, #b9ab8e);
+  font-size: 14px;
+}
+.ring:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
