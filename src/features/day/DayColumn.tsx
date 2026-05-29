@@ -4,6 +4,7 @@ import { tasksOnDate } from "@/lib/tasks";
 import { dayOfMonth, shortWeekday } from "@/lib/date";
 import { TaskRow } from "./TaskRow";
 import { Top3Card } from "./Top3Card";
+import { AddTaskInput } from "./AddTaskInput";
 import styles from "./DayColumn.module.css";
 
 export interface DayColumnProps {
@@ -39,6 +40,8 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
     return map;
   }, [allTasks]);
 
+  const interactive = variant === "today-hero";
+
   return (
     <div className={[styles.col, styles[`v_${variant}`]].join(" ")}>
       <div className={styles.header}>
@@ -57,6 +60,7 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
           variant="accent"
           showParentRef
           parentTitleById={parentTitleById}
+          interactive={interactive}
         />
       )}
 
@@ -66,7 +70,13 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
             其他計劃內 <span className={styles.count}>{otherPlanned.length}</span>
           </header>
           {otherPlanned.map((e) => (
-            <TaskRow key={e.task.id} task={e.task} kind={e.kind} />
+            <TaskRow
+              key={e.task.id}
+              task={e.task}
+              kind={e.kind}
+              interactive={interactive}
+              showRing={interactive}
+            />
           ))}
         </section>
       )}
@@ -77,7 +87,14 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
             今天臨時加的 <span className={styles.count}>{adhoc.length}</span>
           </header>
           {adhoc.map((e) => (
-            <TaskRow key={e.task.id} task={e.task} kind={e.kind} showAdhocChip />
+            <TaskRow
+              key={e.task.id}
+              task={e.task}
+              kind={e.kind}
+              showAdhocChip
+              interactive={interactive}
+              showRing={interactive}
+            />
           ))}
         </section>
       )}
@@ -89,6 +106,8 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
           ))}
         </section>
       )}
+
+      {interactive && <AddTaskInput />}
     </div>
   );
 }
