@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Task } from "@/lib/types";
-import { toggleDone } from "./taskOps";
+import { toggleDone, addTodayTask } from "./taskOps";
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
   return {
@@ -52,4 +52,29 @@ describe("toggleDone", () => {
     expect("done_on" in next[0].custom_fields).toBe(false);
   });
 });
+
+describe("addTodayTask", () => {
+  it("appends an adhoc task scheduled for today", () => {
+    const next = addTodayTask([], "回電話", "2026-05-22", "new-id", NOW);
+    expect(next).toHaveLength(1);
+    expect(next[0]).toMatchObject({
+      id: "new-id",
+      title: "回電話",
+      status: "open",
+      created_at: NOW,
+      custom_fields: { scheduled_dates: ["2026-05-22"], is_adhoc: "true" },
+    });
+  });
+
+  it("trims the title", () => {
+    const next = addTodayTask([], "  買菜  ", "2026-05-22", "x", NOW);
+    expect(next[0].title).toBe("買菜");
+  });
+
+  it("ignores a blank title", () => {
+    const next = addTodayTask([], "   ", "2026-05-22", "x", NOW);
+    expect(next).toHaveLength(0);
+  });
+});
+
 

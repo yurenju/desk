@@ -26,3 +26,25 @@ export function toggleDone(tasks: Task[], id: string, now: string): Task[] {
   });
 }
 
+export function addTodayTask(
+  tasks: Task[],
+  title: string,
+  today: string,
+  id: string,
+  now: string,
+): Task[] {
+  const trimmed = title.trim();
+  if (!trimmed) return tasks;
+  const task: Task = {
+    id,
+    title: trimmed,
+    status: "open",
+    parent_id: null,
+    created_at: now,
+    updated_at: now,
+    custom_fields: { scheduled_dates: [today], is_adhoc: "true" },
+  };
+  return [...tasks, task];
+}
+
+
