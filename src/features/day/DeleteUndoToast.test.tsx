@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DeleteUndoToast } from "./DeleteUndoToast";
 import { useTasksStore } from "@/store/tasks";
@@ -23,5 +23,19 @@ describe("DeleteUndoToast", () => {
     expect(screen.getByText(/已刪除/)).toBeInTheDocument();
     await user.click(screen.getByText("復原"));
     expect(useTasksStore.getState().tasks.some((t) => t.id === "d6")).toBe(true);
+  });
+
+  it("dismisses after 5 seconds automatically", () => {
+    vi.useFakeTimers();
+    useTasksStore.getState().deleteTask("d6");
+    render(<DeleteUndoToast />);
+    expect(screen.getByText(/已刪除/)).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+
+    expect(screen.queryByText(/已刪除/)).toBeNull();
+    vi.useRealTimers();
   });
 });

@@ -10,6 +10,7 @@
     "deploy": "vite build && wrangler deploy",
     "test": "vitest",
     "test:ui": "vitest --ui",
+    "test:e2e": "playwright test",
     "lint": "eslint src worker",
     "format": "prettier --write src worker",
     "cf-typegen": "wrangler types"
@@ -24,6 +25,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.39.0",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.60.0",
     "@tanstack/router-devtools": "^1.167.0",
     "@tanstack/router-plugin": "^1.168.11",
     "@testing-library/jest-dom": "^6.9.1",

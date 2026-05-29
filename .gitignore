@@ -83,3 +83,7 @@ dist-ssr/
 
 # TanStack Router tmp files
 .tanstack/tmp/
+
+# Playwright
+test-results/
+playwright-report/
