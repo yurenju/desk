@@ -1,6 +1,5 @@
 import type { Task } from "@/lib/types";
 import { Checkbox } from "@/ui/Checkbox";
-import { PlannedRefChip } from "@/ui/Chip";
 import { PriorityRing } from "@/ui/PriorityRing";
 import { useTaskRow } from "./useTaskRow";
 import styles from "./Top3Card.module.css";
@@ -9,32 +8,16 @@ export interface Top3CardProps {
   tasks: Task[];
   title: string;
   variant?: "accent" | "plain";
-  showParentRef?: boolean;
-  parentTitleById?: Record<string, string>;
   interactive?: boolean;
 }
 
-export function Top3Card({
-  tasks,
-  title,
-  variant = "accent",
-  showParentRef,
-  parentTitleById,
-  interactive,
-}: Top3CardProps) {
+export function Top3Card({ tasks, title, variant = "accent", interactive }: Top3CardProps) {
   return (
     <div className={[styles.card, styles[`v_${variant}`]].join(" ")}>
       <h3 className={styles.heading}>{title}</h3>
       <ul className={styles.list}>
         {tasks.map((t) => (
-          <Top3Item
-            key={t.id}
-            task={t}
-            variant={variant}
-            showParentRef={showParentRef}
-            parentTitleById={parentTitleById}
-            interactive={interactive}
-          />
+          <Top3Item key={t.id} task={t} variant={variant} interactive={interactive} />
         ))}
       </ul>
     </div>
@@ -44,14 +27,10 @@ export function Top3Card({
 function Top3Item({
   task: t,
   variant,
-  showParentRef,
-  parentTitleById,
   interactive,
 }: {
   task: Task;
   variant: "accent" | "plain";
-  showParentRef?: boolean;
-  parentTitleById?: Record<string, string>;
   interactive?: boolean;
 }) {
   const row = useTaskRow(t.id);
@@ -60,8 +39,6 @@ function Top3Item({
     | "2"
     | "3"
     | undefined;
-  const parentTitle =
-    showParentRef && t.parent_id && parentTitleById ? parentTitleById[t.parent_id] : null;
 
   return (
     <li className={styles.item}>
@@ -92,12 +69,6 @@ function Top3Item({
           />
         ) : (
           <div className={styles.itemTitle}>{t.title}</div>
-        )}
-        {parentTitle && (
-          <div className={styles.parentRef}>
-            <PlannedRefChip order={order ?? "1"} />
-            <span className={styles.parentRefText}>{parentTitle}</span>
-          </div>
         )}
       </div>
       {interactive && !row.isEditing && (

@@ -37,12 +37,6 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
   const isEmpty =
     top3.length === 0 && otherPlanned.length === 0 && adhoc.length === 0 && trails.length === 0;
 
-  const parentTitleById = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const t of allTasks) map[t.id] = t.title;
-    return map;
-  }, [allTasks]);
-
   const interactive = variant === "today-hero";
 
   return (
@@ -61,8 +55,6 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
           tasks={top3}
           title="今天最重要的三件事"
           variant="accent"
-          showParentRef
-          parentTitleById={parentTitleById}
           interactive={interactive}
         />
       )}
