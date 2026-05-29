@@ -19,6 +19,8 @@ export const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(function Ch
   return (
     <BaseCheckbox.Root
       ref={ref}
+      nativeButton
+      render={<button />}
       className={[styles.root, styles[`v_${variant}`], className].filter(Boolean).join(" ")}
       {...rest}
     >
