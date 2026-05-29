@@ -62,6 +62,13 @@ function Top3Item({
 
   return (
     <li className={styles.item}>
+      <Checkbox
+        variant="accent"
+        checked={t.status === "done"}
+        disabled={!interactive}
+        onCheckedChange={interactive ? row.toggle : undefined}
+        aria-label={t.title}
+      />
       {interactive ? (
         <PriorityRing value={t.custom_fields.daily_priority ?? null} onClick={row.cyclePriority} />
       ) : (
@@ -81,12 +88,7 @@ function Top3Item({
             }}
           />
         ) : (
-          <div
-            className={styles.itemTitle}
-            onDoubleClick={interactive ? () => row.startEdit(t.title) : undefined}
-          >
-            {t.title}
-          </div>
+          <div className={styles.itemTitle}>{t.title}</div>
         )}
         {parentTitle && (
           <div className={styles.parentRef}>
@@ -96,17 +98,25 @@ function Top3Item({
         )}
       </div>
       {interactive && !row.isEditing && (
-        <button type="button" className={styles.iconBtn} aria-label="刪除" onClick={row.remove}>
-          🗑
-        </button>
+        <div className={styles.actions}>
+          <button
+            type="button"
+            className={styles.iconBtn}
+            aria-label="編輯"
+            onClick={() => row.startEdit(t.title)}
+          >
+            ✎
+          </button>
+          <button
+            type="button"
+            className={[styles.iconBtn, styles.del].join(" ")}
+            aria-label="刪除"
+            onClick={row.remove}
+          >
+            🗑
+          </button>
+        </div>
       )}
-      <Checkbox
-        variant="accent"
-        checked={t.status === "done"}
-        disabled={!interactive}
-        onCheckedChange={interactive ? row.toggle : undefined}
-        aria-label={t.title}
-      />
     </li>
   );
 }

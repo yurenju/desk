@@ -76,17 +76,24 @@
   font-family: var(--font-sans);
 }
 
+.actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.item:hover .actions {
+  opacity: 1;
+}
 .iconBtn {
   border: none;
   background: transparent;
   cursor: pointer;
   font-size: 13px;
-  color: var(--color-flag, #c1432e);
-  opacity: 0;
-  transition: opacity 0.12s ease;
+  color: var(--color-accent-text);
 }
-.item:hover .iconBtn {
-  opacity: 1;
+.del {
+  color: var(--color-flag, #c1432e);
 }
 .editInput {
   width: 100%;
@@ -98,7 +105,7 @@
   color: inherit;
 }
 @media (max-width: 640px) {
-  .iconBtn {
+  .actions {
     opacity: 1;
   }
 }
