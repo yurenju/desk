@@ -10,12 +10,60 @@ beforeEach(() => {
 });
 
 describe("useTaskRow", () => {
-  it("cyclePriority steps null -> 1 -> 2 -> 3 -> null", () => {
-    const { result } = renderHook(() => useTaskRow("d5")); // d5 has no daily_priority initially
+  it("cyclePriority fills the next free slot for an unprioritized task", () => {
+    // free up all three slots, then promoting an unprioritized task takes slot 1
+    act(() => {
+      const s = useTasksStore.getState();
+      s.setDailyPriority("d1", null);
+      s.setDailyPriority("d2", null);
+      s.setDailyPriority("d3", null);
+    });
+    const { result } = renderHook(() => useTaskRow("d5")); // d5 has no daily_priority
     act(() => result.current.cyclePriority());
     expect(
       useTasksStore.getState().tasks.find((t) => t.id === "d5")!.custom_fields.daily_priority,
     ).toBe("1");
+  });
+
+  it("cyclePriority does not evict existing top-3 tasks when promoting", () => {
+    // d1=1, d2=2, d3=3 occupy slots; clearing d2 leaves slot 2 free
+    act(() => {
+      const s = useTasksStore.getState();
+      s.setDailyPriority("d1", "1");
+      s.setDailyPriority("d2", "2");
+      s.setDailyPriority("d3", "3");
+      s.setDailyPriority("d2", null);
+    });
+    const { result } = renderHook(() => useTaskRow("d5"));
+    act(() => result.current.cyclePriority());
+    const tasks = useTasksStore.getState().tasks;
+    expect(tasks.find((t) => t.id === "d5")!.custom_fields.daily_priority).toBe("2");
+    // d1 / d3 stay put — no eviction
+    expect(tasks.find((t) => t.id === "d1")!.custom_fields.daily_priority).toBe("1");
+    expect(tasks.find((t) => t.id === "d3")!.custom_fields.daily_priority).toBe("3");
+  });
+
+  it("cyclePriority does nothing when all three slots are full", () => {
+    act(() => {
+      const s = useTasksStore.getState();
+      s.setDailyPriority("d1", "1");
+      s.setDailyPriority("d2", "2");
+      s.setDailyPriority("d3", "3");
+    });
+    const { result } = renderHook(() => useTaskRow("d5"));
+    act(() => result.current.cyclePriority());
+    expect(
+      useTasksStore.getState().tasks.find((t) => t.id === "d5")!.custom_fields.daily_priority,
+    ).toBeUndefined();
+  });
+
+  it("cyclePriority cycles the number for a task already in the top three", () => {
+    act(() => useTasksStore.getState().setDailyPriority("d1", "1"));
+    const { result } = renderHook(() => useTaskRow("d1")); // already prioritized
+    act(() => result.current.cyclePriority());
+    expect(
+      useTasksStore.getState().tasks.find((t) => t.id === "d1")!.custom_fields.daily_priority,
+    ).toBe("2");
   });
 
   it("startEdit / commitEdit writes the draft via the store", () => {

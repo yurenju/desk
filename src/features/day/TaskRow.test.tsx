@@ -53,6 +53,10 @@ describe("TaskRow (interactive)", () => {
       const task = useTasksStore((s) => s.tasks.find((t) => t.id === "d5"))!;
       return <TaskRow task={task} kind="primary" interactive showRing />;
     };
+    // seed fills all three slots (d1/d2/d3); free them so promoting d5 lands on slot 1
+    useTasksStore.getState().setDailyPriority("d1", null);
+    useTasksStore.getState().setDailyPriority("d2", null);
+    useTasksStore.getState().setDailyPriority("d3", null);
     render(<TestComponent />);
     const ring = screen.getByRole("button", { name: "設為今日重點" });
     expect(ring).toBeDefined();

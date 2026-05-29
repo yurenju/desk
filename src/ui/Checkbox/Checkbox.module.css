@@ -15,11 +15,20 @@
   border-color: var(--color-ink-faint);
 }
 
-.root[data-checked="true"] {
+/* accent variant unchecked: lift the fill one step above the green card so it
+   reads as a raised surface in both themes. A fixed paper background goes
+   lighter than the card in light but darker (a "hole") in dark. */
+.v_accent.root {
+  background: color-mix(in oklch, var(--color-accent-soft), white 15%);
+}
+
+/* Base UI emits a valueless `data-checked` boolean attribute (not
+   data-checked="true"), so the selector must match attribute presence. */
+.root[data-checked] {
   background: var(--color-ink);
   border-color: var(--color-ink);
 }
-.v_accent.root[data-checked="true"] {
+.v_accent.root[data-checked] {
   background: var(--color-accent);
   border-color: var(--color-accent);
 }

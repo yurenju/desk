@@ -30,12 +30,11 @@ describe("Top3Card (interactive)", () => {
     expect(screen.queryByLabelText("刪除")).toBeNull();
   });
 
-  it("edits the title on double click and Enter key", async () => {
+  it("edits the title via the edit button and Enter key", async () => {
     const user = userEvent.setup();
     render(<TestComponent />);
 
-    const title = screen.getByText("完成 desk.yurenju.me todo MVP demo");
-    await user.dblClick(title);
+    await user.click(screen.getByRole("button", { name: "編輯" }));
 
     const input = screen.getByRole("textbox");
     await user.clear(input);
@@ -50,8 +49,7 @@ describe("Top3Card (interactive)", () => {
     const user = userEvent.setup();
     render(<TestComponent />);
 
-    const title = screen.getByText("完成 desk.yurenju.me todo MVP demo");
-    await user.dblClick(title);
+    await user.click(screen.getByRole("button", { name: "編輯" }));
 
     const input = screen.getByRole("textbox");
     await user.type(input, "修改中...{Escape}");

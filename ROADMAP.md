@@ -83,6 +83,10 @@
 **可以看到什麼**:每日焦點的互動手感(完成動畫、空狀態、`is_adhoc` chip 怎麼出現),刷新後資料還在。
 **不做**:WSPC、auth、Plan mode 的拖曳、Backlog 互動、軌跡的寫入。
 
+**過程中發現、暫時擱置的設計問題**:
+
+- **移除了三件事的「對應月度任務」標記(`PlannedRefChip`)**:原本三件事每列標題下方會顯示一個小圈號 + 父任務標題(例:`① 推出 desk.yurenju.me MVP`),靠 mock data 的 `parent_id` 指向月度任務。但這個「月、日各存在一個 task、用 `parent_id` 連起來」的父子模型與本 ROADMAP 的資料模型**矛盾** —— 正確設計是**同一個 task 透過 `scheduled_months` + `scheduled_dates` 同時出現在月度欄與日欄**(見「共用參考:資料模型」),不該有兩個互相對應的 task。而且那個圈號還綁錯欄位(顯示 task 自己的 `daily_priority` 而非父任務的 `monthly_priority`,又與左側優先序圈重複)。Slice 1 先把這個顯示拿掉,待 **Slice 3(Monthly 互動 + promote)** 接上真實漏斗模型時一併處理;mock data 的 `parent_id` 也應隨之淘汰。
+
 ### Slice 2 — 接上 WSPC（仍只有 Today）
 
 **目標**：把最痛的基礎建設一次解掉，但範圍鎖在「一欄就好」。
@@ -118,6 +122,7 @@
 - [ ] `monthly_priority` 1/2/3 切換(點 ring / menu)
 - [ ] 拖曳:Monthly → Selected Day(append `scheduled_dates`)
 - [ ] Monthly 內 task 完成 / 編輯 / 刪除
+- [ ] 淘汰 mock data 的 `parent_id`:月 / 日改以「同一個 task 跨層級」呈現(`scheduled_months` + `scheduled_dates`),取代 Slice 1 移除的「對應月度任務」chip
 
 **不做**:軌跡的寫入語意、略過、carryover 動作。
 
