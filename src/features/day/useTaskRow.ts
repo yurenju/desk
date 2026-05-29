@@ -14,6 +14,7 @@ export function useTaskRow(id: string) {
   const deleteTask = useTasksStore((s) => s.deleteTask);
   const editTitle = useTasksStore((s) => s.editTitle);
   const setDailyPriority = useTasksStore((s) => s.setDailyPriority);
+  const promoteToPriority = useTasksStore((s) => s.promoteToPriority);
   const current = useTasksStore((s) => s.tasks.find((t) => t.id === id));
 
   const [isEditing, setIsEditing] = useState(false);
@@ -24,8 +25,12 @@ export function useTaskRow(id: string) {
     draft,
     toggle: () => toggleDone(id),
     remove: () => deleteTask(id),
-    cyclePriority: () =>
-      setDailyPriority(id, nextPriority(current?.custom_fields.daily_priority ?? null)),
+    cyclePriority: () => {
+      const currentPriority = current?.custom_fields.daily_priority ?? null;
+      // empty ring → promote into the next free slot; numbered ring → cycle its own number
+      if (currentPriority === null) promoteToPriority(id);
+      else setDailyPriority(id, nextPriority(currentPriority));
+    },
     startEdit: (initial: string) => {
       setDraft(initial);
       setIsEditing(true);

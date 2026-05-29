@@ -4,6 +4,7 @@ import type { Priority, Task } from "@/lib/types";
 import { allTasks, MOCK_TODAY } from "@/mock/data";
 import {
   addTodayTask,
+  assignNextPriority,
   deleteTask,
   editTitle,
   restoreTask,
@@ -23,6 +24,7 @@ interface TasksState {
   restoreTask: () => void;
   clearRecentlyDeleted: () => void;
   setDailyPriority: (id: string, n: Priority | null) => void;
+  promoteToPriority: (id: string) => void;
 }
 
 const now = () => new Date().toISOString();
@@ -50,6 +52,8 @@ export const useTasksStore = create<TasksState>()(
       clearRecentlyDeleted: () => set({ recentlyDeleted: null }),
       setDailyPriority: (id, n) =>
         set({ tasks: setDailyPriority(get().tasks, id, n, get().today) }),
+      promoteToPriority: (id) =>
+        set({ tasks: assignNextPriority(get().tasks, id, get().today) }),
     }),
     {
       name: "desk.tasks",
