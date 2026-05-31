@@ -983,6 +983,13 @@ describe("server-backed tasks store", () => {
     ]);
     await useTasksStore.getState().loadTasks("2026-05-31");
     expect(useTasksStore.getState().tasks.map((t) => t.id)).toEqual(["tod_1"]);
+    expect(useTasksStore.getState().status).toBe("ready");
+  });
+
+  it("sets status=error when load fails", async () => {
+    vi.spyOn(api, "fetchTodos").mockRejectedValue(new Error("boom"));
+    await useTasksStore.getState().loadTasks("2026-05-31");
+    expect(useTasksStore.getState().status).toBe("error");
   });
 
   it("rolls back toggleDone when patch fails", async () => {
@@ -1023,6 +1030,7 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 interface TasksState {
   tasks: Task[];
   today: string;
+  status: "loading" | "ready" | "error";
   error: string | null;
   loadTasks: (date: string) => Promise<void>;
   toggleDone: (id: string) => Promise<void>;
@@ -1036,14 +1044,16 @@ interface TasksState {
 export const useTasksStore = create<TasksState>()((set, get) => ({
   tasks: [],
   today: todayISO(),
+  status: "loading",
   error: null,
 
   async loadTasks(date) {
+    set({ status: "loading", error: null });
     try {
       const tasks = await fetchTodos(date);
-      set({ tasks, today: date, error: null });
+      set({ tasks, today: date, status: "ready" });
     } catch {
-      set({ error: "load_failed" });
+      set({ status: "error", error: "load_failed" });
     }
   },
 
@@ -1191,15 +1201,28 @@ import { useEffect } from "react";
 import { useTasksStore } from "@/store/tasks";
 
 export function TodayView({ date }: { date: string }) {
+  const status = useTasksStore((s) => s.status);
   useEffect(() => {
     useTasksStore.getState().loadTasks(date);
   }, [date]);
-  // …既有 Today 版型，改讀 store.tasks…
+
+  if (status === "loading") return <TodaySkeleton />;
+  if (status === "error") {
+    return (
+      <div role="alert">
+        載入失敗
+        <button onClick={() => useTasksStore.getState().loadTasks(date)}>重試</button>
+      </div>
+    );
+  }
+  // …既有 Today 版型，改讀 store.tasks（status === "ready"，含空狀態）…
   return /* 既有 JSX */;
 }
 ```
 
-route component 解析 date（預設真實今天，`/today/$date` 帶該日）後渲染 `<TodayView date={date} />`。新增選擇性 route param 檔 `src/routes/today.$date.tsx`（TanStack Router 慣例），重用 `TodayView`。
+`TodaySkeleton` 是簡單的佔位元件（沿用既有 token / 樣式畫幾條灰階列即可，無需動畫）。route component 解析 date（預設真實今天，`/today/$date` 帶該日）後渲染 `<TodayView date={date} />`。新增選擇性 route param 檔 `src/routes/today.$date.tsx`（TanStack Router 慣例），重用 `TodayView`。
+
+bootstrap 的延遲被 `status === "loading"` 的 skeleton 統一吸收，不需要專屬的「初始化中」畫面（見 spec「載入狀態」）。
 
 - [ ] **Step 4: 跑測試確認通過**
 
@@ -1312,7 +1335,7 @@ git commit -m "docs(roadmap): mark Slice 2b complete, note project bootstrap + c
 
 ## Self-Review（規劃者自查結果）
 
-- **Spec coverage：** bootstrap(Task 3) / list-create-patch(Task 5) / cf 過濾(Task 2,5) / Todo→Task(Task 4) / per-user multi-tenant(Task 1,3) / 真實 today + 切日(Task 8) / soft-delete(Task 7) / seed→載入(Task 7) / 騰位兩筆(Task 7) / 樂觀+回滾(Task 7) / 登出清快取(Task 9) / cf key 防呆(Task 2) / 測試與驗收(Task 10) — spec 各段皆有對應 task。
+- **Spec coverage：** bootstrap(Task 3) / list-create-patch(Task 5) / cf 過濾(Task 2,5) / Todo→Task(Task 4) / per-user multi-tenant(Task 1,3) / 真實 today + 切日(Task 8) / 載入狀態含首次 bootstrap 吸收(Task 7 store status + Task 8 skeleton) / soft-delete(Task 7) / seed→載入(Task 7) / 騰位兩筆(Task 7) / 樂觀+回滾(Task 7) / 登出清快取(Task 9) / cf key 防呆(Task 2) / 測試與驗收(Task 10) — spec 各段皆有對應 task。
 - **Placeholder scan：** 無 TBD/TODO；每個改 code 的 step 都附完整程式碼。`editTitle` 對 server 的標題 PATCH 明確標為本片不做（只保留樂觀本地 + 回滾骨架），非 placeholder 而是範圍決策。
 - **Type consistency：** `SessionContext { accessToken, userId }`、`BootstrapData { projectId, typeId }`、`Todo`、`mapTodoToTask`、API client `fetchTodos/postTodo/patchTodoApi`、store action 皆 async 回 Promise，跨 task 命名一致。
 - **已知範圍排除（對齊 spec「不做」）：** 軌跡寫入、略過、Monthly、Backlog、carryover、position 排序、Plan 可寫、bootstrap race lock、WSPC 標題 PATCH。
