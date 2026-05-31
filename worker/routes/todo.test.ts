@@ -85,4 +85,22 @@ describe("PATCH /api/todo/:id", () => {
       status: "done", customFields: { done_on: "2026-05-31T00:00:00Z" },
     });
   });
+
+  it("sends daily_priority null clear with no status key", async () => {
+    const env = makeEnv();
+    await seedSession(env);
+    const spy = vi.spyOn(wspc, "patchTodo").mockResolvedValue({
+      id: "tod_1", status: "open", title: "A", created_at: 0, updated_at: 0, custom_fields: {},
+    });
+    const req = new Request("https://d/api/todo/tod_1", {
+      method: "PATCH",
+      headers: { ...cookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ daily_priority: null }),
+    });
+    await handlePatchTodo(req, env, "tod_1");
+    expect(spy.mock.calls[0][2]).toEqual({
+      status: undefined,
+      customFields: { daily_priority: null },
+    });
+  });
 });

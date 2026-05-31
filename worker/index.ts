@@ -47,7 +47,16 @@ export default {
     }
     const todoIdMatch = path.match(/^\/api\/todo\/([^/]+)$/);
     if (todoIdMatch && method === "PATCH") {
-      return handlePatchTodo(request, env, decodeURIComponent(todoIdMatch[1]));
+      let todoId: string;
+      try {
+        todoId = decodeURIComponent(todoIdMatch[1]);
+      } catch {
+        return new Response(JSON.stringify({ error: "bad_todo_id" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return handlePatchTodo(request, env, todoId);
     }
 
     return new Response(JSON.stringify({ error: "not_found" }), {
