@@ -18,7 +18,9 @@ export async function getSession(
   const raw = await kv.get(`session:${id}`);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as SessionData;
+    const parsed = JSON.parse(raw) as SessionData;
+    if (!parsed.userId) return null;
+    return parsed;
   } catch {
     return null;
   }

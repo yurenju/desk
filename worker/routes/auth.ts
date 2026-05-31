@@ -76,6 +76,8 @@ export async function handleStatus(env: Env, pollingId: string): Promise<Respons
     case "success": {
       const sessionId = randomBase64UrlId(32);
       const nowSeconds = Math.floor(Date.now() / 1000);
+      // If getWhoami throws here the device entry survives and the next poll
+      // returns expired_token; acceptable for this slice (no partial-OAuth recovery).
       const me = await getWhoami(result.tokens.accessToken);
       await putSession(env.DESK_KV, sessionId, {
         accessToken: result.tokens.accessToken,

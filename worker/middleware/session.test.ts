@@ -78,6 +78,7 @@ describe("withSession", () => {
     const stored = await getSession(env.DESK_KV, "sid-1");
     expect(stored?.accessToken).toBe("at-new");
     expect(stored?.refreshToken).toBe("rt-new");
+    expect(stored?.userId).toBe("usr_test");
   });
 
   it("returns 401 and deletes session when refresh fails", async () => {
