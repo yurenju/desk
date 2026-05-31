@@ -1,5 +1,6 @@
 import { handleLogin, handleStatus, handleLogout } from "./routes/auth";
 import { handleMe } from "./routes/me";
+import { handleListTodo, handleCreateTodo, handlePatchTodo } from "./routes/todo";
 
 interface Env {
   DESK_KV: KVNamespace;
@@ -36,6 +37,17 @@ export default {
 
     if (path === "/api/me" && method === "GET") {
       return handleMe(request, env);
+    }
+
+    if (path === "/api/todo" && method === "GET") {
+      return handleListTodo(request, env);
+    }
+    if (path === "/api/todo" && method === "POST") {
+      return handleCreateTodo(request, env);
+    }
+    const todoIdMatch = path.match(/^\/api\/todo\/([^/]+)$/);
+    if (todoIdMatch && method === "PATCH") {
+      return handlePatchTodo(request, env, decodeURIComponent(todoIdMatch[1]));
     }
 
     return new Response(JSON.stringify({ error: "not_found" }), {
