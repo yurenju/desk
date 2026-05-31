@@ -190,5 +190,6 @@ describe("server-backed tasks store", () => {
     await useTasksStore.getState().restoreTask();
     expect(useTasksStore.getState().tasks).toHaveLength(0); // rolled back
     expect(useTasksStore.getState().error).toBe("save_failed");
+    expect(useTasksStore.getState().recentlyDeleted).not.toBeNull(); // undo remains retryable
   });
 });

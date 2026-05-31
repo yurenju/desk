@@ -120,7 +120,7 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     try {
       await patchTodoApi(removed.task.id, { status: removed.task.status });
     } catch {
-      set({ tasks: prev, error: "save_failed" });
+      set({ tasks: prev, recentlyDeleted: removed, error: "save_failed" });
     }
   },
 
