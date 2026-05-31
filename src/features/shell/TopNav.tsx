@@ -1,4 +1,5 @@
 import { DeskLogo } from "@/ui/DeskLogo";
+import { AuthMenu } from "./AuthMenu";
 import { ModeToggle } from "./ModeToggle";
 import { ThemeToggle } from "./ThemeToggle";
 import styles from "./TopNav.module.css";
@@ -14,6 +15,7 @@ export function TopNav() {
         <ModeToggle />
       </div>
       <div className={styles.actions}>
+        <AuthMenu />
         <ThemeToggle />
       </div>
     </header>
