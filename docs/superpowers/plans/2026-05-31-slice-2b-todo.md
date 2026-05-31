@@ -1035,7 +1035,7 @@ interface TasksState {
   loadTasks: (date: string) => Promise<void>;
   toggleDone: (id: string) => Promise<void>;
   addTodayTask: (title: string) => Promise<void>;
-  editTitle: (id: string, title: string) => void;
+  editTitle: (id: string, title: string) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   setDailyPriority: (id: string, n: Priority | null) => Promise<void>;
   clearTasks: () => void;
@@ -1090,10 +1090,17 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     }
   },
 
-  editTitle(id, title) {
-    // title 是 WSPC 核心欄位；2b 不打 server 標題 PATCH。純本地樂觀更新，
-    // 沒有要 roll back 的請求（不發無意義的空 PATCH，避免假成功 + 下次 load 還原）。
-    set({ tasks: editTitle(get().tasks, id, title, now()), error: null });
+  async editTitle(id, title) {
+    // title 是 WSPC 核心欄位（top-level）；樂觀更新 + 發 PATCH { title } + 失敗回滾。
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    const prev = get().tasks;
+    set({ tasks: editTitle(prev, id, trimmed, now()), error: null });
+    try {
+      await patchTodoApi(id, { title: trimmed });
+    } catch {
+      set({ tasks: prev, error: "save_failed" });
+    }
   },
 
   async deleteTask(id) {

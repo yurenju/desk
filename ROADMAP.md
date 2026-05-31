@@ -119,7 +119,7 @@
 
 - [x] **Lazy 建立 Desk project + KV 存 `project_id`（per-user `desk:bootstrap:<user_id>`）** —— WSPC todo 必須屬於某 project，type 註冊的前置條件
 - [x] WSPC `DeskTask` 自訂型態註冊（一次宣告完整 9 個 custom fields，雖然這片只用到一部分）
-- [x] `/api/todo` 端點：list / create / patch（status、daily_priority、done_on）
+- [x] `/api/todo` 端點：list / create / patch（status、daily_priority、done_on、title）
 - [x] 過濾條件：`scheduled_dates contains today` —— 用 WSPC `cf.scheduled_dates`(server 端 array-contains)
 
 > ⚠️ `cf.<field>` 過濾**未寫進主 OpenAPI**,但 MCP tool / `llms.txt` 有,且已用 `scripts/verify-wspc.mjs` 對線上實證(dotted 語法有效、未宣告 key 會靜默回整包 → filter key 鎖成常數)。此工具留作回歸檢查。

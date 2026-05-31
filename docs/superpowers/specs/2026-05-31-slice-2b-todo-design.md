@@ -125,6 +125,9 @@ Content-Type: application/json
 # 例：設 daily_priority
 { "custom_fields": { "daily_priority": "1" } }
 
+# 例：改標題（core 欄位，top-level）
+{ "title": "新標題" }
+
 # 例：被騰位者清除 priority
 { "custom_fields": { "daily_priority": null } }
 
@@ -208,8 +211,8 @@ POST /todo/types
 ### `PATCH /api/todo/:id`
 
 1. `withSession` + bootstrap。
-2. body 為語意化部分欄位：`{ status?, daily_priority?, done_on? }`，其中 `daily_priority` / `done_on` 可為 `null`（表示清除）。
-3. BFF 翻譯成 WSPC PATCH：`status` 進核心欄位；`daily_priority` / `done_on` 進 `custom_fields`（`null` 即刪除）。
+2. body 為語意化部分欄位：`{ title?, status?, daily_priority?, done_on? }`，其中 `daily_priority` / `done_on` 可為 `null`（表示清除）。
+3. BFF 翻譯成 WSPC PATCH：`title` / `status` 進核心欄位（top-level）；`daily_priority` / `done_on` 進 `custom_fields`（`null` 即刪除）。
 4. 回傳 map 後的 `Task`。
 
 soft-delete 走 `PATCH { status: "cancelled" }`（不是 `DELETE /todo/items/{id}`），語意上貼近「使用者取消」，且 list 預設不回 cancelled。
