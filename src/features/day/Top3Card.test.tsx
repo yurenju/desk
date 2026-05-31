@@ -1,13 +1,15 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Top3Card } from "./Top3Card";
 import { useTasksStore } from "@/store/tasks";
 import { allTasks, MOCK_TODAY } from "@/mock/data";
+import * as api from "@/lib/api/todo";
 
 beforeEach(() => {
-  localStorage.clear();
-  useTasksStore.setState({ tasks: allTasks, today: MOCK_TODAY, recentlyDeleted: null });
+  vi.restoreAllMocks();
+  vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+  useTasksStore.setState({ tasks: allTasks, today: MOCK_TODAY, status: "ready", error: null });
 });
 
 const TestComponent = ({ interactive = true }: { interactive?: boolean }) => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fetchTodos, postTodo, patchTodoApi } from "./todo";
+import { fetchTodos, patchTodoApi } from "./todo";
 
 beforeEach(() => vi.restoreAllMocks());
 

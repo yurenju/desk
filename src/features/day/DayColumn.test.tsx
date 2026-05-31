@@ -5,8 +5,7 @@ import { useTasksStore } from "@/store/tasks";
 import { MOCK_TODAY } from "@/mock/data";
 
 beforeEach(() => {
-  localStorage.clear();
-  useTasksStore.setState({ tasks: [], today: MOCK_TODAY, recentlyDeleted: null });
+  useTasksStore.setState({ tasks: [], today: MOCK_TODAY, status: "ready", error: null });
 });
 
 describe("DayColumn empty state", () => {
@@ -31,7 +30,7 @@ describe("DayColumn empty state", () => {
         },
       },
     ];
-    useTasksStore.setState({ tasks: mockTasks, today: MOCK_TODAY, recentlyDeleted: null });
+    useTasksStore.setState({ tasks: mockTasks, today: MOCK_TODAY, status: "ready", error: null });
     render(<DayColumn allTasks={mockTasks} selectedDate={MOCK_TODAY} variant="today-hero" />);
     expect(screen.queryByText("今天還很空白")).not.toBeInTheDocument();
   });

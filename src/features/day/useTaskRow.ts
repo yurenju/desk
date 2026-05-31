@@ -1,5 +1,6 @@
 import { useState } from "react";
-import type { Priority } from "@/lib/types";
+import type { Priority, Task } from "@/lib/types";
+import { primaryDate } from "@/lib/tasks";
 import { useTasksStore } from "@/store/tasks";
 
 function nextPriority(p: Priority | null): Priority | null {
@@ -9,13 +10,25 @@ function nextPriority(p: Priority | null): Priority | null {
   return null;
 }
 
+const PRIORITY_SLOTS: Priority[] = ["1", "2", "3"];
+
+function nextFreeSlot(tasks: Task[], today: string): Priority | null {
+  const used = new Set(
+    tasks
+      .filter((t) => primaryDate(t) === today && t.custom_fields.daily_priority)
+      .map((t) => t.custom_fields.daily_priority),
+  );
+  return PRIORITY_SLOTS.find((p) => !used.has(p)) ?? null;
+}
+
 export function useTaskRow(id: string) {
   const toggleDone = useTasksStore((s) => s.toggleDone);
   const deleteTask = useTasksStore((s) => s.deleteTask);
   const editTitle = useTasksStore((s) => s.editTitle);
   const setDailyPriority = useTasksStore((s) => s.setDailyPriority);
-  const promoteToPriority = useTasksStore((s) => s.promoteToPriority);
-  const current = useTasksStore((s) => s.tasks.find((t) => t.id === id));
+  const tasks = useTasksStore((s) => s.tasks);
+  const today = useTasksStore((s) => s.today);
+  const current = tasks.find((t) => t.id === id);
 
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -27,9 +40,13 @@ export function useTaskRow(id: string) {
     remove: () => deleteTask(id),
     cyclePriority: () => {
       const currentPriority = current?.custom_fields.daily_priority ?? null;
-      // empty ring → promote into the next free slot; numbered ring → cycle its own number
-      if (currentPriority === null) promoteToPriority(id);
-      else setDailyPriority(id, nextPriority(currentPriority));
+      if (currentPriority === null) {
+        // promote into the next free slot without evicting others
+        const free = nextFreeSlot(tasks, today);
+        if (free !== null) setDailyPriority(id, free);
+      } else {
+        setDailyPriority(id, nextPriority(currentPriority));
+      }
     },
     startEdit: (initial: string) => {
       setDraft(initial);

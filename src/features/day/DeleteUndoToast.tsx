@@ -1,26 +1,6 @@
-import { useEffect } from "react";
-import { useTasksStore } from "@/store/tasks";
-import styles from "./DeleteUndoToast.module.css";
-
+// Undo-after-delete was removed in Slice 2b: delete is now a server soft-delete
+// (status → cancelled) with no local undo buffer. This component is kept as a
+// stub so import sites compile; it renders nothing.
 export function DeleteUndoToast() {
-  const recentlyDeleted = useTasksStore((s) => s.recentlyDeleted);
-  const restoreTask = useTasksStore((s) => s.restoreTask);
-  const clear = useTasksStore((s) => s.clearRecentlyDeleted);
-
-  useEffect(() => {
-    if (!recentlyDeleted) return;
-    const timer = setTimeout(clear, 5000);
-    return () => clearTimeout(timer);
-  }, [recentlyDeleted, clear]);
-
-  if (!recentlyDeleted) return null;
-
-  return (
-    <div className={styles.toast} role="status">
-      <span>已刪除「{recentlyDeleted.task.title}」</span>
-      <button type="button" className={styles.undo} onClick={restoreTask}>
-        復原
-      </button>
-    </div>
-  );
+  return null;
 }

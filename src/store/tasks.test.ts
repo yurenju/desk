@@ -1,45 +1,89 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useTasksStore } from "./tasks";
 import { allTasks, MOCK_TODAY } from "@/mock/data";
+import * as api from "@/lib/api/todo";
 
+// Silence unhandled floating-promise warnings from fire-and-forget store actions
+// by ensuring all API calls are mocked by default.
 beforeEach(() => {
-  localStorage.clear();
-  useTasksStore.setState({ tasks: allTasks, today: MOCK_TODAY, recentlyDeleted: null });
+  vi.restoreAllMocks();
+  useTasksStore.setState({ tasks: allTasks, today: MOCK_TODAY, status: "ready", error: null });
 });
 
-describe("useTasksStore", () => {
+describe("useTasksStore (local behaviour)", () => {
   it("seeds today from MOCK_TODAY", () => {
     expect(useTasksStore.getState().today).toBe(MOCK_TODAY);
   });
 
-  it("toggleDone flips status and persists to localStorage", () => {
-    useTasksStore.getState().toggleDone("d5");
+  it("toggleDone flips status optimistically", async () => {
+    vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+    await useTasksStore.getState().toggleDone("d5");
     expect(useTasksStore.getState().tasks.find((t) => t.id === "d5")!.status).toBe("done");
-    const stored = JSON.parse(localStorage.getItem("desk.tasks")!);
-    expect(stored.state.tasks.find((t: { id: string }) => t.id === "d5").status).toBe("done");
   });
 
-  it("deleteTask stashes recentlyDeleted and restoreTask brings it back", () => {
-    const before = useTasksStore.getState().tasks.length;
-    useTasksStore.getState().deleteTask("d6");
-    expect(useTasksStore.getState().tasks).toHaveLength(before - 1);
-    expect(useTasksStore.getState().recentlyDeleted?.task.id).toBe("d6");
-    useTasksStore.getState().restoreTask();
-    expect(useTasksStore.getState().tasks).toHaveLength(before);
-    expect(useTasksStore.getState().recentlyDeleted).toBeNull();
-  });
-
-  it("addTodayTask adds a task scheduled for store.today", () => {
-    useTasksStore.getState().addTodayTask("臨時一件");
-    const added = useTasksStore.getState().tasks.find((t) => t.title === "臨時一件");
+  it("addTodayTask adds a task scheduled for store.today", async () => {
+    vi.spyOn(api, "postTodo").mockResolvedValue({
+      id: "srv-1",
+      title: "臨時一件",
+      status: "open",
+      parent_id: null,
+      created_at: "x",
+      updated_at: "x",
+      custom_fields: { scheduled_dates: [MOCK_TODAY], is_adhoc: "true" },
+    });
+    await useTasksStore.getState().addTodayTask("臨時一件");
+    const added = useTasksStore.getState().tasks.find((t) => t.id === "srv-1");
     expect(added?.custom_fields.scheduled_dates).toEqual([MOCK_TODAY]);
     expect(added?.custom_fields.is_adhoc).toBe("true");
   });
 
-  it("setDailyPriority routes through store.today for eviction", () => {
-    useTasksStore.getState().setDailyPriority("d5", "1");
+  it("setDailyPriority routes through store.today for eviction", async () => {
+    vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+    await useTasksStore.getState().setDailyPriority("d5", "1");
     const s = useTasksStore.getState();
     expect(s.tasks.find((t) => t.id === "d5")!.custom_fields.daily_priority).toBe("1");
     expect(s.tasks.find((t) => t.id === "d1")!.custom_fields.daily_priority).toBeUndefined();
+  });
+
+  it("deleteTask removes the task optimistically", async () => {
+    vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+    const before = useTasksStore.getState().tasks.length;
+    await useTasksStore.getState().deleteTask("d6");
+    expect(useTasksStore.getState().tasks).toHaveLength(before - 1);
+    expect(useTasksStore.getState().tasks.find((t) => t.id === "d6")).toBeUndefined();
+  });
+});
+
+describe("server-backed tasks store", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    useTasksStore.setState({ tasks: [], error: null });
+  });
+
+  it("loadTasks populates from api", async () => {
+    vi.spyOn(api, "fetchTodos").mockResolvedValue([
+      { id: "tod_1", title: "A", status: "open", parent_id: null,
+        created_at: "x", updated_at: "x", custom_fields: { scheduled_dates: ["2026-05-31"] } },
+    ]);
+    await useTasksStore.getState().loadTasks("2026-05-31");
+    expect(useTasksStore.getState().tasks.map((t) => t.id)).toEqual(["tod_1"]);
+    expect(useTasksStore.getState().status).toBe("ready");
+  });
+
+  it("sets status=error when load fails", async () => {
+    vi.spyOn(api, "fetchTodos").mockRejectedValue(new Error("boom"));
+    await useTasksStore.getState().loadTasks("2026-05-31");
+    expect(useTasksStore.getState().status).toBe("error");
+  });
+
+  it("rolls back toggleDone when patch fails", async () => {
+    useTasksStore.setState({
+      tasks: [{ id: "tod_1", title: "A", status: "open", parent_id: null,
+        created_at: "x", updated_at: "x", custom_fields: { scheduled_dates: ["2026-05-31"] } }],
+    });
+    vi.spyOn(api, "patchTodoApi").mockRejectedValue(new Error("boom"));
+    await useTasksStore.getState().toggleDone("tod_1");
+    expect(useTasksStore.getState().tasks[0].status).toBe("open"); // rolled back
+    expect(useTasksStore.getState().error).not.toBeNull();
   });
 });
