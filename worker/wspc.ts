@@ -289,7 +289,7 @@ export interface Todo {
   custom_fields?: Record<string, string | string[]>;
 }
 
-const CF_SCHEDULED_DATES = "cf.scheduled_dates"; // 鎖死 key，防靜默回整包
+export const CF_SCHEDULED_DATES = "cf.scheduled_dates"; // 鎖死 key，防靜默回整包
 
 export async function listTodos(
   accessToken: string,
@@ -346,7 +346,7 @@ export async function patchTodo(
   },
 ): Promise<Todo> {
   const payload: Record<string, unknown> = {};
-  if (body.status) payload.status = body.status;
+  if (body.status !== undefined) payload.status = body.status;
   if (body.customFields) payload.custom_fields = body.customFields;
   const res = await fetch(`${WSPC_BASE}/todo/items/${id}`, {
     method: "PATCH",
