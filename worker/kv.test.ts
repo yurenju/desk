@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { makeKvStub } from "./test-helpers/kv-stub";
-import { getClientId, ensureClientId } from "./kv";
+import { getClientId, ensureClientId, getSession, putSession, deleteSession } from "./kv";
 import * as wspc from "./wspc";
 
 describe("getClientId", () => {
@@ -59,6 +59,46 @@ describe("makeKvStub proxy", () => {
     expect((kv as unknown as Record<string, unknown>).then).toBeUndefined();
     expect((kv as unknown as Record<string, unknown>).toJSON).toBeUndefined();
     expect((kv as unknown as Record<symbol, unknown>)[Symbol.toStringTag]).toBeUndefined();
+  });
+});
+
+describe("session operations", () => {
+  it("putSession writes JSON with 30-day TTL, getSession reads it back", async () => {
+    const kv = makeKvStub();
+    const session = {
+      accessToken: "at-1",
+      refreshToken: "rt-1",
+      accessExp: 1234567890,
+    };
+    await putSession(kv, "sid-1", session);
+
+    const raw = await kv.get("session:sid-1");
+    expect(raw).not.toBeNull();
+    expect(JSON.parse(raw!)).toEqual(session);
+
+    expect(await getSession(kv, "sid-1")).toEqual(session);
+  });
+
+  it("getSession returns null when not present", async () => {
+    const kv = makeKvStub();
+    expect(await getSession(kv, "missing")).toBeNull();
+  });
+
+  it("getSession returns null when JSON parse fails", async () => {
+    const kv = makeKvStub();
+    await kv.put("session:bad", "not-json{");
+    expect(await getSession(kv, "bad")).toBeNull();
+  });
+
+  it("deleteSession removes the entry", async () => {
+    const kv = makeKvStub();
+    await putSession(kv, "sid-1", {
+      accessToken: "at",
+      refreshToken: "rt",
+      accessExp: 1,
+    });
+    await deleteSession(kv, "sid-1");
+    expect(await getSession(kv, "sid-1")).toBeNull();
   });
 });
 
