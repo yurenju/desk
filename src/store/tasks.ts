@@ -20,7 +20,7 @@ interface TasksState {
   loadTasks: (date: string) => Promise<void>;
   toggleDone: (id: string) => Promise<void>;
   addTodayTask: (title: string) => Promise<void>;
-  editTitle: (id: string, title: string) => Promise<void>;
+  editTitle: (id: string, title: string) => void;
   deleteTask: (id: string) => Promise<void>;
   setDailyPriority: (id: string, n: Priority | null) => Promise<void>;
   clearTasks: () => void;
@@ -63,26 +63,21 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     const trimmed = title.trim();
     if (!trimmed) return;
     const prev = get().tasks;
+    const today = get().today;            // capture once, before any await
     const tempId = `temp-${crypto.randomUUID()}`;
-    set({ tasks: addTodayTask(prev, trimmed, get().today, tempId, now()), error: null });
+    set({ tasks: addTodayTask(prev, trimmed, today, tempId, now()), error: null });
     try {
-      const created = await postTodo(trimmed, get().today);
+      const created = await postTodo(trimmed, today);   // use captured value
       set({ tasks: get().tasks.map((t) => (t.id === tempId ? created : t)) });
     } catch {
       set({ tasks: prev, error: "save_failed" });
     }
   },
 
-  async editTitle(id, title) {
-    const prev = get().tasks;
-    set({ tasks: editTitle(prev, id, title, now()), error: null });
-    try {
-      // title is a WSPC core field; PATCH-ing the title is out of scope for 2b.
-      // Keep the optimistic local update + rollback skeleton only.
-      await patchTodoApi(id, {});
-    } catch {
-      set({ tasks: prev, error: "save_failed" });
-    }
+  editTitle(id, title) {
+    // title is a WSPC core field; server title PATCH is out of scope for 2b.
+    // Local-only optimistic update until it's supported (no request to roll back).
+    set({ tasks: editTitle(get().tasks, id, title, now()), error: null });
   },
 
   async deleteTask(id) {
