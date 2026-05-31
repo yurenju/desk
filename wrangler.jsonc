@@ -9,5 +9,12 @@
   },
   "routes": [
     { "pattern": "desk.yurenju.me", "custom_domain": true }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "DESK_KV",
+      "id": "cc6e1e56481b492c84f072fa502a0f07",
+      "preview_id": "7ec658e2cde3401cb39ae18eae0cefab"
+    }
   ]
 }
