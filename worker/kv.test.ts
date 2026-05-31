@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { makeKvStub } from "./test-helpers/kv-stub";
-import { getClientId, ensureClientId, getSession, putSession, deleteSession } from "./kv";
+import { getClientId, ensureClientId, getSession, putSession, deleteSession, getDevice, putDevice, deleteDevice } from "./kv";
 import * as wspc from "./wspc";
 
 describe("getClientId", () => {
@@ -102,4 +102,30 @@ describe("session operations", () => {
   });
 });
 
+describe("device polling operations", () => {
+  it("putDevice writes JSON with custom TTL", async () => {
+    const kv = makeKvStub();
+    await putDevice(
+      kv,
+      "pid-1",
+      { deviceCode: "dc-1", interval: 5 },
+      600,
+    );
+    expect(await getDevice(kv, "pid-1")).toEqual({
+      deviceCode: "dc-1",
+      interval: 5,
+    });
+  });
 
+  it("getDevice returns null when missing", async () => {
+    const kv = makeKvStub();
+    expect(await getDevice(kv, "missing")).toBeNull();
+  });
+
+  it("deleteDevice removes the entry", async () => {
+    const kv = makeKvStub();
+    await putDevice(kv, "pid-1", { deviceCode: "dc", interval: 5 }, 600);
+    await deleteDevice(kv, "pid-1");
+    expect(await getDevice(kv, "pid-1")).toBeNull();
+  });
+});

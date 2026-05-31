@@ -57,3 +57,36 @@ export async function ensureClientId(
   return id;
 }
 
+export interface DeviceData {
+  deviceCode: string;
+  interval: number;
+}
+
+export async function getDevice(
+  kv: KVNamespace,
+  pollingId: string,
+): Promise<DeviceData | null> {
+  const raw = await kv.get(`device:${pollingId}`);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as DeviceData;
+  } catch {
+    return null;
+  }
+}
+
+export async function putDevice(
+  kv: KVNamespace,
+  pollingId: string,
+  data: DeviceData,
+  ttlSeconds: number,
+): Promise<void> {
+  await kv.put(`device:${pollingId}`, JSON.stringify(data), {
+    expirationTtl: ttlSeconds,
+  });
+}
+
+export async function deleteDevice(kv: KVNamespace, pollingId: string): Promise<void> {
+  await kv.delete(`device:${pollingId}`);
+}
+
