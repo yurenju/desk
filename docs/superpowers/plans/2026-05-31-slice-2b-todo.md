@@ -1035,7 +1035,7 @@ interface TasksState {
   loadTasks: (date: string) => Promise<void>;
   toggleDone: (id: string) => Promise<void>;
   addTodayTask: (title: string) => Promise<void>;
-  editTitle: (id: string, title: string) => Promise<void>;
+  editTitle: (id: string, title: string) => void;
   deleteTask: (id: string) => Promise<void>;
   setDailyPriority: (id: string, n: Priority | null) => Promise<void>;
   clearTasks: () => void;
@@ -1079,26 +1079,21 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     const trimmed = title.trim();
     if (!trimmed) return;
     const prev = get().tasks;
+    const today = get().today; // capture before await（避免切日 race）
     const tempId = `temp-${crypto.randomUUID()}`;
-    set({ tasks: addTodayTask(prev, trimmed, get().today, tempId, now()), error: null });
+    set({ tasks: addTodayTask(prev, trimmed, today, tempId, now()), error: null });
     try {
-      const created = await postTodo(trimmed, get().today);
+      const created = await postTodo(trimmed, today);
       set({ tasks: get().tasks.map((t) => (t.id === tempId ? created : t)) });
     } catch {
       set({ tasks: prev, error: "save_failed" });
     }
   },
 
-  async editTitle(id, title) {
-    const prev = get().tasks;
-    set({ tasks: editTitle(prev, id, title, now()), error: null });
-    try {
-      // title 不是 custom field；2b 範圍用 PATCH 標題的擴充留待需要時，
-      // 這裡先以樂觀本地更新為主，失敗回滾。
-      await patchTodoApi(id, {});
-    } catch {
-      set({ tasks: prev, error: "save_failed" });
-    }
+  editTitle(id, title) {
+    // title 是 WSPC 核心欄位；2b 不打 server 標題 PATCH。純本地樂觀更新，
+    // 沒有要 roll back 的請求（不發無意義的空 PATCH，避免假成功 + 下次 load 還原）。
+    set({ tasks: editTitle(get().tasks, id, title, now()), error: null });
   },
 
   async deleteTask(id) {
