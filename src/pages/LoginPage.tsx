@@ -33,6 +33,12 @@ export function LoginPage({ onAuthenticated }: Props) {
           `/api/auth/status?polling_id=${encodeURIComponent(pollingId)}`,
         );
         if (cancelled) return;
+        if (!res.ok) {
+          // Infra failure (e.g. a non-JSON 5xx). Surface an error and stop
+          // polling rather than letting res.json() throw and silently stall.
+          setState("error");
+          return;
+        }
         const data = (await res.json()) as { state: string; slow_down?: boolean };
         if (cancelled) return;
         if (data.state === "authenticated") {
