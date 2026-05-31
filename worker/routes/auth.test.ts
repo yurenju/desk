@@ -5,7 +5,7 @@ import { getDevice } from "../kv";
 import * as wspc from "../wspc";
 
 function makeEnv(kv = makeKvStub()) {
-  return { DESK_KV: kv } as unknown as { DESK_KV: import("@cloudflare/workers-types").KVNamespace };
+  return { DESK_KV: kv } as unknown as { DESK_KV: KVNamespace };
 }
 
 beforeEach(() => {
