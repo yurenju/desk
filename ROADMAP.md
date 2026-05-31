@@ -127,7 +127,7 @@
 **從 Slice 1 銜接過來要處理**（Slice 1 刻意用最小前端做法、延後到接 WSPC 才補的衍生事項）：
 
 - [x] `today` 真實化 + 可切換日期：換成真實今天(local YYYY-MM-DD)並支援 `/today/$date` 切換日期
-- [x] 刪除改 soft-delete：改為 PATCH `status: cancelled`(移除 Slice 1 的本地 undo buffer)
+- [x] 刪除改 soft-delete：改為 PATCH `status: cancelled`;undo 改為 server-aware(復原 = PATCH 回原 status),並接上 mutation 失敗 toast(讀 store.error,涵蓋所有 mutation)
 - [x] seed → 真實資料：store 改由 `/api/todo` list 載入,移除 persist 與 mock seed;新增 `status: loading/ready/error` 載入狀態(skeleton/error+retry),首次 bootstrap 延遲被它吸收
 - [x] `daily_priority` 騰位要 patch 兩筆：前端編排,被騰位者也對 server 發 PATCH(`daily_priority: null`);全程樂觀更新 + 失敗回滾
 
