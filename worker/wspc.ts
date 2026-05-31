@@ -205,7 +205,7 @@ export async function refreshAccessToken(input: {
 
   if (!res.ok) {
     const clone = res.clone();
-    let errorText = "";
+    let errorText: string;
     try {
       const errJson = await res.json();
       errorText = JSON.stringify(errJson);
@@ -235,5 +235,47 @@ export async function refreshAccessToken(input: {
     accessToken: data.access_token,
     refreshToken: data.refresh_token,
     expiresIn: data.expires_in,
+  };
+}
+
+type WhoamiResponse = components["schemas"]["GetMeResponse"];
+
+export interface Whoami {
+  userId: string;
+  email: string;
+  displayName?: string;
+}
+
+export async function getWhoami(accessToken: string): Promise<Whoami> {
+  const res = await fetch(`${WSPC_BASE}/auth/me`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`WSPC whoami failed (status ${res.status}): ${text}`);
+  }
+
+  let data: WhoamiResponse;
+  try {
+    data = (await res.json()) as WhoamiResponse;
+  } catch (err) {
+    throw new Error(
+      `WSPC whoami failed to parse JSON response: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+      { cause: err }
+    );
+  }
+
+  if (!data || typeof data !== "object" || !data.user_id || !data.email) {
+    throw new Error("WSPC whoami response missing critical fields");
+  }
+
+  return {
+    userId: data.user_id,
+    email: data.email,
+    displayName: data.display_name,
   };
 }

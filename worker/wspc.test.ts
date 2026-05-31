@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { registerClient, requestDeviceAuthorization, exchangeDeviceCode, refreshAccessToken } from "./wspc";
+import { registerClient, requestDeviceAuthorization, exchangeDeviceCode, refreshAccessToken, getWhoami } from "./wspc";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -328,5 +328,84 @@ describe("refreshAccessToken", () => {
     await expect(
       refreshAccessToken({ clientId: "c1", refreshToken: "rt-1" }),
     ).rejects.toThrow("failed (status 500): Internal Server Error HTML");
+  });
+});
+
+describe("getWhoami", () => {
+  it("GETs /auth/me with Bearer token and returns user info", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          user_id: "u-1",
+          email: "test@example.com",
+          display_name: "Test User",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const me = await getWhoami("at-1");
+    expect(me).toEqual({
+      userId: "u-1",
+      email: "test@example.com",
+      displayName: "Test User",
+    });
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "https://api.wspc.ai/auth/me",
+      expect.objectContaining({
+        method: "GET",
+        headers: expect.objectContaining({ Authorization: "Bearer at-1" }),
+      }),
+    );
+  });
+
+  it("handles missing display_name (undefined)", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ user_id: "u-1", email: "test@example.com" }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    const me = await getWhoami("at-1");
+    expect(me.displayName).toBeUndefined();
+  });
+
+  it("throws on 401 (caller decides what to do)", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("unauthorized", { status: 401 }),
+    );
+    await expect(getWhoami("at-bad")).rejects.toThrow();
+  });
+
+  it("throws when WSPC responds with invalid JSON", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("not a json string", { status: 200, headers: { "Content-Type": "application/json" } }),
+    );
+    await expect(getWhoami("at-1")).rejects.toThrow(
+      "WSPC whoami failed to parse JSON response:"
+    );
+  });
+
+  it("throws when WSPC responds with 200 OK but missing critical fields", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          display_name: "Test User",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    await expect(getWhoami("at-1")).rejects.toThrow(
+      "WSPC whoami response missing critical fields"
+    );
+  });
+
+  it("throws with status code and body text on failure", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("Bad Gateway HTML", { status: 502 }),
+    );
+    await expect(getWhoami("at-1")).rejects.toThrow(
+      "WSPC whoami failed (status 502): Bad Gateway HTML"
+    );
   });
 });
