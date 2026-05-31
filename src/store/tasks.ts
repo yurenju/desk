@@ -5,9 +5,11 @@ import {
   addTodayTask,
   deleteTask,
   editTitle,
+  restoreTask as restoreTaskOp,
   setDailyPriority,
   toggleDone,
 } from "./taskOps";
+import type { RemovedTask } from "./taskOps";
 
 const now = () => new Date().toISOString();
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -21,13 +23,17 @@ interface TasksState {
   today: string;
   status: "loading" | "ready" | "error";
   error: string | null;
+  recentlyDeleted: RemovedTask | null;
   loadTasks: (date: string) => Promise<void>;
   toggleDone: (id: string) => Promise<void>;
   addTodayTask: (title: string) => Promise<void>;
   editTitle: (id: string, title: string) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
+  restoreTask: () => Promise<void>;
   setDailyPriority: (id: string, n: Priority | null) => Promise<void>;
   clearTasks: () => void;
+  clearRecentlyDeleted: () => void;
+  clearError: () => void;
 }
 
 export const useTasksStore = create<TasksState>()((set, get) => ({
@@ -35,6 +41,7 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
   today: todayISO(),
   status: "loading",
   error: null,
+  recentlyDeleted: null,
 
   async loadTasks(date) {
     const seq = ++loadSeq;
@@ -95,10 +102,23 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
 
   async deleteTask(id) {
     const prev = get().tasks;
-    const { tasks } = deleteTask(prev, id);
-    set({ tasks, error: null });
+    const { tasks, removed } = deleteTask(prev, id);
+    if (!removed) return;
+    set({ tasks, error: null, recentlyDeleted: removed });
     try {
       await patchTodoApi(id, { status: "cancelled" });
+    } catch {
+      set({ tasks: prev, error: "save_failed", recentlyDeleted: null });
+    }
+  },
+
+  async restoreTask() {
+    const removed = get().recentlyDeleted;
+    if (!removed) return;
+    const prev = get().tasks;
+    set({ tasks: restoreTaskOp(prev, removed), recentlyDeleted: null, error: null });
+    try {
+      await patchTodoApi(removed.task.id, { status: removed.task.status });
     } catch {
       set({ tasks: prev, error: "save_failed" });
     }
@@ -124,6 +144,14 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
   },
 
   clearTasks() {
-    set({ tasks: [], error: null });
+    set({ tasks: [], error: null, recentlyDeleted: null });
+  },
+
+  clearRecentlyDeleted() {
+    set({ recentlyDeleted: null });
+  },
+
+  clearError() {
+    set({ error: null });
   },
 }));

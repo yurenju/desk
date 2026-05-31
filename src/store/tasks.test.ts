@@ -7,7 +7,7 @@ import * as api from "@/lib/api/todo";
 // by ensuring all API calls are mocked by default.
 beforeEach(() => {
   vi.restoreAllMocks();
-  useTasksStore.setState({ tasks: allTasks, today: MOCK_TODAY, status: "ready", error: null });
+  useTasksStore.setState({ tasks: allTasks, today: MOCK_TODAY, status: "ready", error: null, recentlyDeleted: null });
 });
 
 describe("useTasksStore (local behaviour)", () => {
@@ -45,19 +45,55 @@ describe("useTasksStore (local behaviour)", () => {
     expect(s.tasks.find((t) => t.id === "d1")!.custom_fields.daily_priority).toBeUndefined();
   });
 
-  it("deleteTask removes the task optimistically", async () => {
+  it("deleteTask removes the task optimistically and sets recentlyDeleted", async () => {
     vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
     const before = useTasksStore.getState().tasks.length;
     await useTasksStore.getState().deleteTask("d6");
     expect(useTasksStore.getState().tasks).toHaveLength(before - 1);
     expect(useTasksStore.getState().tasks.find((t) => t.id === "d6")).toBeUndefined();
+    const rd = useTasksStore.getState().recentlyDeleted;
+    expect(rd).not.toBeNull();
+    expect(rd!.task.id).toBe("d6");
+  });
+
+  it("deleteTask failure clears recentlyDeleted, sets error, and rolls back", async () => {
+    vi.spyOn(api, "patchTodoApi").mockRejectedValue(new Error("boom"));
+    const before = useTasksStore.getState().tasks.length;
+    await useTasksStore.getState().deleteTask("d6");
+    expect(useTasksStore.getState().tasks).toHaveLength(before);
+    expect(useTasksStore.getState().tasks.find((t) => t.id === "d6")).toBeDefined();
+    expect(useTasksStore.getState().recentlyDeleted).toBeNull();
+    expect(useTasksStore.getState().error).toBe("save_failed");
+  });
+
+  it("clearRecentlyDeleted clears recentlyDeleted", () => {
+    useTasksStore.setState({
+      recentlyDeleted: { task: allTasks[0], index: 0 },
+    });
+    useTasksStore.getState().clearRecentlyDeleted();
+    expect(useTasksStore.getState().recentlyDeleted).toBeNull();
+  });
+
+  it("clearError clears error", () => {
+    useTasksStore.setState({ error: "save_failed" });
+    useTasksStore.getState().clearError();
+    expect(useTasksStore.getState().error).toBeNull();
+  });
+
+  it("clearTasks clears recentlyDeleted too", () => {
+    useTasksStore.setState({
+      recentlyDeleted: { task: allTasks[0], index: 0 },
+    });
+    useTasksStore.getState().clearTasks();
+    expect(useTasksStore.getState().recentlyDeleted).toBeNull();
+    expect(useTasksStore.getState().tasks).toHaveLength(0);
   });
 });
 
 describe("server-backed tasks store", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    useTasksStore.setState({ tasks: [], error: null });
+    useTasksStore.setState({ tasks: [], error: null, recentlyDeleted: null });
   });
 
   it("loadTasks populates from api", async () => {
@@ -127,5 +163,32 @@ describe("server-backed tasks store", () => {
     await useTasksStore.getState().editTitle("t1", "New");
     expect(useTasksStore.getState().tasks[0].title).toBe("Old"); // rolled back
     expect(useTasksStore.getState().error).not.toBeNull();
+  });
+
+  it("restoreTask re-inserts the task and patches with original status", async () => {
+    const task = { id: "r1", title: "Restore me", status: "open" as const, parent_id: null,
+      created_at: "x", updated_at: "x", custom_fields: {} };
+    useTasksStore.setState({
+      tasks: [],
+      recentlyDeleted: { task, index: 0 },
+    });
+    const spy = vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+    await useTasksStore.getState().restoreTask();
+    expect(useTasksStore.getState().tasks.find((t) => t.id === "r1")).toBeDefined();
+    expect(useTasksStore.getState().recentlyDeleted).toBeNull();
+    expect(spy).toHaveBeenCalledWith("r1", { status: "open" });
+  });
+
+  it("restoreTask rolls back and sets error when patch fails", async () => {
+    const task = { id: "r1", title: "Restore me", status: "open" as const, parent_id: null,
+      created_at: "x", updated_at: "x", custom_fields: {} };
+    useTasksStore.setState({
+      tasks: [],
+      recentlyDeleted: { task, index: 0 },
+    });
+    vi.spyOn(api, "patchTodoApi").mockRejectedValue(new Error("boom"));
+    await useTasksStore.getState().restoreTask();
+    expect(useTasksStore.getState().tasks).toHaveLength(0); // rolled back
+    expect(useTasksStore.getState().error).toBe("save_failed");
   });
 });
