@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useTasksStore } from "@/store/tasks";
 import { TodayLayout } from "@/features/plan-view/TodayLayout";
 import { currentMonthISO, todayISO } from "@/lib/date";
+import { Button } from "@/ui/Button/Button";
 
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 
@@ -41,7 +42,7 @@ export function TodayView({ date }: { date: string }) {
     return (
       <div role="alert" style={{ padding: "1.5rem" }}>
         載入失敗
-        <button onClick={() => useTasksStore.getState().loadTasks(date)}>重試</button>
+        <Button variant="ghost" size="sm" onClick={() => useTasksStore.getState().loadTasks(date)}>重試</Button>
       </div>
     );
   }
