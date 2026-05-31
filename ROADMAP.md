@@ -21,8 +21,8 @@
 |---|---|---|
 | Slice 0 — 純前端骨架 | ✅ 完成 | [#2](https://github.com/yurenju/desk/pull/2) |
 | Slice 1 — Today 互動 + localStorage | ✅ 完成 | — |
-| Slice 2a — auth + BFF 骨架 | 🔄 開發完成,PR #8 待合併 | [#8](https://github.com/yurenju/desk/pull/8) |
-| Slice 2b — /api/todo + 前端銜接 | ⏳ 規劃中 | — |
+| Slice 2a — auth + BFF 骨架 | ✅ 完成 | [#8](https://github.com/yurenju/desk/pull/8) |
+| Slice 2b — /api/todo + 前端銜接 | 🔄 開發中 | — |
 | Slice 2c — 登入流程 UI 打磨 | ⏳ 規劃中 | — |
 | Slice 3+ | ⏳ 規劃中 | — |
 
@@ -90,20 +90,22 @@
 
 - **移除了三件事的「對應月度任務」標記(`PlannedRefChip`)**:原本三件事每列標題下方會顯示一個小圈號 + 父任務標題(例:`① 推出 desk.yurenju.me MVP`),靠 mock data 的 `parent_id` 指向月度任務。但這個「月、日各存在一個 task、用 `parent_id` 連起來」的父子模型與本 ROADMAP 的資料模型**矛盾** —— 正確設計是**同一個 task 透過 `scheduled_months` + `scheduled_dates` 同時出現在月度欄與日欄**(見「共用參考:資料模型」),不該有兩個互相對應的 task。而且那個圈號還綁錯欄位(顯示 task 自己的 `daily_priority` 而非父任務的 `monthly_priority`,又與左側優先序圈重複)。Slice 1 先把這個顯示拿掉,待 **Slice 3(Monthly 互動 + promote)** 接上真實漏斗模型時一併處理;mock data 的 `parent_id` 也應隨之淘汰。
 
-### Slice 2a — auth + BFF 骨架（仍只有 localStorage）
+### Slice 2a — auth + BFF 骨架（仍只有 localStorage）✅
 
 **目標**：把 auth 鏈跑通，但完全不碰 todo 資料。Slice 1 的所有互動仍走 localStorage。
 
+**完成於 PR [#8](https://github.com/yurenju/desk/pull/8)**
+
 > 設計文件：[2026-05-30-slice-2a-auth-bff-design.md](docs/superpowers/specs/2026-05-30-slice-2a-auth-bff-design.md)
 
-- [ ] Cloudflare KV namespace `DESK_KV`（單一 namespace、三類 key：`wspc:client_id` / `session:<id>` / `device:<polling_id>`）
-- [ ] WSPC 動態 client 註冊（第一次 `/api/auth/login` 時 lazy 完成，`wspc:client_id` 存 KV）
-- [ ] BFF 認證路由：`/api/auth/login`、`/api/auth/status`、`/api/auth/logout`
-- [ ] `__Host-Session` cookie + KV session + token 自動刷新中間件
-- [ ] `/api/me` proxy 到 WSPC `/auth/me`（demo 端點，證明 token 真的能授權打 WSPC）
-- [ ] 前端 `/login` route：顯示 user_code、verification URL、polling 狀態
-- [ ] Header 加登入狀態：未登入顯示「登入 WSPC」按鈕、已登入顯示 display_name + 登出
-- [ ] Zustand `useAuthStore`（不 persist，每次重整重新驗證 `/api/me`）
+- [x] Cloudflare KV namespace `DESK_KV`（單一 namespace、三類 key：`wspc:client_id` / `session:<id>` / `device:<polling_id>`）
+- [x] WSPC 動態 client 註冊（第一次 `/api/auth/login` 時 lazy 完成，`wspc:client_id` 存 KV）
+- [x] BFF 認證路由：`/api/auth/login`、`/api/auth/status`、`/api/auth/logout`
+- [x] `__Host-Session` cookie + KV session + token 自動刷新中間件
+- [x] `/api/me` proxy 到 WSPC `/auth/me`（demo 端點，證明 token 真的能授權打 WSPC）
+- [x] 前端 `/login` route：顯示 user_code、verification URL、polling 狀態
+- [x] Header 加登入狀態：未登入顯示「登入 WSPC」按鈕、已登入顯示 display_name + 登出
+- [x] Zustand `useAuthStore`（不 persist，每次重整重新驗證 `/api/me`）
 
 **可以看到什麼**：從 desk.yurenju.me 走完整 device flow 登入後，header 顯示自己的 WSPC email / display_name。Today / Plan / Backlog 三個 mode 的互動完全不變。
 **Owner 防護**：**不鎖**。任何人都可以用自己的 WSPC 帳號登入看自己的 todo（multi-tenant）。
