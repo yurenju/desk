@@ -22,7 +22,7 @@
 | Slice 0 — 純前端骨架 | ✅ 完成 | [#2](https://github.com/yurenju/desk/pull/2) |
 | Slice 1 — Today 互動 + localStorage | ✅ 完成 | — |
 | Slice 2a — auth + BFF 骨架 | ✅ 完成 | [#8](https://github.com/yurenju/desk/pull/8) |
-| Slice 2b — /api/todo + 前端銜接 | 🔄 開發中 | — |
+| Slice 2b — /api/todo + 前端銜接 | 🔄 開發完成,待部署驗證 | [#9](https://github.com/yurenju/desk/pull/9) |
 | Slice 2c — 登入流程 UI 打磨 | ⏳ 規劃中 | — |
 | Slice 3+ | ⏳ 規劃中 | — |
 
@@ -115,19 +115,25 @@
 
 **目標**：把 Today mode 從 localStorage 換成真實 WSPC 資料。
 
-- [ ] WSPC `DeskTask` 自訂型態註冊（含完整 custom fields，雖然這片只用到一部分）
-- [ ] `/api/todo` 端點：list / create / patch（status、daily_priority、done_on）
-- [ ] 過濾條件先簡化：`scheduled_dates contains today`
+> 設計：[2026-05-31-slice-2b-todo-design.md](docs/superpowers/specs/2026-05-31-slice-2b-todo-design.md)・計畫：[2026-05-31-slice-2b-todo.md](docs/superpowers/plans/2026-05-31-slice-2b-todo.md)（PR [#9](https://github.com/yurenju/desk/pull/9)）
+
+- [x] **Lazy 建立 Desk project + KV 存 `project_id`（per-user `desk:bootstrap:<user_id>`）** —— WSPC todo 必須屬於某 project，type 註冊的前置條件
+- [x] WSPC `DeskTask` 自訂型態註冊（一次宣告完整 9 個 custom fields，雖然這片只用到一部分）
+- [x] `/api/todo` 端點：list / create / patch（status、daily_priority、done_on）
+- [x] 過濾條件：`scheduled_dates contains today` —— 用 WSPC `cf.scheduled_dates`(server 端 array-contains)
+
+> ⚠️ `cf.<field>` 過濾**未寫進主 OpenAPI**,但 MCP tool / `llms.txt` 有,且已用 `scripts/verify-wspc.mjs` 對線上實證(dotted 語法有效、未宣告 key 會靜默回整包 → filter key 鎖成常數)。此工具留作回歸檢查。
 
 **從 Slice 1 銜接過來要處理**（Slice 1 刻意用最小前端做法、延後到接 WSPC 才補的衍生事項）：
 
-- [ ] `today` 真實化 + 可切換日期：Slice 1 固定 `MOCK_TODAY` 並集中在 store 單一欄位，這片換成真實今天並支援切換日期（`/today/:date` 之類）
-- [ ] 刪除改 soft-delete：Slice 1 是「直接刪 + undo」，這片改為 PATCH `status: cancelled`，取代從陣列直接移除
-- [ ] seed → 真實資料：store 的 initial `tasks = allTasks` 改由 `/api/todo` list 載入，persist 角色轉為快取 / 樂觀更新
-- [ ] `daily_priority` 騰位要 patch 兩筆：被騰位者的 `daily_priority` 清除也要對 server 發 PATCH，不能只改本地
+- [x] `today` 真實化 + 可切換日期：換成真實今天(local YYYY-MM-DD)並支援 `/today/$date` 切換日期
+- [x] 刪除改 soft-delete：改為 PATCH `status: cancelled`(移除 Slice 1 的本地 undo buffer)
+- [x] seed → 真實資料：store 改由 `/api/todo` list 載入,移除 persist 與 mock seed;新增 `status: loading/ready/error` 載入狀態(skeleton/error+retry),首次 bootstrap 延遲被它吸收
+- [x] `daily_priority` 騰位要 patch 兩筆：前端編排,被騰位者也對 server 發 PATCH(`daily_priority: null`);全程樂觀更新 + 失敗回滾
 
 **可以看到什麼**：Today 換成真實 WSPC 資料；auth 鏈端到端跑通。
 **不做**：軌跡、略過、Monthly、Backlog。
+**待辦(合併前)**：部署到 production 後跑一次手動驗收(見設計文件「驗收標準」1–10:首次 bootstrap、CRUD 落地、騰位、切日、第二帳號 multi-tenant 分流、登出清快取)。
 
 ### Slice 2c — 登入流程 UI 打磨 ⏳
 
