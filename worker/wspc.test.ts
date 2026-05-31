@@ -424,6 +424,30 @@ describe("listTodos", () => {
   });
 });
 
+describe("createTodo", () => {
+  it("serialises camelCase body to snake_case fields", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ id: "tod_1", status: "open", title: "T", created_at: 0, updated_at: 0 }),
+        { status: 200 },
+      ),
+    );
+    await createTodo("at", {
+      title: "T",
+      projectId: "prj_1",
+      typeId: "typ_1",
+      customFields: { scheduled_dates: ["2026-05-31"] },
+    });
+    const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
+    expect(body).toEqual({
+      title: "T",
+      project_id: "prj_1",
+      type_id: "typ_1",
+      custom_fields: { scheduled_dates: ["2026-05-31"] },
+    });
+  });
+});
+
 describe("patchTodo", () => {
   it("maps status + customFields and supports null clear", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
