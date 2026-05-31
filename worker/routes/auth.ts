@@ -5,10 +5,15 @@ import {
   getDevice,
   deleteDevice,
   putSession,
+  deleteSession,
 } from "../kv";
 import { requestDeviceAuthorization, exchangeDeviceCode } from "../wspc";
 import { randomBase64UrlId } from "../random";
-import { serializeSessionCookie } from "../cookie";
+import {
+  serializeSessionCookie,
+  parseSessionId,
+  clearSessionCookie,
+} from "../cookie";
 
 interface Env {
   DESK_KV: KVNamespace;
@@ -93,4 +98,15 @@ export async function handleStatus(env: Env, pollingId: string): Promise<Respons
       await deleteDevice(env.DESK_KV, pollingId);
       return jsonResponse({ state: "expired" });
   }
+}
+
+export async function handleLogout(request: Request, env: Env): Promise<Response> {
+  const sessionId = parseSessionId(request.headers);
+  if (sessionId) {
+    await deleteSession(env.DESK_KV, sessionId);
+  }
+  return new Response(null, {
+    status: 204,
+    headers: { "Set-Cookie": clearSessionCookie() },
+  });
 }

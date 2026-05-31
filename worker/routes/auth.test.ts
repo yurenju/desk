@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { makeKvStub } from "../test-helpers/kv-stub";
-import { handleLogin, handleStatus } from "./auth";
-import { getDevice, putDevice, getSession } from "../kv";
+import { handleLogin, handleStatus, handleLogout } from "./auth";
+import { getDevice, putDevice, getSession, putSession } from "../kv";
 import * as wspc from "../wspc";
 
 function makeEnv(kv = makeKvStub()) {
@@ -137,5 +137,47 @@ describe("GET /api/auth/status", () => {
     const res = await handleStatus(env, "pid-1");
     expect((await res.json())).toEqual({ state: "expired" });
     expect(await getDevice(env.DESK_KV, "pid-1")).toBeNull();
+  });
+});
+
+describe("POST /api/auth/logout", () => {
+  it("deletes session from KV and clears cookie", async () => {
+    const env = makeEnv();
+    await putSession(env.DESK_KV, "sid-1", {
+      accessToken: "at",
+      refreshToken: "rt",
+      accessExp: 999999,
+    });
+
+    const req = new Request("https://desk.yurenju.me/api/auth/logout", {
+      method: "POST",
+      headers: { Cookie: "__Host-Session=sid-1" },
+    });
+
+    const res = await handleLogout(req, env);
+    expect(res.status).toBe(204);
+    expect(res.headers.get("Set-Cookie")).toContain("Max-Age=0");
+    expect(await getSession(env.DESK_KV, "sid-1")).toBeNull();
+  });
+
+  it("clears cookie even when no session existed (idempotent)", async () => {
+    const env = makeEnv();
+    const req = new Request("https://desk.yurenju.me/api/auth/logout", {
+      method: "POST",
+      headers: { Cookie: "__Host-Session=ghost" },
+    });
+    const res = await handleLogout(req, env);
+    expect(res.status).toBe(204);
+    expect(res.headers.get("Set-Cookie")).toContain("Max-Age=0");
+  });
+
+  it("returns 204 and clears cookie when no cookie present", async () => {
+    const env = makeEnv();
+    const req = new Request("https://desk.yurenju.me/api/auth/logout", {
+      method: "POST",
+    });
+    const res = await handleLogout(req, env);
+    expect(res.status).toBe(204);
+    expect(res.headers.get("Set-Cookie")).toContain("Max-Age=0");
   });
 });
