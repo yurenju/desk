@@ -18,9 +18,11 @@ export function LoginPage({ onAuthenticated }: Props) {
   const [init, setInit] = useState<LoginInit | null>(null);
   const [state, setState] = useState<PollState>("idle");
   const timerRef = useRef<number | null>(null);
-  // Keep the latest onAuthenticated without re-running the effect.
+  // Keep the latest onAuthenticated without re-running the polling effect.
   const onAuthenticatedRef = useRef(onAuthenticated);
-  onAuthenticatedRef.current = onAuthenticated;
+  useEffect(() => {
+    onAuthenticatedRef.current = onAuthenticated;
+  });
 
   useEffect(() => {
     let cancelled = false;
