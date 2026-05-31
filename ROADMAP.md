@@ -21,7 +21,9 @@
 |---|---|---|
 | Slice 0 — 純前端骨架 | ✅ 完成 | [#2](https://github.com/yurenju/desk/pull/2) |
 | Slice 1 — Today 互動 + localStorage | ✅ 完成 | — |
-| Slice 2+ | ⏳ 規劃中 | — |
+| Slice 2a — auth + BFF 骨架 | ⏳ 規劃中 | — |
+| Slice 2b — /api/todo + 前端銜接 | ⏳ 規劃中 | — |
+| Slice 3+ | ⏳ 規劃中 | — |
 
 **Slice 0 比原規劃多做的部分**(因為「中高保真度」視覺要做到位,自然把後面 slice 的純視覺工作也帶進來了):
 
@@ -87,28 +89,41 @@
 
 - **移除了三件事的「對應月度任務」標記(`PlannedRefChip`)**:原本三件事每列標題下方會顯示一個小圈號 + 父任務標題(例:`① 推出 desk.yurenju.me MVP`),靠 mock data 的 `parent_id` 指向月度任務。但這個「月、日各存在一個 task、用 `parent_id` 連起來」的父子模型與本 ROADMAP 的資料模型**矛盾** —— 正確設計是**同一個 task 透過 `scheduled_months` + `scheduled_dates` 同時出現在月度欄與日欄**(見「共用參考:資料模型」),不該有兩個互相對應的 task。而且那個圈號還綁錯欄位(顯示 task 自己的 `daily_priority` 而非父任務的 `monthly_priority`,又與左側優先序圈重複)。Slice 1 先把這個顯示拿掉,待 **Slice 3(Monthly 互動 + promote)** 接上真實漏斗模型時一併處理;mock data 的 `parent_id` 也應隨之淘汰。
 
-### Slice 2 — 接上 WSPC（仍只有 Today）
+### Slice 2a — auth + BFF 骨架（仍只有 localStorage）
 
-**目標**：把最痛的基礎建設一次解掉，但範圍鎖在「一欄就好」。
+**目標**：把 auth 鏈跑通，但完全不碰 todo 資料。Slice 1 的所有互動仍走 localStorage。
 
-- [ ] Cloudflare Workers + Wrangler Assets monorepo 結構
-- [ ] Cloudflare KV 命名空間（dev / prod）+ `wrangler.toml`
-- [ ] WSPC 動態 Client 註冊（Worker 啟動時自動完成，`client_id` 存 KV）
+> 設計文件：[2026-05-30-slice-2a-auth-bff-design.md](docs/superpowers/specs/2026-05-30-slice-2a-auth-bff-design.md)
+
+- [ ] Cloudflare KV namespace `DESK_KV`（單一 namespace、三類 key：`wspc:client_id` / `session:<id>` / `device:<polling_id>`）
+- [ ] WSPC 動態 client 註冊（第一次 `/api/auth/login` 時 lazy 完成，`wspc:client_id` 存 KV）
 - [ ] BFF 認證路由：`/api/auth/login`、`/api/auth/status`、`/api/auth/logout`
-- [ ] 加密 HttpOnly Cookie + Token 自動刷新中間件
-- [ ] API 安全防護：僅 Owner (yurenju) 可存取 `/api/todo/*`
+- [ ] `__Host-Session` cookie + KV session + token 自動刷新中間件
+- [ ] `/api/me` proxy 到 WSPC `/auth/me`（demo 端點，證明 token 真的能授權打 WSPC）
+- [ ] 前端 `/login` route：顯示 user_code、verification URL、polling 狀態
+- [ ] Header 加登入狀態：未登入顯示「登入 WSPC」按鈕、已登入顯示 display_name + 登出
+- [ ] Zustand `useAuthStore`（不 persist，每次重整重新驗證 `/api/me`）
+
+**可以看到什麼**：從 desk.yurenju.me 走完整 device flow 登入後，header 顯示自己的 WSPC email / display_name。Today / Plan / Backlog 三個 mode 的互動完全不變。
+**Owner 防護**：**不鎖**。任何人都可以用自己的 WSPC 帳號登入看自己的 todo（multi-tenant）。
+**不做**：todo 端點、DeskTask 型態註冊、前端任何資料源切換。
+
+### Slice 2b — `/api/todo` 接上 WSPC + 前端銜接
+
+**目標**：把 Today mode 從 localStorage 換成真實 WSPC 資料。
+
 - [ ] WSPC `DeskTask` 自訂型態註冊（含完整 custom fields，雖然這片只用到一部分）
-- [ ] `/api/todo` 端點：list / create / patch（status, daily_priority, done_on）
+- [ ] `/api/todo` 端點：list / create / patch（status、daily_priority、done_on）
 - [ ] 過濾條件先簡化：`scheduled_dates contains today`
 
-**從 Slice 1 銜接過來要處理**（Slice 1 刻意用最小前端做法,延後到接 WSPC 才補的衍生事項）:
+**從 Slice 1 銜接過來要處理**（Slice 1 刻意用最小前端做法、延後到接 WSPC 才補的衍生事項）：
 
-- [ ] `today` 真實化 + 可切換日期:Slice 1 固定 `MOCK_TODAY` 並集中在 store 單一欄位,這片換成真實今天並支援切換日期(`/today/:date` 之類)
-- [ ] 刪除改 soft-delete:Slice 1 是「直接刪 + undo」,這片改為 PATCH `status: cancelled`,取代從陣列直接移除
-- [ ] seed → 真實資料:store 的 initial `tasks = allTasks` 改由 `/api/todo` list 載入,persist 角色轉為快取 / 樂觀更新
-- [ ] `daily_priority` 騰位要 patch 兩筆:被騰位者的 `daily_priority` 清除也要對 server 發 PATCH,不能只改本地
+- [ ] `today` 真實化 + 可切換日期：Slice 1 固定 `MOCK_TODAY` 並集中在 store 單一欄位，這片換成真實今天並支援切換日期（`/today/:date` 之類）
+- [ ] 刪除改 soft-delete：Slice 1 是「直接刪 + undo」，這片改為 PATCH `status: cancelled`，取代從陣列直接移除
+- [ ] seed → 真實資料：store 的 initial `tasks = allTasks` 改由 `/api/todo` list 載入，persist 角色轉為快取 / 樂觀更新
+- [ ] `daily_priority` 騰位要 patch 兩筆：被騰位者的 `daily_priority` 清除也要對 server 發 PATCH，不能只改本地
 
-**可以看到什麼**：Slice 1 的畫面換成真實 WSPC 資料；auth 鏈整條跑通。
+**可以看到什麼**：Today 換成真實 WSPC 資料；auth 鏈端到端跑通。
 **不做**：軌跡、略過、Monthly、Backlog。
 
 ### Slice 3 — Monthly 欄互動 + promote ⏳
