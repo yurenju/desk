@@ -279,3 +279,134 @@ export async function getWhoami(accessToken: string): Promise<Whoami> {
     displayName: data.display_name,
   };
 }
+
+export interface Todo {
+  id: string;
+  status: "open" | "in_progress" | "done" | "cancelled";
+  title: string;
+  created_at: number;
+  updated_at: number;
+  custom_fields?: Record<string, string | string[]>;
+}
+
+const CF_SCHEDULED_DATES = "cf.scheduled_dates"; // 鎖死 key，防靜默回整包
+
+export async function listTodos(
+  accessToken: string,
+  opts: { projectId: string; date: string },
+): Promise<Todo[]> {
+  const params = new URLSearchParams();
+  params.set("project_id", opts.projectId);
+  params.set(CF_SCHEDULED_DATES, opts.date);
+  for (const s of ["open", "in_progress", "done"]) params.append("status", s);
+  const res = await fetch(`${WSPC_BASE}/todo/items?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    throw new Error(`WSPC listTodos failed: ${res.status} ${await res.text()}`);
+  }
+  const data = (await res.json()) as { todos?: Todo[] };
+  return data.todos ?? [];
+}
+
+export async function createTodo(
+  accessToken: string,
+  body: {
+    title: string;
+    projectId: string;
+    typeId: string;
+    customFields: Record<string, string | string[]>;
+  },
+): Promise<Todo> {
+  const res = await fetch(`${WSPC_BASE}/todo/items`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      title: body.title,
+      project_id: body.projectId,
+      type_id: body.typeId,
+      custom_fields: body.customFields,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`WSPC createTodo failed: ${res.status} ${await res.text()}`);
+  }
+  return (await res.json()) as Todo;
+}
+
+export async function patchTodo(
+  accessToken: string,
+  id: string,
+  body: {
+    status?: Todo["status"];
+    customFields?: Record<string, string | null>;
+  },
+): Promise<Todo> {
+  const payload: Record<string, unknown> = {};
+  if (body.status) payload.status = body.status;
+  if (body.customFields) payload.custom_fields = body.customFields;
+  const res = await fetch(`${WSPC_BASE}/todo/items/${id}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    throw new Error(`WSPC patchTodo failed: ${res.status} ${await res.text()}`);
+  }
+  return (await res.json()) as Todo;
+}
+
+export async function createProject(
+  accessToken: string,
+  name: string,
+): Promise<{ id: string }> {
+  const res = await fetch(`${WSPC_BASE}/todo/projects`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    throw new Error(`WSPC createProject failed: ${res.status} ${await res.text()}`);
+  }
+  const data = (await res.json()) as { id?: string };
+  if (!data.id) throw new Error("WSPC createProject response missing id");
+  return { id: data.id };
+}
+
+export interface CustomFieldDecl {
+  key: string;
+  type: "string" | "string_array";
+}
+
+export async function createTodoType(
+  accessToken: string,
+  body: { label: string; projectId: string; customFields: CustomFieldDecl[] },
+): Promise<{ id: string }> {
+  const res = await fetch(`${WSPC_BASE}/todo/types`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      label: body.label,
+      project_id: body.projectId,
+      custom_fields: body.customFields,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`WSPC createTodoType failed: ${res.status} ${await res.text()}`);
+  }
+  const data = (await res.json()) as { id?: string };
+  if (!data.id) throw new Error("WSPC createTodoType response missing id");
+  return { id: data.id };
+}

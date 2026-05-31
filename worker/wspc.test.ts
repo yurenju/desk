@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { registerClient, requestDeviceAuthorization, exchangeDeviceCode, refreshAccessToken, getWhoami } from "./wspc";
+import { registerClient, requestDeviceAuthorization, exchangeDeviceCode, refreshAccessToken, getWhoami, listTodos, createTodo, patchTodo } from "./wspc";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -407,5 +407,33 @@ describe("getWhoami", () => {
     await expect(getWhoami("at-1")).rejects.toThrow(
       "WSPC whoami failed (status 502): Bad Gateway HTML"
     );
+  });
+});
+
+describe("listTodos", () => {
+  it("builds project_id + cf.scheduled_dates + status query", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ todos: [] }), { status: 200 }),
+    );
+    await listTodos("at", { projectId: "prj_1", date: "2026-05-31" });
+    const url = new URL(fetchSpy.mock.calls[0][0] as string);
+    expect(url.pathname).toBe("/todo/items");
+    expect(url.searchParams.get("project_id")).toBe("prj_1");
+    expect(url.searchParams.get("cf.scheduled_dates")).toBe("2026-05-31");
+    expect(url.searchParams.getAll("status")).toEqual(["open", "in_progress", "done"]);
+  });
+});
+
+describe("patchTodo", () => {
+  it("maps status + customFields and supports null clear", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: "tod_1", status: "open" }), { status: 200 }),
+    );
+    await patchTodo("at", "tod_1", { customFields: { daily_priority: null } });
+    const init = fetchSpy.mock.calls[0][1]!;
+    expect(JSON.parse(init.body as string)).toEqual({
+      custom_fields: { daily_priority: null },
+    });
+    expect(init.method).toBe("PATCH");
   });
 });
