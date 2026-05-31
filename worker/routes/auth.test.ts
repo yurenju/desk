@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { makeKvStub } from "../test-helpers/kv-stub";
-import { handleLogin } from "./auth";
-import { getDevice } from "../kv";
+import { handleLogin, handleStatus } from "./auth";
+import { getDevice, putDevice, getSession } from "../kv";
 import * as wspc from "../wspc";
 
 function makeEnv(kv = makeKvStub()) {
@@ -60,5 +60,82 @@ describe("POST /api/auth/login", () => {
     });
     await handleLogin(env);
     expect(await env.DESK_KV.get("wspc:client_id")).toBe("fresh-client");
+  });
+});
+
+describe("GET /api/auth/status", () => {
+  it("returns 'expired' when polling_id is not found in KV", async () => {
+    const env = makeEnv();
+    const res = await handleStatus(env, "ghost-id");
+    const body = (await res.json()) as { state: string };
+    expect(body.state).toBe("expired");
+  });
+
+  it("returns 'pending' when WSPC says authorization_pending", async () => {
+    const env = makeEnv();
+    await env.DESK_KV.put("wspc:client_id", "client-1");
+    await putDevice(env.DESK_KV, "pid-1", { deviceCode: "dc", interval: 5 }, 600);
+    vi.spyOn(wspc, "exchangeDeviceCode").mockResolvedValue({ status: "pending" });
+
+    const res = await handleStatus(env, "pid-1");
+    expect((await res.json())).toEqual({ state: "pending" });
+  });
+
+  it("returns 'pending' + slow_down hint", async () => {
+    const env = makeEnv();
+    await env.DESK_KV.put("wspc:client_id", "client-1");
+    await putDevice(env.DESK_KV, "pid-1", { deviceCode: "dc", interval: 5 }, 600);
+    vi.spyOn(wspc, "exchangeDeviceCode").mockResolvedValue({ status: "slow_down" });
+
+    const res = await handleStatus(env, "pid-1");
+    expect((await res.json())).toEqual({ state: "pending", slow_down: true });
+  });
+
+  it("returns 'authenticated', creates session, sets cookie, deletes device entry", async () => {
+    const env = makeEnv();
+    await env.DESK_KV.put("wspc:client_id", "client-1");
+    await putDevice(env.DESK_KV, "pid-1", { deviceCode: "dc", interval: 5 }, 600);
+    vi.spyOn(wspc, "exchangeDeviceCode").mockResolvedValue({
+      status: "success",
+      tokens: { accessToken: "at-1", refreshToken: "rt-1", expiresIn: 900 },
+    });
+
+    const res = await handleStatus(env, "pid-1");
+    expect(res.status).toBe(200);
+    expect((await res.json())).toEqual({ state: "authenticated" });
+
+    const setCookie = res.headers.get("Set-Cookie");
+    expect(setCookie).toContain("__Host-Session=");
+    expect(setCookie).toContain("HttpOnly");
+
+    const cookieMatch = setCookie!.match(/__Host-Session=([^;]+)/);
+    const sessionId = cookieMatch![1];
+    const session = await getSession(env.DESK_KV, sessionId);
+    expect(session?.accessToken).toBe("at-1");
+    expect(session?.refreshToken).toBe("rt-1");
+
+    expect(await getDevice(env.DESK_KV, "pid-1")).toBeNull();
+  });
+
+  it("returns 'denied' and deletes device entry", async () => {
+    const env = makeEnv();
+    await env.DESK_KV.put("wspc:client_id", "client-1");
+    await putDevice(env.DESK_KV, "pid-1", { deviceCode: "dc", interval: 5 }, 600);
+    vi.spyOn(wspc, "exchangeDeviceCode").mockResolvedValue({ status: "denied" });
+
+    const res = await handleStatus(env, "pid-1");
+    expect((await res.json())).toEqual({ state: "denied" });
+    expect(await getDevice(env.DESK_KV, "pid-1")).toBeNull();
+  });
+
+  it("returns 'expired' and deletes device entry when WSPC says expired_token", async () => {
+    const env = makeEnv();
+    await env.DESK_KV.put("wspc:client_id", "client-1");
+    await putDevice(env.DESK_KV, "pid-1", { deviceCode: "dc", interval: 5 }, 600);
+    vi.spyOn(wspc, "exchangeDeviceCode").mockResolvedValue({ status: "expired" });
+
+    const res = await handleStatus(env, "pid-1");
+    expect((await res.json())).toEqual({ state: "expired" });
+    expect(await getDevice(env.DESK_KV, "pid-1")).toBeNull();
   });
 });
