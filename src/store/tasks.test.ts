@@ -76,6 +76,30 @@ describe("server-backed tasks store", () => {
     expect(useTasksStore.getState().status).toBe("error");
   });
 
+  it("ignores a stale load that resolves after a newer one", async () => {
+    let resolveOld!: (v: import("@/lib/types").Task[]) => void;
+    let resolveNew!: (v: import("@/lib/types").Task[]) => void;
+    const oldP = new Promise<import("@/lib/types").Task[]>((r) => { resolveOld = r; });
+    const newP = new Promise<import("@/lib/types").Task[]>((r) => { resolveNew = r; });
+    const spy = vi.spyOn(api, "fetchTodos");
+    spy.mockReturnValueOnce(oldP).mockReturnValueOnce(newP);
+
+    const p1 = useTasksStore.getState().loadTasks("2026-05-30");
+    const p2 = useTasksStore.getState().loadTasks("2026-05-31");
+
+    // newer (second) call resolves first, older resolves last
+    resolveNew([{ id: "new", title: "N", status: "open", parent_id: null,
+      created_at: "x", updated_at: "x", custom_fields: {} }]);
+    resolveOld([{ id: "old", title: "O", status: "open", parent_id: null,
+      created_at: "x", updated_at: "x", custom_fields: {} }]);
+    await Promise.all([p1, p2]);
+
+    // the LATEST requested date (05-31 / "new") must win, not the last-to-resolve
+    expect(useTasksStore.getState().tasks.map((t) => t.id)).toEqual(["new"]);
+    expect(useTasksStore.getState().today).toBe("2026-05-31");
+    expect(useTasksStore.getState().status).toBe("ready");
+  });
+
   it("rolls back toggleDone when patch fails", async () => {
     useTasksStore.setState({
       tasks: [{ id: "tod_1", title: "A", status: "open", parent_id: null,

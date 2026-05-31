@@ -12,6 +12,10 @@ import {
 const now = () => new Date().toISOString();
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
+// Monotonic counter used to sequence loadTasks calls. Only the most-recent
+// invocation is allowed to commit its result to the store.
+let loadSeq = 0;
+
 interface TasksState {
   tasks: Task[];
   today: string;
@@ -33,11 +37,14 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
   error: null,
 
   async loadTasks(date) {
+    const seq = ++loadSeq;
     set({ status: "loading", error: null });
     try {
       const tasks = await fetchTodos(date);
+      if (seq !== loadSeq) return;          // a newer load superseded this one
       set({ tasks, today: date, status: "ready" });
     } catch {
+      if (seq !== loadSeq) return;
       set({ status: "error", error: "load_failed" });
     }
   },
