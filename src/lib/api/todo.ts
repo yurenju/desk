@@ -28,6 +28,7 @@ export interface TodoPatch {
   status?: TaskStatus;
   daily_priority?: string | null;
   done_on?: string | null;
+  title?: string;
 }
 
 export async function patchTodoApi(id: string, patch: TodoPatch): Promise<Task> {

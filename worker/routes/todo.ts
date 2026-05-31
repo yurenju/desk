@@ -56,12 +56,14 @@ export async function handlePatchTodo(
       status?: "open" | "in_progress" | "done" | "cancelled";
       daily_priority?: string | null;
       done_on?: string | null;
+      title?: string;
     };
     try {
       body = (await request.json()) as {
         status?: "open" | "in_progress" | "done" | "cancelled";
         daily_priority?: string | null;
         done_on?: string | null;
+        title?: string;
       };
     } catch {
       return json({ error: "invalid_json" }, 400);
@@ -72,6 +74,7 @@ export async function handlePatchTodo(
     const todo = await patchTodo(accessToken, id, {
       status: body.status,
       customFields: Object.keys(customFields).length ? customFields : undefined,
+      title: body.title,
     });
     return json({ task: mapTodoToTask(todo) });
   });

@@ -24,7 +24,7 @@ interface TasksState {
   loadTasks: (date: string) => Promise<void>;
   toggleDone: (id: string) => Promise<void>;
   addTodayTask: (title: string) => Promise<void>;
-  editTitle: (id: string, title: string) => void;
+  editTitle: (id: string, title: string) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   setDailyPriority: (id: string, n: Priority | null) => Promise<void>;
   clearTasks: () => void;
@@ -81,10 +81,16 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     }
   },
 
-  editTitle(id, title) {
-    // title is a WSPC core field; server title PATCH is out of scope for 2b.
-    // Local-only optimistic update until it's supported (no request to roll back).
-    set({ tasks: editTitle(get().tasks, id, title, now()), error: null });
+  async editTitle(id, title) {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    const prev = get().tasks;
+    set({ tasks: editTitle(prev, id, trimmed, now()), error: null });
+    try {
+      await patchTodoApi(id, { title: trimmed });
+    } catch {
+      set({ tasks: prev, error: "save_failed" });
+    }
   },
 
   async deleteTask(id) {

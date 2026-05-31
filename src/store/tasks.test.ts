@@ -110,4 +110,22 @@ describe("server-backed tasks store", () => {
     expect(useTasksStore.getState().tasks[0].status).toBe("open"); // rolled back
     expect(useTasksStore.getState().error).not.toBeNull();
   });
+
+  it("editTitle optimistically renames and persists", async () => {
+    useTasksStore.setState({ tasks: [{ id: "t1", title: "Old", status: "open", parent_id: null,
+      created_at: "x", updated_at: "x", custom_fields: {} }] });
+    const spy = vi.spyOn(api, "patchTodoApi").mockResolvedValue({ id: "t1" } as never);
+    await useTasksStore.getState().editTitle("t1", "New");
+    expect(useTasksStore.getState().tasks[0].title).toBe("New");
+    expect(spy).toHaveBeenCalledWith("t1", { title: "New" });
+  });
+
+  it("editTitle rolls back when patch fails", async () => {
+    useTasksStore.setState({ tasks: [{ id: "t1", title: "Old", status: "open", parent_id: null,
+      created_at: "x", updated_at: "x", custom_fields: {} }] });
+    vi.spyOn(api, "patchTodoApi").mockRejectedValue(new Error("boom"));
+    await useTasksStore.getState().editTitle("t1", "New");
+    expect(useTasksStore.getState().tasks[0].title).toBe("Old"); // rolled back
+    expect(useTasksStore.getState().error).not.toBeNull();
+  });
 });

@@ -21,4 +21,13 @@ describe("todo api client", () => {
     expect(init.method).toBe("PATCH");
     expect(JSON.parse(init.body as string)).toEqual({ daily_priority: null });
   });
+
+  it("patchTodoApi sends title when provided", async () => {
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ task: { id: "tod_1" } }), { status: 200 }),
+    );
+    await patchTodoApi("tod_1", { title: "x" });
+    const init = spy.mock.calls[0][1]!;
+    expect(JSON.parse(init.body as string)).toEqual({ title: "x" });
+  });
 });

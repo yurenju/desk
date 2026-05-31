@@ -343,9 +343,11 @@ export async function patchTodo(
   body: {
     status?: Todo["status"];
     customFields?: Record<string, string | null>;
+    title?: string;
   },
 ): Promise<Todo> {
   const payload: Record<string, unknown> = {};
+  if (body.title !== undefined) payload.title = body.title;
   if (body.status !== undefined) payload.status = body.status;
   if (body.customFields) payload.custom_fields = body.customFields;
   const res = await fetch(`${WSPC_BASE}/todo/items/${id}`, {

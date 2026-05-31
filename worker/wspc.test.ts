@@ -460,4 +460,14 @@ describe("patchTodo", () => {
     });
     expect(init.method).toBe("PATCH");
   });
+
+  it("sends title as a top-level field when provided", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: "tod_1", status: "open" }), { status: 200 }),
+    );
+    await patchTodo("at", "tod_1", { title: "New" });
+    const init = fetchSpy.mock.calls[0][1]!;
+    expect(JSON.parse(init.body as string)).toEqual({ title: "New" });
+    expect(init.method).toBe("PATCH");
+  });
 });

@@ -103,4 +103,20 @@ describe("PATCH /api/todo/:id", () => {
       customFields: { daily_priority: null },
     });
   });
+
+  it("passes title through to patchTodo as a top-level field", async () => {
+    const env = makeEnv();
+    await seedSession(env);
+    const spy = vi.spyOn(wspc, "patchTodo").mockResolvedValue({
+      id: "tod_1", status: "open", title: "Renamed", created_at: 0, updated_at: 0, custom_fields: {},
+    });
+    const req = new Request("https://d/api/todo/tod_1", {
+      method: "PATCH",
+      headers: { ...cookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Renamed" }),
+    });
+    const res = await handlePatchTodo(req, env, "tod_1");
+    expect(res.status).toBe(200);
+    expect(spy.mock.calls[0][2]).toMatchObject({ title: "Renamed" });
+  });
 });
