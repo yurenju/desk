@@ -31,6 +31,18 @@ describe("GET /api/todo", () => {
     expect(res.status).toBe(400);
   });
 
+  it("400 with invalid_date when date format is wrong", async () => {
+    const env = makeEnv();
+    await seedSession(env);
+    const spy = vi.spyOn(wspc, "listTodos");
+    const req = new Request("https://d/api/todo?date=garbage", { headers: cookie });
+    const res = await handleListTodo(req, env);
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("invalid_date");
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it("returns mapped tasks filtered by date", async () => {
     const env = makeEnv();
     await seedSession(env);
