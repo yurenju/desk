@@ -99,3 +99,141 @@ export async function requestDeviceAuthorization(clientId: string): Promise<Devi
     interval: data.interval,
   };
 }
+
+const DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code";
+
+type TokenResponse = components["schemas"]["OAuthTokenResponse"];
+
+export interface TokenBundle {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+}
+
+export type ExchangeDeviceCodeResult =
+  | { status: "success"; tokens: TokenBundle }
+  | { status: "pending" }
+  | { status: "slow_down" }
+  | { status: "denied" }
+  | { status: "expired" };
+
+// WSPC may return either RFC 8628 string form { error: "authorization_pending" }
+// or wspc envelope form { error: { code: "AUTHORIZATION_PENDING", message } }.
+// Normalize both into a lowercase code.
+function extractOAuthErrorCode(body: unknown): string {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) return "";
+  const err = (body as { error?: unknown }).error;
+  if (typeof err === "string") return err.toLowerCase();
+  if (typeof err === "object" && err !== null && !Array.isArray(err)) {
+    const code = (err as { code?: unknown }).code;
+    if (typeof code === "string") return code.toLowerCase();
+  }
+  return "";
+}
+
+export async function exchangeDeviceCode(input: {
+  clientId: string;
+  deviceCode: string;
+}): Promise<ExchangeDeviceCodeResult> {
+  const res = await fetch(`${WSPC_BASE}/auth/oauth/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: DEVICE_CODE_GRANT,
+      device_code: input.deviceCode,
+      client_id: input.clientId,
+    }),
+  });
+
+  let body: unknown;
+  const clone = res.clone();
+  try {
+    body = await res.json();
+  } catch (err) {
+    const text = await clone.text().catch(() => "");
+    throw new Error(
+      `WSPC token exchange failed (status ${res.status}): ${text || (err instanceof Error ? err.message : String(err))}`,
+      { cause: err }
+    );
+  }
+
+  if (res.ok) {
+    const data = body as TokenResponse;
+    if (!data || typeof data !== "object" || !data.access_token || !data.refresh_token || typeof data.expires_in !== "number") {
+      throw new Error("WSPC token response missing critical fields");
+    }
+    return {
+      status: "success",
+      tokens: {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        expiresIn: data.expires_in,
+      },
+    };
+  }
+
+  const code = extractOAuthErrorCode(body);
+  switch (code) {
+    case "authorization_pending":
+      return { status: "pending" };
+    case "slow_down":
+      return { status: "slow_down" };
+    case "access_denied":
+      return { status: "denied" };
+    case "expired_token":
+      return { status: "expired" };
+    default:
+      throw new Error(
+        `WSPC token exchange failed: ${res.status} ${JSON.stringify(body)}`
+      );
+  }
+}
+
+export async function refreshAccessToken(input: {
+  clientId: string;
+  refreshToken: string;
+}): Promise<TokenBundle> {
+  const res = await fetch(`${WSPC_BASE}/auth/oauth/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: input.refreshToken,
+      client_id: input.clientId,
+    }),
+  });
+
+  if (!res.ok) {
+    const clone = res.clone();
+    let errorText = "";
+    try {
+      const errJson = await res.json();
+      errorText = JSON.stringify(errJson);
+    } catch {
+      errorText = await clone.text().catch(() => "Unknown error");
+    }
+    throw new Error(`WSPC token refresh failed (status ${res.status}): ${errorText}`);
+  }
+
+  let data: TokenResponse;
+  try {
+    data = (await res.json()) as TokenResponse;
+  } catch (err) {
+    throw new Error(
+      `WSPC token refresh failed to parse JSON response: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+      { cause: err }
+    );
+  }
+
+  if (!data || typeof data !== "object" || !data.access_token || !data.refresh_token || typeof data.expires_in !== "number") {
+    throw new Error("WSPC token refresh response missing critical fields");
+  }
+
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    expiresIn: data.expires_in,
+  };
+}
