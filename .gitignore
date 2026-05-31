@@ -81,6 +81,9 @@ dist-ssr/
 # Superpowers Brainstorming Session Cache
 .superpowers/
 
+# WSPC API verification tool cache (auth tokens + bootstrap ids)
+.wspc-verify-cache.json
+
 # TanStack Router tmp files
 .tanstack/tmp/
 
