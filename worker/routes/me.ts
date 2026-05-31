@@ -6,7 +6,7 @@ interface Env {
 }
 
 export async function handleMe(request: Request, env: Env): Promise<Response> {
-  return withSession(request, env, async (accessToken) => {
+  return withSession(request, env, async ({ accessToken }) => {
     const me = await getWhoami(accessToken);
     return new Response(
       JSON.stringify({

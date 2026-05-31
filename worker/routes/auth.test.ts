@@ -99,6 +99,7 @@ describe("GET /api/auth/status", () => {
       status: "success",
       tokens: { accessToken: "at-1", refreshToken: "rt-1", expiresIn: 900 },
     });
+    vi.spyOn(wspc, "getWhoami").mockResolvedValue({ userId: "usr_test", email: "t@e.co" });
 
     const res = await handleStatus(env, "pid-1");
     expect(res.status).toBe(200);
@@ -113,6 +114,7 @@ describe("GET /api/auth/status", () => {
     const session = await getSession(env.DESK_KV, sessionId);
     expect(session?.accessToken).toBe("at-1");
     expect(session?.refreshToken).toBe("rt-1");
+    expect(session?.userId).toBe("usr_test");
 
     expect(await getDevice(env.DESK_KV, "pid-1")).toBeNull();
   });
@@ -147,6 +149,7 @@ describe("POST /api/auth/logout", () => {
       accessToken: "at",
       refreshToken: "rt",
       accessExp: 999999,
+      userId: "usr_test",
     });
 
     const req = new Request("https://desk.yurenju.me/api/auth/logout", {

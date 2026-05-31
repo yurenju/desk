@@ -8,6 +8,7 @@ export interface SessionData {
   accessToken: string;
   refreshToken: string;
   accessExp: number; // unix seconds
+  userId: string;
 }
 
 export async function getSession(
@@ -88,5 +89,31 @@ export async function putDevice(
 
 export async function deleteDevice(kv: KVNamespace, pollingId: string): Promise<void> {
   await kv.delete(`device:${pollingId}`);
+}
+
+export interface BootstrapData {
+  projectId: string;
+  typeId: string;
+}
+
+export async function getBootstrap(
+  kv: KVNamespace,
+  userId: string,
+): Promise<BootstrapData | null> {
+  const raw = await kv.get(`desk:bootstrap:${userId}`);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as BootstrapData;
+  } catch {
+    return null;
+  }
+}
+
+export async function putBootstrap(
+  kv: KVNamespace,
+  userId: string,
+  data: BootstrapData,
+): Promise<void> {
+  await kv.put(`desk:bootstrap:${userId}`, JSON.stringify(data));
 }
 

@@ -26,6 +26,7 @@ describe("GET /api/me", () => {
       accessToken: "at-1",
       refreshToken: "rt-1",
       accessExp: Math.floor(Date.now() / 1000) + 600,
+      userId: "usr_test",
     });
     vi.spyOn(wspc, "getWhoami").mockResolvedValue({
       userId: "u-1",

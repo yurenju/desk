@@ -37,16 +37,17 @@ describe("withSession", () => {
       accessToken: "at-1",
       refreshToken: "rt-1",
       accessExp: futureExp,
+      userId: "usr_test",
     });
     vi.spyOn(env.DESK_KV, "put"); // ensure we don't refresh
 
     const req = new Request("https://desk.yurenju.me/api/me", {
       headers: { Cookie: "__Host-Session=sid-1" },
     });
-    const handler = vi.fn(async (token: string) => new Response(token));
+    const handler = vi.fn(async ({ accessToken }: { accessToken: string }) => new Response(accessToken));
     const res = await withSession(req, env, handler);
 
-    expect(handler).toHaveBeenCalledWith("at-1");
+    expect(handler).toHaveBeenCalledWith({ accessToken: "at-1", userId: "usr_test" });
     expect(await res.text()).toBe("at-1");
   });
 
@@ -57,6 +58,7 @@ describe("withSession", () => {
       accessToken: "at-old",
       refreshToken: "rt-old",
       accessExp: nearExp,
+      userId: "usr_test",
     });
     await env.DESK_KV.put("wspc:client_id", "client-1");
     vi.spyOn(wspc, "refreshAccessToken").mockResolvedValue({
@@ -68,10 +70,10 @@ describe("withSession", () => {
     const req = new Request("https://desk.yurenju.me/api/me", {
       headers: { Cookie: "__Host-Session=sid-1" },
     });
-    const handler = vi.fn(async (token: string) => new Response(token));
+    const handler = vi.fn(async ({ accessToken }: { accessToken: string }) => new Response(accessToken));
     const res = await withSession(req, env, handler);
 
-    expect(handler).toHaveBeenCalledWith("at-new");
+    expect(handler).toHaveBeenCalledWith({ accessToken: "at-new", userId: "usr_test" });
     expect(await res.text()).toBe("at-new");
     const stored = await getSession(env.DESK_KV, "sid-1");
     expect(stored?.accessToken).toBe("at-new");
@@ -85,6 +87,7 @@ describe("withSession", () => {
       accessToken: "at-old",
       refreshToken: "rt-bad",
       accessExp: nearExp,
+      userId: "usr_test",
     });
     await env.DESK_KV.put("wspc:client_id", "client-1");
     vi.spyOn(wspc, "refreshAccessToken").mockRejectedValue(new Error("invalid_grant"));
@@ -99,5 +102,24 @@ describe("withSession", () => {
     expect(res.headers.get("Set-Cookie")).toContain("Max-Age=0");
     expect(handler).not.toHaveBeenCalled();
     expect(await getSession(env.DESK_KV, "sid-1")).toBeNull();
+  });
+
+  it("passes userId from session to the handler", async () => {
+    const env = makeEnv();
+    await putSession(env.DESK_KV, "sid-u", {
+      accessToken: "at",
+      refreshToken: "rt",
+      accessExp: Math.floor(Date.now() / 1000) + 600,
+      userId: "usr_123",
+    });
+    const req = new Request("https://desk.yurenju.me/api/x", {
+      headers: { Cookie: "__Host-Session=sid-u" },
+    });
+    let seen: { accessToken: string; userId: string } | null = null;
+    await withSession(req, env, async (ctx) => {
+      seen = ctx;
+      return new Response("ok");
+    });
+    expect(seen).toEqual({ accessToken: "at", userId: "usr_123" });
   });
 });

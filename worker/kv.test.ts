@@ -69,6 +69,7 @@ describe("session operations", () => {
       accessToken: "at-1",
       refreshToken: "rt-1",
       accessExp: 1234567890,
+      userId: "usr_test",
     };
     await putSession(kv, "sid-1", session);
 
@@ -96,6 +97,7 @@ describe("session operations", () => {
       accessToken: "at",
       refreshToken: "rt",
       accessExp: 1,
+      userId: "usr_test",
     });
     await deleteSession(kv, "sid-1");
     expect(await getSession(kv, "sid-1")).toBeNull();
