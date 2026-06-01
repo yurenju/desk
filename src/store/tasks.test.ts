@@ -2,11 +2,13 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useTasksStore } from "./tasks";
 import { allTasks, MOCK_TODAY } from "@/mock/data";
 import * as api from "@/lib/api/todo";
+import { resetTodoQueue } from "@/lib/api/todoQueue";
 
 // Silence unhandled floating-promise warnings from fire-and-forget store actions
 // by ensuring all API calls are mocked by default.
 beforeEach(() => {
   vi.restoreAllMocks();
+  resetTodoQueue();
   useTasksStore.setState({ tasks: allTasks, today: MOCK_TODAY, status: "ready", error: null, recentlyDeleted: null });
 });
 
@@ -93,6 +95,7 @@ describe("useTasksStore (local behaviour)", () => {
 describe("server-backed tasks store", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    resetTodoQueue();
     useTasksStore.setState({ tasks: [], error: null, recentlyDeleted: null });
   });
 
@@ -191,5 +194,30 @@ describe("server-backed tasks store", () => {
     expect(useTasksStore.getState().tasks).toHaveLength(0); // rolled back
     expect(useTasksStore.getState().error).toBe("save_failed");
     expect(useTasksStore.getState().recentlyDeleted).not.toBeNull(); // undo remains retryable
+  });
+
+  it("setDailyPriority reloads from server when a patch fails", async () => {
+    useTasksStore.setState({
+      tasks: allTasks,
+      today: MOCK_TODAY,
+      status: "ready",
+      error: null,
+      recentlyDeleted: null,
+    });
+    vi.spyOn(api, "patchTodoApi").mockRejectedValue(new Error("boom"));
+    const reload = vi.spyOn(api, "fetchTodos").mockResolvedValue([
+      {
+        id: "reloaded",
+        title: "R",
+        status: "open",
+        parent_id: null,
+        created_at: "x",
+        updated_at: "x",
+        custom_fields: {},
+      },
+    ]);
+    await useTasksStore.getState().setDailyPriority("d5", "1");
+    expect(reload).toHaveBeenCalledWith(MOCK_TODAY);
+    expect(useTasksStore.getState().tasks.map((t) => t.id)).toEqual(["reloaded"]);
   });
 });
