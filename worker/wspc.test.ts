@@ -267,6 +267,14 @@ describe("exchangeDeviceCode", () => {
     expect(result).toEqual({ status: "expired" });
   });
 
+  it("returns { status: 'expired' } on invalid_grant (consumed/revoked device_code)", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ error: "invalid_grant" }), { status: 400 }),
+    );
+    const result = await exchangeDeviceCode({ clientId: "c1", deviceCode: "dc-1" });
+    expect(result).toEqual({ status: "expired" });
+  });
+
   it("throws on unknown error code", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ error: "weird_error" }), { status: 400 }),

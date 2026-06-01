@@ -180,7 +180,11 @@ export async function exchangeDeviceCode(input: {
       return { status: "slow_down" };
     case "access_denied":
       return { status: "denied" };
+    // expired_token and invalid_grant are both terminal: a consumed, revoked,
+    // or expired device_code. Treat as expiry so the caller restarts the flow
+    // instead of bubbling up a 500.
     case "expired_token":
+    case "invalid_grant":
       return { status: "expired" };
     default:
       throw new Error(
