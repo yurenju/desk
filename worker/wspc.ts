@@ -289,7 +289,11 @@ export interface Todo {
   custom_fields?: Record<string, string | string[]>;
 }
 
-export const CF_SCHEDULED_DATES = "cf.scheduled_dates"; // 鎖死 key，防靜默回整包
+// `cf.<field>` 過濾未在主 OpenAPI 文件化(只在 llms.txt / MCP tool schema)。
+// 鎖成常數 + 測試鎖定組裝結果,讓 typo 在開發期就被擋下。
+// (歷史:早期 WSPC 對未宣告 cf 鍵會靜默回整包;2026-06 起改為 422 UNKNOWN_CUSTOM_FIELD,
+//  仍維持常數作為防呆與單一真實來源。)
+export const CF_SCHEDULED_DATES = "cf.scheduled_dates";
 
 export async function listTodos(
   accessToken: string,

@@ -122,7 +122,7 @@
 - [x] `/api/todo` 端點：list / create / patch（status、daily_priority、done_on、title）
 - [x] 過濾條件：`scheduled_dates contains today` —— 用 WSPC `cf.scheduled_dates`(server 端 array-contains)
 
-> ⚠️ `cf.<field>` 過濾**未寫進主 OpenAPI**,但 MCP tool / `llms.txt` 有,且已用 `scripts/verify-wspc.mjs` 對線上實證(dotted 語法有效、未宣告 key 會靜默回整包 → filter key 鎖成常數)。此工具留作回歸檢查。
+> ⚠️ `cf.<field>` 過濾**未寫進主 OpenAPI**(2026-06-01 重新確認仍未文件化),但 MCP tool / `llms.txt` 有,且已用 `scripts/verify-wspc.mjs` 對線上實證(dotted 語法有效;早期「打錯 key 靜默回整包」的漏洞已被 WSPC 修為 422 `UNKNOWN_CUSTOM_FIELD`)。filter key 仍鎖成常數作為單一真實來源 + typo 防呆;工具留作回歸檢查。
 
 **從 Slice 1 銜接過來要處理**（Slice 1 刻意用最小前端做法、延後到接 WSPC 才補的衍生事項）：
 

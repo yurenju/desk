@@ -265,7 +265,9 @@ export interface Todo {
   custom_fields?: Record<string, string | string[]>;
 }
 
-const CF_SCHEDULED_DATES = "cf.scheduled_dates"; // 鎖死 key，防靜默回整包
+// 鎖死 cf key 作為單一真實來源,擋下重構期 typo。
+// (歷史:早期 WSPC 對未宣告 cf 鍵會靜默回整包;2026-06 起改為 422 UNKNOWN_CUSTOM_FIELD。)
+const CF_SCHEDULED_DATES = "cf.scheduled_dates";
 
 export async function listTodos(
   accessToken: string,
