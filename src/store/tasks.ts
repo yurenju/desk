@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Priority, Task } from "@/lib/types";
-import { fetchTodos, postTodo, patchTodoApi } from "@/lib/api/todo";
+import { fetchTodos, postTodo } from "@/lib/api/todo";
+import { enqueuePatch } from "@/lib/api/todoQueue";
 import {
   addTodayTask,
   deleteTask,
@@ -64,7 +65,7 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     const stamp = now();
     set({ tasks: toggleDone(prev, id, stamp), error: null });
     try {
-      await patchTodoApi(id, {
+      await enqueuePatch(id, {
         status: willBeDone ? "done" : "open",
         done_on: willBeDone ? stamp : null,
       });
@@ -94,7 +95,7 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     const prev = get().tasks;
     set({ tasks: editTitle(prev, id, trimmed, now()), error: null });
     try {
-      await patchTodoApi(id, { title: trimmed });
+      await enqueuePatch(id, { title: trimmed });
     } catch {
       set({ tasks: prev, error: "save_failed" });
     }
@@ -106,7 +107,7 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     if (!removed) return;
     set({ tasks, error: null, recentlyDeleted: removed });
     try {
-      await patchTodoApi(id, { status: "cancelled" });
+      await enqueuePatch(id, { status: "cancelled" });
     } catch {
       set({ tasks: prev, error: "save_failed", recentlyDeleted: null });
     }
@@ -118,7 +119,7 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     const prev = get().tasks;
     set({ tasks: restoreTaskOp(prev, removed), recentlyDeleted: null, error: null });
     try {
-      await patchTodoApi(removed.task.id, { status: removed.task.status });
+      await enqueuePatch(removed.task.id, { status: removed.task.status });
     } catch {
       set({ tasks: prev, recentlyDeleted: removed, error: "save_failed" });
     }
@@ -135,11 +136,21 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     try {
       await Promise.all(
         changed.map((t) =>
-          patchTodoApi(t.id, { daily_priority: t.custom_fields.daily_priority ?? null }),
+          enqueuePatch(t.id, { daily_priority: t.custom_fields.daily_priority ?? null }),
         ),
       );
     } catch {
-      set({ tasks: prev, error: "save_failed" });
+      // Unlike other mutations we do NOT roll back to `prev` here: Promise.all
+      // may span multiple ids and some may have already been patched, so a
+      // per-call rollback would leave priorities inconsistent. Reload from the
+      // server to restore a coherent state instead. loadTasks handles its own
+      // failures internally (sets status:"error"); the extra try makes that
+      // contract explicit at the call site and guards against future drift.
+      try {
+        await get().loadTasks(get().today);
+      } catch {
+        /* loadTasks already set status:"error" */
+      }
     }
   },
 
