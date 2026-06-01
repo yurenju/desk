@@ -1,13 +1,15 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TaskRow } from "./TaskRow";
 import { useTasksStore } from "@/store/tasks";
 import { allTasks, MOCK_TODAY } from "@/mock/data";
+import * as api from "@/lib/api/todo";
 
 beforeEach(() => {
-  localStorage.clear();
-  useTasksStore.setState({ tasks: allTasks, today: MOCK_TODAY, recentlyDeleted: null });
+  vi.restoreAllMocks();
+  vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+  useTasksStore.setState({ tasks: allTasks, today: MOCK_TODAY, status: "ready", error: null });
 });
 
 function rowFor(id: string) {
@@ -54,9 +56,9 @@ describe("TaskRow (interactive)", () => {
       return <TaskRow task={task} kind="primary" interactive showRing />;
     };
     // seed fills all three slots (d1/d2/d3); free them so promoting d5 lands on slot 1
-    useTasksStore.getState().setDailyPriority("d1", null);
-    useTasksStore.getState().setDailyPriority("d2", null);
-    useTasksStore.getState().setDailyPriority("d3", null);
+    await useTasksStore.getState().setDailyPriority("d1", null);
+    await useTasksStore.getState().setDailyPriority("d2", null);
+    await useTasksStore.getState().setDailyPriority("d3", null);
     render(<TestComponent />);
     const ring = screen.getByRole("button", { name: "設為今日重點" });
     expect(ring).toBeDefined();

@@ -7,7 +7,7 @@ import {
   putSession,
   deleteSession,
 } from "../kv";
-import { requestDeviceAuthorization, exchangeDeviceCode } from "../wspc";
+import { requestDeviceAuthorization, exchangeDeviceCode, getWhoami } from "../wspc";
 import { randomBase64UrlId } from "../random";
 import {
   serializeSessionCookie,
@@ -76,10 +76,14 @@ export async function handleStatus(env: Env, pollingId: string): Promise<Respons
     case "success": {
       const sessionId = randomBase64UrlId(32);
       const nowSeconds = Math.floor(Date.now() / 1000);
+      // If getWhoami throws here the device entry survives and the next poll
+      // returns expired_token; acceptable for this slice (no partial-OAuth recovery).
+      const me = await getWhoami(result.tokens.accessToken);
       await putSession(env.DESK_KV, sessionId, {
         accessToken: result.tokens.accessToken,
         refreshToken: result.tokens.refreshToken,
         accessExp: nowSeconds + result.tokens.expiresIn - 5,
+        userId: me.userId,
       });
       await deleteDevice(env.DESK_KV, pollingId);
       return jsonResponse(

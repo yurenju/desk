@@ -94,18 +94,3 @@ export function setDailyPriority(
   });
 }
 
-const PRIORITY_SLOTS: Priority[] = ["1", "2", "3"];
-
-// Promote a task into the next free daily-priority slot for `today` (1→2→3)
-// without evicting tasks already in the top three. No-op when all slots are full.
-export function assignNextPriority(tasks: Task[], id: string, today: string): Task[] {
-  if (!tasks.some((t) => t.id === id)) return tasks;
-  const used = new Set(
-    tasks
-      .filter((t) => primaryDate(t) === today && t.custom_fields.daily_priority)
-      .map((t) => t.custom_fields.daily_priority),
-  );
-  const free = PRIORITY_SLOTS.find((p) => !used.has(p));
-  if (!free) return tasks;
-  return tasks.map((t) => (t.id === id ? patch(t, { daily_priority: free }) : t));
-}

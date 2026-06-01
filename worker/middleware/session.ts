@@ -8,7 +8,12 @@ interface Env {
   DESK_KV: KVNamespace;
 }
 
-export type SessionHandler = (accessToken: string) => Promise<Response>;
+export interface SessionContext {
+  accessToken: string;
+  userId: string;
+}
+
+export type SessionHandler = (ctx: SessionContext) => Promise<Response>;
 
 export async function withSession(
   request: Request,
@@ -59,6 +64,7 @@ export async function withSession(
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
         accessExp: newAccessExp,
+        userId: session.userId,
       });
       accessToken = tokens.accessToken;
     } catch {
@@ -73,5 +79,5 @@ export async function withSession(
     }
   }
 
-  return handler(accessToken);
+  return handler({ accessToken, userId: session.userId });
 }

@@ -69,6 +69,7 @@ describe("session operations", () => {
       accessToken: "at-1",
       refreshToken: "rt-1",
       accessExp: 1234567890,
+      userId: "usr_test",
     };
     await putSession(kv, "sid-1", session);
 
@@ -96,9 +97,32 @@ describe("session operations", () => {
       accessToken: "at",
       refreshToken: "rt",
       accessExp: 1,
+      userId: "usr_test",
     });
     await deleteSession(kv, "sid-1");
     expect(await getSession(kv, "sid-1")).toBeNull();
+  });
+
+  it("getSession returns null for a legacy session that lacks userId", async () => {
+    const kv = makeKvStub();
+    // Simulate a session written before userId was introduced
+    await kv.put(
+      "session:legacy-sid",
+      JSON.stringify({ accessToken: "at-old", refreshToken: "rt-old", accessExp: 9999999999 }),
+    );
+    expect(await getSession(kv, "legacy-sid")).toBeNull();
+  });
+
+  it("getSession round-trips a session that has userId", async () => {
+    const kv = makeKvStub();
+    const session = {
+      accessToken: "at-ok",
+      refreshToken: "rt-ok",
+      accessExp: 9999999999,
+      userId: "usr_abc",
+    };
+    await putSession(kv, "sid-ok", session);
+    expect(await getSession(kv, "sid-ok")).toEqual(session);
   });
 });
 

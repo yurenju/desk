@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { registerClient, requestDeviceAuthorization, exchangeDeviceCode, refreshAccessToken, getWhoami } from "./wspc";
+import { registerClient, requestDeviceAuthorization, exchangeDeviceCode, refreshAccessToken, getWhoami, listTodos, createTodo, patchTodo } from "./wspc";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -267,6 +267,14 @@ describe("exchangeDeviceCode", () => {
     expect(result).toEqual({ status: "expired" });
   });
 
+  it("returns { status: 'expired' } on invalid_grant (consumed/revoked device_code)", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ error: "invalid_grant" }), { status: 400 }),
+    );
+    const result = await exchangeDeviceCode({ clientId: "c1", deviceCode: "dc-1" });
+    expect(result).toEqual({ status: "expired" });
+  });
+
   it("throws on unknown error code", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ error: "weird_error" }), { status: 400 }),
@@ -407,5 +415,67 @@ describe("getWhoami", () => {
     await expect(getWhoami("at-1")).rejects.toThrow(
       "WSPC whoami failed (status 502): Bad Gateway HTML"
     );
+  });
+});
+
+describe("listTodos", () => {
+  it("builds project_id + cf.scheduled_dates + status query", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ todos: [] }), { status: 200 }),
+    );
+    await listTodos("at", { projectId: "prj_1", date: "2026-05-31" });
+    const url = new URL(fetchSpy.mock.calls[0][0] as string);
+    expect(url.pathname).toBe("/todo/items");
+    expect(url.searchParams.get("project_id")).toBe("prj_1");
+    expect(url.searchParams.get("cf.scheduled_dates")).toBe("2026-05-31");
+    expect(url.searchParams.getAll("status")).toEqual(["open", "in_progress", "done"]);
+  });
+});
+
+describe("createTodo", () => {
+  it("serialises camelCase body to snake_case fields", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ id: "tod_1", status: "open", title: "T", created_at: 0, updated_at: 0 }),
+        { status: 200 },
+      ),
+    );
+    await createTodo("at", {
+      title: "T",
+      projectId: "prj_1",
+      typeId: "typ_1",
+      customFields: { scheduled_dates: ["2026-05-31"] },
+    });
+    const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
+    expect(body).toEqual({
+      title: "T",
+      project_id: "prj_1",
+      type_id: "typ_1",
+      custom_fields: { scheduled_dates: ["2026-05-31"] },
+    });
+  });
+});
+
+describe("patchTodo", () => {
+  it("maps status + customFields and supports null clear", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: "tod_1", status: "open" }), { status: 200 }),
+    );
+    await patchTodo("at", "tod_1", { customFields: { daily_priority: null } });
+    const init = fetchSpy.mock.calls[0][1]!;
+    expect(JSON.parse(init.body as string)).toEqual({
+      custom_fields: { daily_priority: null },
+    });
+    expect(init.method).toBe("PATCH");
+  });
+
+  it("sends title as a top-level field when provided", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: "tod_1", status: "open" }), { status: 200 }),
+    );
+    await patchTodo("at", "tod_1", { title: "New" });
+    const init = fetchSpy.mock.calls[0][1]!;
+    expect(JSON.parse(init.body as string)).toEqual({ title: "New" });
+    expect(init.method).toBe("PATCH");
   });
 });

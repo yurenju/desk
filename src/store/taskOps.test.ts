@@ -7,7 +7,6 @@ import {
   deleteTask,
   restoreTask,
   setDailyPriority,
-  assignNextPriority,
 } from "./taskOps";
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
@@ -195,53 +194,3 @@ describe("setDailyPriority", () => {
   });
 });
 
-describe("assignNextPriority", () => {
-  const today = "2026-05-22";
-  const onToday = (id: string, p?: "1" | "2" | "3") =>
-    makeTask({
-      id,
-      custom_fields: { scheduled_dates: [today], ...(p ? { daily_priority: p } : {}) },
-    });
-
-  it("assigns slot 1 when no priorities are taken today", () => {
-    const tasks = [onToday("a")];
-    const next = assignNextPriority(tasks, "a", today);
-    expect(next.find((t) => t.id === "a")!.custom_fields.daily_priority).toBe("1");
-  });
-
-  it("fills the next free slot without evicting existing ones", () => {
-    const tasks = [onToday("a", "1"), onToday("b")];
-    const next = assignNextPriority(tasks, "b", today);
-    expect(next.find((t) => t.id === "a")!.custom_fields.daily_priority).toBe("1");
-    expect(next.find((t) => t.id === "b")!.custom_fields.daily_priority).toBe("2");
-  });
-
-  it("assigns slot 3 when 1 and 2 are taken", () => {
-    const tasks = [onToday("a", "1"), onToday("b", "2"), onToday("c")];
-    const next = assignNextPriority(tasks, "c", today);
-    expect(next.find((t) => t.id === "c")!.custom_fields.daily_priority).toBe("3");
-  });
-
-  it("does nothing when all three slots are full", () => {
-    const tasks = [onToday("a", "1"), onToday("b", "2"), onToday("c", "3"), onToday("d")];
-    const next = assignNextPriority(tasks, "d", today);
-    expect(next.find((t) => t.id === "d")!.custom_fields.daily_priority).toBeUndefined();
-    expect(next).toBe(tasks);
-  });
-
-  it("ignores slots taken on a different day", () => {
-    const other = makeTask({
-      id: "x",
-      custom_fields: { scheduled_dates: ["2026-05-24"], daily_priority: "1" },
-    });
-    const tasks = [other, onToday("b")];
-    const next = assignNextPriority(tasks, "b", today);
-    expect(next.find((t) => t.id === "b")!.custom_fields.daily_priority).toBe("1");
-  });
-
-  it("returns the original reference when the target ID is not found", () => {
-    const tasks = [onToday("a", "1")];
-    const next = assignNextPriority(tasks, "not-found", today);
-    expect(next).toBe(tasks);
-  });
-});

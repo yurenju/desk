@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { useTasksStore } from "./tasks";
 
 export interface AuthMe {
   userId: string;
@@ -21,6 +22,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ me, status: "authenticated" });
   },
   clear() {
+    useTasksStore.getState().clearTasks();
     set({ me: null, status: "unauthenticated" });
   },
   async fetchMe() {

@@ -1,3 +1,8 @@
+/** Returns true if `s` matches the YYYY-MM-DD format. */
+export function isValidDateParam(s: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(s);
+}
+
 /** Returns ISO date string YYYY-MM-DD in local time. */
 export function todayISO(now: Date = new Date()): string {
   const y = now.getFullYear();

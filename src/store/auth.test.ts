@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useAuthStore } from "./auth";
+import { useTasksStore } from "./tasks";
 
 beforeEach(() => {
   useAuthStore.setState({ me: null, status: "loading" });
@@ -56,4 +57,10 @@ describe("useAuthStore", () => {
     expect(useAuthStore.getState().me).toBeNull();
     expect(useAuthStore.getState().status).toBe("unauthenticated");
   });
+});
+
+it("clear() also empties tasks cache", () => {
+  useTasksStore.setState({ tasks: [{ id: "x" } as never] });
+  useAuthStore.getState().clear();
+  expect(useTasksStore.getState().tasks).toEqual([]);
 });

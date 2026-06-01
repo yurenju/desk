@@ -5,8 +5,7 @@ import { useTasksStore } from "@/store/tasks";
 import { MOCK_TODAY } from "@/mock/data";
 
 beforeEach(() => {
-  localStorage.clear();
-  useTasksStore.setState({ tasks: [], today: MOCK_TODAY, recentlyDeleted: null });
+  useTasksStore.setState({ tasks: [], today: MOCK_TODAY, status: "ready", error: null });
 });
 
 describe("DayColumn empty state", () => {
@@ -31,7 +30,7 @@ describe("DayColumn empty state", () => {
         },
       },
     ];
-    useTasksStore.setState({ tasks: mockTasks, today: MOCK_TODAY, recentlyDeleted: null });
+    useTasksStore.setState({ tasks: mockTasks, today: MOCK_TODAY, status: "ready", error: null });
     render(<DayColumn allTasks={mockTasks} selectedDate={MOCK_TODAY} variant="today-hero" />);
     expect(screen.queryByText("今天還很空白")).not.toBeInTheDocument();
   });
@@ -40,5 +39,32 @@ describe("DayColumn empty state", () => {
     const tasks = useTasksStore.getState().tasks;
     render(<DayColumn allTasks={tasks} selectedDate={MOCK_TODAY} variant="plan-narrow" />);
     expect(screen.queryByText("今天還很空白")).not.toBeInTheDocument();
+  });
+});
+
+describe("DayColumn section assignment", () => {
+  it("shows a promoted adhoc task only in Top3, not also in the adhoc section", () => {
+    const mockTasks = [
+      {
+        id: "adhoc-promoted",
+        title: "升上重點的臨時任務",
+        status: "open" as const,
+        parent_id: null,
+        created_at: "2026-05-22T00:00:00Z",
+        updated_at: "2026-05-22T00:00:00Z",
+        custom_fields: {
+          scheduled_dates: [MOCK_TODAY],
+          is_adhoc: "true" as const,
+          daily_priority: "1" as const,
+        },
+      },
+    ];
+    useTasksStore.setState({ tasks: mockTasks, today: MOCK_TODAY, status: "ready", error: null });
+    render(<DayColumn allTasks={mockTasks} selectedDate={MOCK_TODAY} variant="today-hero" />);
+
+    // Top3 renders it once; the adhoc section must not duplicate it.
+    expect(screen.getByText("今天最重要的三件事")).toBeInTheDocument();
+    expect(screen.queryByText("今天臨時加的")).not.toBeInTheDocument();
+    expect(screen.getAllByText("升上重點的臨時任務")).toHaveLength(1);
   });
 });
