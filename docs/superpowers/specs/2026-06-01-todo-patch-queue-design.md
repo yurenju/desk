@@ -64,9 +64,12 @@ enqueuePatch(id: string, patch: TodoPatch): Promise<Task>
 
 ### store 層改動(`src/store/tasks.ts`)
 
-- 所有 `patchTodoApi(...)` 呼叫改成 `enqueuePatch(...)`。optimistic update 維持不變,UI 仍即時反應。
-- 錯誤處理從 `set({ tasks: prev, error: ... })` 改成 `await get().loadTasks(get().today)`,失敗時 reload 當日資料,靠既有的 `loadSeq` 機制防競爭。
-- `setDailyPriority` 的 `Promise.all` 任一 reject 也走同一條 reload 路徑。
+序列化與錯誤回復是兩件事,範圍不同:
+
+- **序列化(全部套用)**:所有 `patchTodoApi(...)` 呼叫改成 `enqueuePatch(...)`。optimistic update 維持不變,UI 仍即時反應。這層保護人人有份,防止任何對同一 id 的並發 PATCH。
+- **錯誤回復(只有 `setDailyPriority` 改 reload)**:
+  - `setDailyPriority` 是唯一會「連點合併」、又用 `Promise.all` 改多個 id 的 mutation。連點失敗時各 call 的 `set(prev)` 會用不同舊快照互相打架,還原到一個非 server 真相的中間值。因此它的 catch 改成 `await get().loadTasks(get().today)`,直接 reload 當日資料,靠既有 `loadSeq` 防競爭。
+  - `toggleDone` / `editTitle` / `deleteTask` / `restoreTask` **維持現有 per-call rollback**。它們不會連點合併,rollback 仍正確,且保留 `recentlyDeleted`(undo)與 `error`(儲存失敗提示)語意——這些是 reload 無法照顧的附加狀態。
 
 ### 不需要動的部分
 
@@ -87,8 +90,10 @@ worker 端(`wspc.ts`、`routes/todo.ts`)、WSPC 的 `expected_version`、前端 
 ## 錯誤處理
 
 - 序列化後唯一還會失敗的情境主要是網路斷線(極端情況仍可能 conflict)。
-- 任一 id 的請求失敗 → 該 id 整條 queue reject → store catch → `loadTasks(today)` reload。
-- reload 用既有 `loadSeq` 確保只有最新一次 commit 進 store。
+- queue 層:任一 id 的請求失敗 → 該 id 整條 queue 作廢(清空 pending、reject 當前與所有 pending waiters、清除 in-flight 標記)。
+- store 層:
+  - `setDailyPriority` catch → `loadTasks(today)` reload,用既有 `loadSeq` 確保只有最新一次 commit 進 store。
+  - 其他 mutation catch → 維持現有 `set({ tasks: prev, error: "save_failed" })` rollback,保留 undo 與 error 提示語意。
 
 ## 測試策略(TDD)
 
@@ -102,4 +107,5 @@ worker 端(`wspc.ts`、`routes/todo.ts`)、WSPC 的 `expected_version`、前端 
 
 store 層:
 
-- 任一 mutation 失敗會呼叫 `loadTasks(today)` reload(而非 rollback 到 prev 快照)。
+- `setDailyPriority` 失敗會呼叫 `loadTasks(today)` reload(而非 rollback 到 prev 快照)。
+- 其他 mutation(toggleDone/editTitle/delete/restore)失敗維持現有 rollback 行為,既有測試不變。
