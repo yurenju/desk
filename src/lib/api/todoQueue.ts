@@ -60,6 +60,8 @@ function flush(id: string): void {
     },
     (err) => {
       batch.forEach((w) => w.reject(err));
+      // Reject any waiters that arrived after we snapshotted `batch`, then
+      // clear the id so a later patch can start a fresh request.
       abort(id, err);
     },
   );

@@ -48,6 +48,39 @@ describe("todoQueue", () => {
     expect(r3).toEqual({ id: "a", v: 2 });
   });
 
+  it("flushes patches that arrive during a coalesced follow-up (recursion depth > 1)", async () => {
+    let resolve1!: (t: Task) => void;
+    let resolve2!: (t: Task) => void;
+    const p1 = new Promise<Task>((r) => {
+      resolve1 = r;
+    });
+    const p2 = new Promise<Task>((r) => {
+      resolve2 = r;
+    });
+    const spy = vi
+      .spyOn(api, "patchTodoApi")
+      .mockReturnValueOnce(p1) // R1 (initial in-flight)
+      .mockReturnValueOnce(p2) // R2 (first coalesced batch)
+      .mockResolvedValueOnce({ id: "a" } as Task); // R3 (second coalesced batch)
+
+    const c1 = enqueuePatch("a", { daily_priority: "1" });
+    const c2 = enqueuePatch("a", { daily_priority: "2" }); // merged into R2
+
+    // R1 settles -> R2 is sent carrying c2's value.
+    resolve1({ id: "a" } as Task);
+    await c1;
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(spy).toHaveBeenNthCalledWith(2, "a", { daily_priority: "2" });
+
+    // A patch arriving while R2 is in flight must be flushed as R3, not lost.
+    const c3 = enqueuePatch("a", { daily_priority: "3" });
+    resolve2({ id: "a" } as Task);
+    await c2;
+    await c3;
+    expect(spy).toHaveBeenCalledTimes(3);
+    expect(spy).toHaveBeenNthCalledWith(3, "a", { daily_priority: "3" });
+  });
+
   it("later value wins when the same field is enqueued repeatedly", async () => {
     let resolve1!: (t: Task) => void;
     const p1 = new Promise<Task>((r) => {
