@@ -1,19 +1,31 @@
 import { handleLogin, handleStatus, handleLogout } from "./routes/auth";
 import { handleMe } from "./routes/me";
 import { handleListTodo, handleCreateTodo, handlePatchTodo } from "./routes/todo";
+import { handleTestLogin } from "./routes/test-login";
+import { setWspcBase } from "./wspc";
 
 interface Env {
   DESK_KV: KVNamespace;
+  WSPC_BASE?: string;
+  E2E?: string;
 }
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    setWspcBase(env.WSPC_BASE);
+
     const url = new URL(request.url);
     const path = url.pathname;
     const method = request.method;
 
     if (!path.startsWith("/api/")) {
       return new Response(null, { status: 404 });
+    }
+
+    // Test-only: seed an authenticated session straight into KV so e2e can skip
+    // the real device-code flow. Only mounted when E2E mode is explicitly on.
+    if (env.E2E === "true" && path === "/api/test-login" && method === "POST") {
+      return handleTestLogin(env);
     }
 
     if (path === "/api/auth/login" && method === "POST") {

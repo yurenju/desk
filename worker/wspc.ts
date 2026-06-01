@@ -1,6 +1,13 @@
 import type { components } from "./wspc-types";
 
-const WSPC_BASE = "https://api.wspc.ai";
+let WSPC_BASE = "https://api.wspc.ai";
+
+// Override the upstream WSPC base URL. Called once per request from the worker
+// entrypoint using `env.WSPC_BASE` so e2e runs can point at a local fake while
+// production keeps the default. A no-op when `url` is falsy.
+export function setWspcBase(url: string | undefined): void {
+  if (url) WSPC_BASE = url;
+}
 
 type OAuthRegisterBody = components["schemas"]["OAuthRegisterBody"];
 type OAuthRegisterResponse = components["schemas"]["OAuthRegisterResponse"];
