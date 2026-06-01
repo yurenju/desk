@@ -16,7 +16,7 @@ function TodaySkeleton() {
           style={{
             height: "2.5rem",
             borderRadius: "0.5rem",
-            background: "var(--color-surface-raised, #e5e7eb)",
+            background: "var(--color-paper-alt)",
             marginBottom: "0.75rem",
           }}
         />
