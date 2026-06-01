@@ -1,9 +1,8 @@
 import { test, expect } from "@playwright/test";
+import { gotoTodaySeeded } from "./fixtures/session";
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/today");
-  await page.evaluate(() => localStorage.clear());
-  await page.reload();
+  await gotoTodaySeeded(page);
 });
 
 test("adds a task and persists it across reload", async ({ page }) => {

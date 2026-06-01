@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { gotoTodaySeeded } from "./fixtures/session";
 
 /**
  * Task 17: 手動驗收 — automated via Playwright screenshots.
@@ -10,11 +11,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Manual Verification — Today Interaction", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/today");
-    await page.evaluate(() => localStorage.clear());
-    await page.reload();
-    // Wait for content to fully render
-    await page.waitForSelector("text=今天最重要的三件事");
+    await gotoTodaySeeded(page);
   });
 
   test("Step 2: Initial view — Top3, planned, adhoc sections visible, no console errors", async ({
