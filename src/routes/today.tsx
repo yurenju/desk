@@ -1,8 +1,8 @@
 import { useEffect } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useTasksStore } from "@/store/tasks";
 import { TodayLayout } from "@/features/plan-view/TodayLayout";
-import { currentMonthISO, todayISO } from "@/lib/date";
+import { currentMonthISO } from "@/lib/date";
 import { Button } from "@/ui/Button/Button";
 
 // ─── Skeleton ────────────────────────────────────────────────────────────────
@@ -60,11 +60,13 @@ export function TodayView({ date }: { date: string }) {
 
 // ─── Route ───────────────────────────────────────────────────────────────────
 
-function TodayRoute() {
-  const date = todayISO();
-  return <TodayView date={date} />;
+// `/today` is a layout for both the bare `/today` (index) and `/today/$date`
+// child routes. It must render <Outlet/> so the matched child renders; the
+// concrete views live in today.index.tsx and today.$date.tsx.
+function TodayLayoutRoute() {
+  return <Outlet />;
 }
 
 export const Route = createFileRoute("/today")({
-  component: TodayRoute,
+  component: TodayLayoutRoute,
 });
