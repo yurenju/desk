@@ -143,10 +143,14 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
       // Unlike other mutations we do NOT roll back to `prev` here: Promise.all
       // may span multiple ids and some may have already been patched, so a
       // per-call rollback would leave priorities inconsistent. Reload from the
-      // server to restore a coherent state instead. (If the reload itself
-      // fails, loadTasks sets status:"error" and the error UI guards the stale
-      // optimistic state.)
-      await get().loadTasks(get().today);
+      // server to restore a coherent state instead. loadTasks handles its own
+      // failures internally (sets status:"error"); the extra try makes that
+      // contract explicit at the call site and guards against future drift.
+      try {
+        await get().loadTasks(get().today);
+      } catch {
+        /* loadTasks already set status:"error" */
+      }
     }
   },
 

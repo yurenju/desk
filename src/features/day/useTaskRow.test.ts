@@ -4,9 +4,11 @@ import { useTaskRow } from "./useTaskRow";
 import { useTasksStore } from "@/store/tasks";
 import { allTasks, MOCK_TODAY } from "@/mock/data";
 import * as api from "@/lib/api/todo";
+import { resetTodoQueue } from "@/lib/api/todoQueue";
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  resetTodoQueue();
   vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
   vi.spyOn(api, "postTodo").mockResolvedValue({} as never);
   useTasksStore.setState({ tasks: allTasks, today: MOCK_TODAY, status: "ready", error: null });
