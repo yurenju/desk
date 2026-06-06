@@ -115,6 +115,7 @@ ROADMAP 原本的 Slice 2c 只涵蓋「登入流程 UI 打磨」。實作 2b 時
   - 優先權 dropdown：選某位子呼叫 `setDailyPriority`；選已佔位子觸發騰位（被佔者 PATCH `null`）。
   - 計畫外 ⇄ 計畫內：toggle 後 task 換區、`is_adhoc` 正確、失敗回滾。
 - **既有測試回歸**：`useTaskRow.test.ts`、`TaskRow.test.tsx`、`LoginPage.test.tsx`、`AuthMenu.test.tsx` 隨改動更新。
+- **手動測試（preview + AI agent）**：自動化測試之外，由 AI agent 透過 `preview_start` 開預覽，實際操作畫面驗證視覺與互動 —— 登入動線四狀態的觀感、優先權 dropdown 騰位、計畫外 ⇄ 計畫內換區、touch 目標、一週排列、dark / light 過場等難用單元測試涵蓋的部分。需要真實登入（device flow 要在 WSPC 按 Approve）時，請使用者協助完成登入後再續跑。對照本文件「驗收標準」1–10 逐項手動驗收。
 
 ## 驗收標準
 
