@@ -22,7 +22,8 @@
 | Slice 0 — 純前端骨架 | ✅ 完成 | [#2](https://github.com/yurenju/desk/pull/2) |
 | Slice 1 — Today 互動 + localStorage | ✅ 完成 | — |
 | Slice 2a — auth + BFF 骨架 | ✅ 完成 | [#8](https://github.com/yurenju/desk/pull/8) |
-| Slice 2b — /api/todo + 前端銜接 | 🔄 開發完成,待部署驗證 | [#9](https://github.com/yurenju/desk/pull/9) |
+| Slice 2b — /api/todo + 前端銜接 | ✅ 完成(已部署驗收) | [#10](https://github.com/yurenju/desk/pull/10) |
+| Slice 2b 加固 — patch queue 修競態 | ✅ 完成 | [#13](https://github.com/yurenju/desk/pull/13) |
 | Slice 2c — 登入流程 UI 打磨 | ⏳ 規劃中 | — |
 | Slice 3+ | ⏳ 規劃中 | — |
 
@@ -111,11 +112,13 @@
 **Owner 防護**：**不鎖**。任何人都可以用自己的 WSPC 帳號登入看自己的 todo（multi-tenant）。
 **不做**：todo 端點、DeskTask 型態註冊、前端任何資料源切換。
 
-### Slice 2b — `/api/todo` 接上 WSPC + 前端銜接
+### Slice 2b — `/api/todo` 接上 WSPC + 前端銜接 ✅
 
 **目標**：把 Today mode 從 localStorage 換成真實 WSPC 資料。
 
-> 設計：[2026-05-31-slice-2b-todo-design.md](docs/superpowers/specs/2026-05-31-slice-2b-todo-design.md)・計畫：[2026-05-31-slice-2b-todo.md](docs/superpowers/plans/2026-05-31-slice-2b-todo.md)（PR [#9](https://github.com/yurenju/desk/pull/9)）
+**完成於 PR [#10](https://github.com/yurenju/desk/pull/10)**(含手動驗收修復;已部署到 production 跑過驗收)
+
+> 設計：[2026-05-31-slice-2b-todo-design.md](docs/superpowers/specs/2026-05-31-slice-2b-todo-design.md)・計畫：[2026-05-31-slice-2b-todo.md](docs/superpowers/plans/2026-05-31-slice-2b-todo.md)
 
 - [x] **Lazy 建立 Desk project + KV 存 `project_id`（per-user `desk:bootstrap:<user_id>`）** —— WSPC todo 必須屬於某 project，type 註冊的前置條件
 - [x] WSPC `DeskTask` 自訂型態註冊（一次宣告完整 9 個 custom fields，雖然這片只用到一部分）
@@ -133,7 +136,20 @@
 
 **可以看到什麼**：Today 換成真實 WSPC 資料；auth 鏈端到端跑通。
 **不做**：軌跡、略過、Monthly、Backlog。
-**待辦(合併前)**：部署到 production 後跑一次手動驗收(見設計文件「驗收標準」1–10:首次 bootstrap、CRUD 落地、騰位、切日、第二帳號 multi-tenant 分流、登出清快取)。
+**驗收**：已部署到 production 並完成手動驗收(設計文件「驗收標準」1–10:首次 bootstrap、CRUD 落地、騰位、切日、第二帳號 multi-tenant 分流、登出清快取)。
+
+### Slice 2b 加固 — todo patch queue(修騰位競態）✅
+
+**目標**：2b 的 `daily_priority` 騰位要對兩筆 task 各發一次 PATCH,並發時會撞在一起(priority-ring race condition)。這片加上 per-id PATCH 序列化 + coalescing queue 收斂。
+
+**完成於 PR [#13](https://github.com/yurenju/desk/pull/13)**
+
+> 設計：[2026-06-01-todo-patch-queue-design.md](docs/superpowers/specs/2026-06-01-todo-patch-queue-design.md)・計畫：[2026-06-01-todo-patch-queue.md](docs/superpowers/plans/2026-06-01-todo-patch-queue.md)
+
+- [x] per-id PATCH 序列化佇列 + 同 id 連續 patch 合併([todoQueue.ts](src/lib/api/todoQueue.ts))
+- [x] mutation 全程走 patch queue;優先序衝突時 reload(而非 rollback)
+- [x] e2e mock WSPC upstream,讓 Today e2e 跑真實 BFF([#11](https://github.com/yurenju/desk/pull/11))
+- [x] skeleton 改用既有 theme token,避免 dark mode 殘留淺灰([#12](https://github.com/yurenju/desk/pull/12))
 
 ### Slice 2c — 登入流程 UI 打磨 ⏳
 
