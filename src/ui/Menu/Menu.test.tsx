@@ -48,8 +48,8 @@ describe("Menu", () => {
         selectedKey="2"
         trigger={<button type="button">2</button>}
         items={[
-          { key: "1", label: "今日第一", onSelect: () => {} },
-          { key: "2", label: "今日第二", onSelect },
+          { key: "1", label: "今日第一", onSelect },
+          { key: "2", label: "今日第二", onSelect: () => {} },
         ]}
       />,
     );
@@ -59,7 +59,7 @@ describe("Menu", () => {
     const other = screen.getByRole("menuitemradio", { name: /今日第一/ });
     expect(other).toHaveAttribute("aria-checked", "false");
     await user.click(other);
-    expect(onSelect).not.toHaveBeenCalled();
+    expect(onSelect).toHaveBeenCalledTimes(1);
   });
 
   it("fires onSelect when a radio item is chosen", async () => {

@@ -77,9 +77,6 @@
 .iconBtn:hover {
   background: var(--color-paper-alt);
 }
-.del {
-  color: var(--color-flag, #c1432e);
-}
 .editInput {
   width: 100%;
   font: inherit;
