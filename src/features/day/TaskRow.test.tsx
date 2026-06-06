@@ -28,18 +28,44 @@ describe("TaskRow (interactive)", () => {
   it("deletes when the trash button is clicked", async () => {
     const user = userEvent.setup();
     render(rowFor("d5"));
-    await user.click(screen.getByLabelText("刪除"));
+    await user.click(screen.getByLabelText("更多動作"));
+    await user.click(await screen.findByRole("menuitem", { name: "刪除" }));
     expect(useTasksStore.getState().tasks.find((t) => t.id === "d5")).toBeUndefined();
   });
 
   it("edits the title via the edit button + Enter", async () => {
     const user = userEvent.setup();
     render(rowFor("d5"));
-    await user.click(screen.getByLabelText("編輯"));
+    await user.click(screen.getByLabelText("更多動作"));
+    await user.click(await screen.findByRole("menuitem", { name: "編輯" }));
     const input = screen.getByRole("textbox");
     await user.clear(input);
     await user.type(input, "新內容{Enter}");
     expect(useTasksStore.getState().tasks.find((t) => t.id === "d5")!.title).toBe("新內容");
+  });
+
+  it("moves an adhoc task to planned via the overflow menu", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+    await useTasksStore.getState().setAdhoc("d5", true);
+    render(rowFor("d5"));
+    await user.click(screen.getByLabelText("更多動作"));
+    await user.click(await screen.findByRole("menuitem", { name: /移到計畫內/ }));
+    expect(
+      useTasksStore.getState().tasks.find((t) => t.id === "d5")!.custom_fields.is_adhoc,
+    ).toBe("false");
+  });
+
+  it("marks a planned task as unplanned via the overflow menu", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+    await useTasksStore.getState().setAdhoc("d5", false);
+    render(rowFor("d5"));
+    await user.click(screen.getByLabelText("更多動作"));
+    await user.click(await screen.findByRole("menuitem", { name: /標為計畫外/ }));
+    expect(
+      useTasksStore.getState().tasks.find((t) => t.id === "d5")!.custom_fields.is_adhoc,
+    ).toBe("true");
   });
 
   it("is read-only when interactive is false", () => {
@@ -49,23 +75,20 @@ describe("TaskRow (interactive)", () => {
     expect(screen.queryByLabelText("刪除")).toBeNull();
   });
 
-  it("renders priority ring when showRing is true and cycles priority on click", async () => {
+  it("opens a priority menu and sets the chosen slot", async () => {
     const user = userEvent.setup();
     const TestComponent = () => {
       const task = useTasksStore((s) => s.tasks.find((t) => t.id === "d5"))!;
       return <TaskRow task={task} kind="primary" interactive showRing />;
     };
-    // seed fills all three slots (d1/d2/d3); free them so promoting d5 lands on slot 1
     await useTasksStore.getState().setDailyPriority("d1", null);
     await useTasksStore.getState().setDailyPriority("d2", null);
     await useTasksStore.getState().setDailyPriority("d3", null);
     render(<TestComponent />);
-    const ring = screen.getByRole("button", { name: "設為今日重點" });
-    expect(ring).toBeDefined();
-    await user.click(ring);
+    await user.click(screen.getByRole("button", { name: "設為今日重點" }));
+    await user.click(await screen.findByRole("menuitemradio", { name: /今日第一/ }));
     expect(
       useTasksStore.getState().tasks.find((t) => t.id === "d5")!.custom_fields.daily_priority,
     ).toBe("1");
-    expect(screen.getByRole("button", { name: "今日重點第 1" })).toBeDefined();
   });
 });

@@ -94,3 +94,10 @@ export function setDailyPriority(
   });
 }
 
+export function setAdhoc(tasks: Task[], id: string, isAdhoc: boolean): Task[] {
+  if (!tasks.some((t) => t.id === id)) return tasks;
+  return tasks.map((t) =>
+    t.id === id ? patch(t, { is_adhoc: isAdhoc ? "true" : "false" }) : t,
+  );
+}
+

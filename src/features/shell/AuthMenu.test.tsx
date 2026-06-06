@@ -61,7 +61,16 @@ describe("AuthMenu", () => {
     ).toHaveAttribute("href", "/login");
   });
 
-  it("shows display name and logout button when authenticated", async () => {
+  it("keeps theme inside a settings menu when unauthenticated (no standalone segmented)", async () => {
+    useAuthStore.setState({ me: null, status: "unauthenticated" });
+    renderWithRouter();
+    // theme is not directly visible — it lives inside the ⋯ menu
+    expect(screen.queryByRole("group", { name: "Theme" })).toBeNull();
+    await userEvent.click(await screen.findByRole("button", { name: /更多設定/ }));
+    expect(await screen.findByRole("group", { name: "Theme" })).toBeInTheDocument();
+  });
+
+  it("shows display name; logout + theme live inside the dropdown", async () => {
     useAuthStore.setState({
       me: { userId: "u-1", email: "a@b", displayName: "Alice" },
       status: "authenticated",
@@ -72,19 +81,41 @@ describe("AuthMenu", () => {
 
     renderWithRouter();
     expect(await screen.findByText("Alice")).toBeInTheDocument();
-    const logoutBtn = screen.getByRole("button", { name: /登出/ });
-    await userEvent.click(logoutBtn);
+    await userEvent.click(
+      screen.getByRole("button", { name: /Alice|帳號選單/ }),
+    );
+    expect(await screen.findByText("a@b")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Theme" })).toBeInTheDocument();
+    const logout = screen.getByRole("menuitem", { name: /登出/ });
+    await userEvent.click(logout);
+    expect(useAuthStore.getState().me).toBeNull();
+    expect(useAuthStore.getState().status).toBe("unauthenticated");
+  });
+
+  it("clears local auth state even if the logout request fails", async () => {
+    useAuthStore.setState({
+      me: { userId: "u-1", email: "a@b", displayName: "Alice" },
+      status: "authenticated",
+    });
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network down"));
+
+    renderWithRouter();
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Alice|帳號選單/ }),
+    );
+    await userEvent.click(await screen.findByRole("menuitem", { name: /登出/ }));
 
     expect(useAuthStore.getState().me).toBeNull();
     expect(useAuthStore.getState().status).toBe("unauthenticated");
   });
 
-  it("falls back to email when displayName is missing", async () => {
+  it("falls back to email on the trigger when displayName is missing", async () => {
     useAuthStore.setState({
       me: { userId: "u-1", email: "a@b" },
       status: "authenticated",
     });
     renderWithRouter();
-    expect(await screen.findByText("a@b")).toBeInTheDocument();
+    const trigger = await screen.findByRole("button", { name: /帳號選單/ });
+    expect(trigger).toHaveTextContent("a@b");
   });
 });

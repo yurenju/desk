@@ -5,16 +5,16 @@ import { PriorityRing } from "./PriorityRing";
 
 describe("PriorityRing", () => {
   it("shows the number when a priority is set", () => {
-    render(<PriorityRing value="2" onClick={() => {}} />);
+    render(<PriorityRing value="2" />);
     expect(screen.getByRole("button")).toHaveTextContent("2");
   });
 
   it("renders an empty (add) ring when value is null", () => {
-    render(<PriorityRing value={null} onClick={() => {}} />);
+    render(<PriorityRing value={null} />);
     expect(screen.getByRole("button")).toHaveAttribute("aria-label", "設為今日重點");
   });
 
-  it("fires onClick", async () => {
+  it("forwards click handlers passed via props", async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();
     render(<PriorityRing value="1" onClick={onClick} />);

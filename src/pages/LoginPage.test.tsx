@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { LoginPage } from "./LoginPage";
 
 beforeEach(() => {
@@ -91,8 +92,67 @@ describe("LoginPage", () => {
 
     render(<LoginPage onAuthenticated={() => {}} />);
     await vi.runAllTimersAsync();
-    expect(await screen.findByText(/已拒絕|登入失敗/)).toBeInTheDocument();
+    expect(await screen.findByText(/已被拒絕/)).toBeInTheDocument();
+    // denied surfaces a restart action.
+    expect(
+      screen.getByRole("button", { name: /重新登入/ }),
+    ).toBeInTheDocument();
     vi.useRealTimers();
+  });
+
+  it("shows expired state with a 'restart' action that re-initiates device flow", async () => {
+    vi.useFakeTimers();
+    const fetchSpy = mockFetchSequence([
+      new Response(
+        JSON.stringify({
+          verification_uri_complete: "https://app.wspc.ai/device?user_code=ABCD",
+          user_code: "ABCD",
+          polling_id: "pid-1",
+          interval: 1,
+          expires_in: 600,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+      new Response(JSON.stringify({ state: "expired" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+      new Response(
+        JSON.stringify({
+          verification_uri_complete: "https://app.wspc.ai/device?user_code=WXYZ",
+          user_code: "WXYZ",
+          polling_id: "pid-2",
+          interval: 1,
+          expires_in: 600,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+      new Response(JSON.stringify({ state: "pending" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    ]);
+    render(<LoginPage onAuthenticated={() => {}} />);
+    await vi.runAllTimersAsync();
+    expect(await screen.findByText(/已過期/)).toBeInTheDocument();
+    vi.useRealTimers();
+    const restart = screen.getByRole("button", { name: /重新產生驗證碼/ });
+    // Count login POSTs before the click so we can prove restart re-POSTs.
+    const loginCallsBefore = fetchSpy.mock.calls.filter(
+      (c) => String(c[0]).includes("/api/auth/login") && c[1]?.method === "POST",
+    ).length;
+    await userEvent.setup().click(restart);
+    // restart() re-initiates the flow: a new login POST fires and the second
+    // login response's user_code surfaces in the DOM.
+    await waitFor(() =>
+      expect(
+        fetchSpy.mock.calls.filter(
+          (c) =>
+            String(c[0]).includes("/api/auth/login") && c[1]?.method === "POST",
+        ).length,
+      ).toBeGreaterThan(loginCallsBefore),
+    );
+    expect(await screen.findByText("WXYZ")).toBeInTheDocument();
   });
 
   it("shows error and stops polling when a status poll returns a non-OK response", async () => {

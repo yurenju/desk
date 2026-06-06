@@ -22,8 +22,9 @@
 | Slice 0 — 純前端骨架 | ✅ 完成 | [#2](https://github.com/yurenju/desk/pull/2) |
 | Slice 1 — Today 互動 + localStorage | ✅ 完成 | — |
 | Slice 2a — auth + BFF 骨架 | ✅ 完成 | [#8](https://github.com/yurenju/desk/pull/8) |
-| Slice 2b — /api/todo + 前端銜接 | 🔄 開發完成,待部署驗證 | [#9](https://github.com/yurenju/desk/pull/9) |
-| Slice 2c — 登入流程 UI 打磨 | ⏳ 規劃中 | — |
+| Slice 2b — /api/todo + 前端銜接 | ✅ 完成(已部署驗收) | [#10](https://github.com/yurenju/desk/pull/10) |
+| Slice 2b 加固 — patch queue 修競態 | ✅ 完成 | [#13](https://github.com/yurenju/desk/pull/13) |
+| Slice 2c — UI 打磨（登入流程 + Today 互動） | ✅ 完成 | — |
 | Slice 3+ | ⏳ 規劃中 | — |
 
 **Slice 0 比原規劃多做的部分**(因為「中高保真度」視覺要做到位,自然把後面 slice 的純視覺工作也帶進來了):
@@ -111,11 +112,13 @@
 **Owner 防護**：**不鎖**。任何人都可以用自己的 WSPC 帳號登入看自己的 todo（multi-tenant）。
 **不做**：todo 端點、DeskTask 型態註冊、前端任何資料源切換。
 
-### Slice 2b — `/api/todo` 接上 WSPC + 前端銜接
+### Slice 2b — `/api/todo` 接上 WSPC + 前端銜接 ✅
 
 **目標**：把 Today mode 從 localStorage 換成真實 WSPC 資料。
 
-> 設計：[2026-05-31-slice-2b-todo-design.md](docs/superpowers/specs/2026-05-31-slice-2b-todo-design.md)・計畫：[2026-05-31-slice-2b-todo.md](docs/superpowers/plans/2026-05-31-slice-2b-todo.md)（PR [#9](https://github.com/yurenju/desk/pull/9)）
+**完成於 PR [#10](https://github.com/yurenju/desk/pull/10)**(含手動驗收修復;已部署到 production 跑過驗收)
+
+> 設計：[2026-05-31-slice-2b-todo-design.md](docs/superpowers/specs/2026-05-31-slice-2b-todo-design.md)・計畫：[2026-05-31-slice-2b-todo.md](docs/superpowers/plans/2026-05-31-slice-2b-todo.md)
 
 - [x] **Lazy 建立 Desk project + KV 存 `project_id`（per-user `desk:bootstrap:<user_id>`）** —— WSPC todo 必須屬於某 project，type 註冊的前置條件
 - [x] WSPC `DeskTask` 自訂型態註冊（一次宣告完整 9 個 custom fields，雖然這片只用到一部分）
@@ -133,25 +136,49 @@
 
 **可以看到什麼**：Today 換成真實 WSPC 資料；auth 鏈端到端跑通。
 **不做**：軌跡、略過、Monthly、Backlog。
-**待辦(合併前)**：部署到 production 後跑一次手動驗收(見設計文件「驗收標準」1–10:首次 bootstrap、CRUD 落地、騰位、切日、第二帳號 multi-tenant 分流、登出清快取)。
+**驗收**：已部署到 production 並完成手動驗收(設計文件「驗收標準」1–10:首次 bootstrap、CRUD 落地、騰位、切日、第二帳號 multi-tenant 分流、登出清快取)。
 
-### Slice 2c — 登入流程 UI 打磨 ⏳
+### Slice 2b 加固 — todo patch queue(修騰位競態）✅
 
-**目標**：Slice 2a 把 auth 鏈跑通時，`/login` 頁與 header 登入狀態刻意只用裸 HTML（範圍紀律：「auth + BFF + 一個端點就停，不順手做別的」）。這片把整條登入動線套上 Slice 0 建立的 design system，做到跟主畫面一致的中高保真度。**只動視覺與互動細節，不碰 auth 邏輯與任何資料源。**
+**目標**：2b 的 `daily_priority` 騰位要對兩筆 task 各發一次 PATCH,並發時會撞在一起(priority-ring race condition)。這片加上 per-id PATCH 序列化 + coalescing queue 收斂。
 
-> 與 Slice 7 的分工：Slice 7 是 v1 整體收尾的打磨（排序、`is_adhoc` 染色、全站 loading / error 細節）；2c 只專注在登入動線本身，做完就能單獨 demo 一條好看的登入流程，符合「每片保留可 demo 的單一畫面」。放在 2b 之後是因為它依賴 2a 已經跑通的登入流程，但與 2b 的 todo 資料工作彼此獨立，順序可視手感調整。
+**完成於 PR [#13](https://github.com/yurenju/desk/pull/13)**
 
-- [ ] `LoginPage` 套 design tokens + CSS Modules：置中卡片版型、紙感背景與主畫面一致
-- [ ] verification code（user_code）強調樣式：等寬字體、放大、可一鍵複製
-- [ ] 「在 WSPC 開啟授權頁」改用 Button primitive（primary action），不要裸 `<a>`
-- [ ] polling 狀態視覺化：等待中顯示 spinner / 進度感；`denied` / `expired` / `error` 各自的狀態色 + 文案 + 重試入口（過期可重新發起 device flow）
-- [ ] `AuthMenu` 視覺：未登入「登入 WSPC」做成 Button；已登入 display_name + 登出做成合適的選單 / avatar，自然融入 TopNav `.actions` 區
-- [ ] loading 過場：確認 `status === "loading"` 不會讓 header 跳動或閃爍（目前 render null，確認過場順）
-- [ ] 文案打磨：等待 / 拒絕 / 過期 / 系統錯誤的措辭與「下一步該怎麼辦」指引
-- [ ] Mobile：窄視窗下登入卡片與 header 登入狀態的排版
+> 設計：[2026-06-01-todo-patch-queue-design.md](docs/superpowers/specs/2026-06-01-todo-patch-queue-design.md)・計畫：[2026-06-01-todo-patch-queue.md](docs/superpowers/plans/2026-06-01-todo-patch-queue.md)
 
-**可以看到什麼**：一條視覺完整的登入動線 —— 從 header 點「登入 WSPC」、看到漂亮的 user_code 卡片、完成授權後平順回到主畫面並顯示自己的 display_name。
-**不做**：auth 邏輯 / KV / token 流程的任何改動、todo 資料源、其他畫面的打磨（留給 Slice 7）。
+- [x] per-id PATCH 序列化佇列 + 同 id 連續 patch 合併([todoQueue.ts](src/lib/api/todoQueue.ts))
+- [x] mutation 全程走 patch queue;優先序衝突時 reload(而非 rollback)
+- [x] e2e mock WSPC upstream,讓 Today e2e 跑真實 BFF([#11](https://github.com/yurenju/desk/pull/11))
+- [x] skeleton 改用既有 theme token,避免 dark mode 殘留淺灰([#12](https://github.com/yurenju/desk/pull/12))
+
+### Slice 2c — UI 打磨（登入流程 + Today 互動）✅
+
+**目標**：把接 WSPC（Slice 2a / 2b）過程中為了範圍紀律延後、用裸 HTML 或最小互動撐住的 UI 遺留物一次補上中高保真度。範圍從原本「只有登入流程」擴大到一併處理 Today 互動的遺留物。**只動視覺與互動，不碰 auth 邏輯 / KV / token / todo 資料模型。**
+
+> 設計：[2026-06-06-slice-2c-ui-polish-design.md](docs/superpowers/specs/2026-06-06-slice-2c-ui-polish-design.md)・計畫：[2026-06-06-slice-2c-ui-polish.md](docs/superpowers/plans/2026-06-06-slice-2c-ui-polish.md)（subagent-driven 執行，每片兩段 review）
+
+**登入流程**
+
+- [x] `LoginPage` 套 design tokens + CSS Modules：置中卡片版型、紙感背景與主畫面一致
+- [x] 驗證碼改為「核對碼」呈現：等寬字體、放大、加字距（device flow 用 `verification_uri_complete`，碼是核對用不是輸入用，**不做複製**）
+- [x] 「在 WSPC 開啟授權頁 ↗」改 primary 樣式（styled `<a>`，因 `Button` 無 render/asChild 支援故用 `.primaryLink` class）
+- [x] polling 狀態視覺化：pending spinner；`denied` / `expired` / `error` 各自狀態色 + 文案 + 重試（三者共用「重新發起 device flow」函式，各自 label）；狀態區加 `aria-live`
+- [x] `AuthMenu`：未登入「登入 WSPC」做成 primary 連結；已登入 avatar + display_name → dropdown（email / 主題 / 登出）
+- [x] 主題切換移進已登入 menu；未登入時獨立留在 TopNav `.actions`
+- [x] loading 過場：`status === "loading"` render null，不讓 header 跳動
+- [x] Mobile：窄視窗登入卡片不溢出、header 登入狀態排版正常
+
+**Today 互動**
+
+- [x] 優先權改 dropdown 選取（取代 `+→1→2→3→無` 循環）：直接選 ①②③ / 移除，`menuitemradio` 語意；選到被佔位子由 store 自動騰位
+- [x] 計畫外 ⇄ 計畫內雙向切換：行尾 ✎🗑 連同「移到計畫內 / 標為計畫外」收進單一 ⋯ overflow menu，底層 toggle `is_adhoc`（含 worker PATCH 補 `is_adhoc` 寫入路徑）
+- [x] Touch：行尾動作改用 `@media (hover: hover)` 偵測（無 hover 裝置常駐顯示），取代寬度斷點；menu 觸控目標 ≥44px
+- [x] 一週改星期日開始（`weekOf` 回傳 Sun–Sat）
+
+**新增的共用元件**：`src/ui/Menu`（包 `@base-ui/react` menu，支援 action 模式與 `selectedKey` 單選模式）。
+
+**驗收**：231 自動化測試 + app/worker 型別全過；手動 preview 驗收（含使用者協助 WSPC 登入）對照設計文件「驗收標準」1–10 逐項通過（touch 常駐以 CSS 程式碼審查佐證）。
+**不做**：auth 邏輯 / KV / token / todo 資料模型；Top3Card 行尾仍為 ✎🗑（與 TaskRow 的 ⋯ menu 不一致，留待後續統一）。
 
 ### Slice 3 — Monthly 欄互動 + promote ⏳
 

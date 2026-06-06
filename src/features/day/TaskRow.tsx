@@ -1,6 +1,7 @@
 import type { Task, TrailKind } from "@/lib/types";
 import { Checkbox } from "@/ui/Checkbox";
 import { UnplannedChip } from "@/ui/Chip";
+import { Menu } from "@/ui/Menu";
 import { PriorityRing } from "@/ui/PriorityRing";
 import { useTaskRow } from "./useTaskRow";
 import styles from "./TaskRow.module.css";
@@ -30,9 +31,16 @@ export function TaskRow({ task, kind, showAdhocChip, interactive, showRing }: Ta
         aria-label={task.title}
       />
       {showRing && editable && (
-        <PriorityRing
-          value={task.custom_fields.daily_priority ?? null}
-          onClick={row.cyclePriority}
+        <Menu
+          ariaLabel="今日重點"
+          selectedKey={task.custom_fields.daily_priority ?? "none"}
+          trigger={<PriorityRing value={task.custom_fields.daily_priority ?? null} />}
+          items={[
+            { key: "1", label: "① 今日第一", onSelect: () => row.setPriority("1") },
+            { key: "2", label: "② 今日第二", onSelect: () => row.setPriority("2") },
+            { key: "3", label: "③ 今日第三", onSelect: () => row.setPriority("3") },
+            { key: "none", label: "— 移除重點", onSelect: () => row.setPriority(null) },
+          ]}
         />
       )}
       <div className={styles.body}>
@@ -60,22 +68,21 @@ export function TaskRow({ task, kind, showAdhocChip, interactive, showRing }: Ta
       {showAdhocChip && isAdhoc && <UnplannedChip />}
       {editable && !row.isEditing && (
         <div className={styles.actions}>
-          <button
-            type="button"
-            className={styles.iconBtn}
-            aria-label="編輯"
-            onClick={() => row.startEdit(task.title)}
-          >
-            ✎
-          </button>
-          <button
-            type="button"
-            className={[styles.iconBtn, styles.del].join(" ")}
-            aria-label="刪除"
-            onClick={row.remove}
-          >
-            🗑
-          </button>
+          <Menu
+            ariaLabel="更多動作"
+            trigger={
+              <button type="button" className={styles.iconBtn} aria-label="更多動作">
+                ⋯
+              </button>
+            }
+            items={[
+              isAdhoc
+                ? { key: "to-planned", label: "↑ 移到計畫內", onSelect: row.toggleAdhoc }
+                : { key: "to-adhoc", label: "↓ 標為計畫外", onSelect: row.toggleAdhoc },
+              { key: "edit", label: "編輯", onSelect: () => row.startEdit(task.title) },
+              { key: "delete", label: "刪除", onSelect: row.remove, danger: true },
+            ]}
+          />
         </div>
       )}
     </div>

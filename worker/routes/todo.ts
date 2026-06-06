@@ -57,6 +57,7 @@ export async function handlePatchTodo(
       status?: "open" | "in_progress" | "done" | "cancelled";
       daily_priority?: string | null;
       done_on?: string | null;
+      is_adhoc?: "true" | "false";
       title?: string;
     };
     try {
@@ -64,6 +65,7 @@ export async function handlePatchTodo(
         status?: "open" | "in_progress" | "done" | "cancelled";
         daily_priority?: string | null;
         done_on?: string | null;
+        is_adhoc?: "true" | "false";
         title?: string;
       };
     } catch {
@@ -72,6 +74,7 @@ export async function handlePatchTodo(
     const customFields: Record<string, string | null> = {};
     if ("daily_priority" in body) customFields.daily_priority = body.daily_priority ?? null;
     if ("done_on" in body) customFields.done_on = body.done_on ?? null;
+    if ("is_adhoc" in body) customFields.is_adhoc = body.is_adhoc ?? null;
     const todo = await patchTodo(accessToken, id, {
       status: body.status,
       customFields: Object.keys(customFields).length ? customFields : undefined,

@@ -1,0 +1,132 @@
+.page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+.loading {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  color: var(--color-ink-soft);
+}
+
+.card {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-8);
+  background: var(--color-paper-alt);
+  border: 1px solid var(--color-paper-edge);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.lead {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--color-ink-soft);
+}
+
+/* Primary CTA — a link styled as the primary button (Button has no render
+   prop, so the link owns its own styling here). */
+.primaryLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.primaryLink:hover {
+  background: var(--color-accent-text);
+}
+
+.primaryLink:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.codeBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.codeLabel {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-faint);
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--color-ink);
+}
+
+.status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.statusText {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+}
+
+/* pending — neutral, low-key */
+.statusPending {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-ink-soft);
+}
+
+/* denied / error use the flag (red) family for the message text */
+.statusDenied .statusText {
+  color: var(--color-flag);
+}
+
+/* expired — a warm warning yellow; tokens have no warn color, so fall back */
+.statusExpired .statusText {
+  color: var(--color-warn, #9a7b2e);
+}
+
+/* error — neutral grey message */
+.statusError .statusText {
+  color: var(--color-ink-soft);
+}

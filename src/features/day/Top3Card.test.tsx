@@ -29,14 +29,15 @@ describe("Top3Card (interactive)", () => {
   it("stays read-only when interactive is false", () => {
     render(<TestComponent interactive={false} />);
     expect(screen.getByRole("checkbox")).toBeDisabled();
-    expect(screen.queryByLabelText("刪除")).toBeNull();
+    expect(screen.queryByLabelText("更多動作")).toBeNull();
   });
 
-  it("edits the title via the edit button and Enter key", async () => {
+  it("edits the title via the overflow menu and Enter key", async () => {
     const user = userEvent.setup();
     render(<TestComponent />);
 
-    await user.click(screen.getByRole("button", { name: "編輯" }));
+    await user.click(screen.getByLabelText("更多動作"));
+    await user.click(await screen.findByRole("menuitem", { name: "編輯" }));
 
     const input = screen.getByRole("textbox");
     await user.clear(input);
@@ -51,7 +52,8 @@ describe("Top3Card (interactive)", () => {
     const user = userEvent.setup();
     render(<TestComponent />);
 
-    await user.click(screen.getByRole("button", { name: "編輯" }));
+    await user.click(screen.getByLabelText("更多動作"));
+    await user.click(await screen.findByRole("menuitem", { name: "編輯" }));
 
     const input = screen.getByRole("textbox");
     await user.type(input, "修改中...{Escape}");
@@ -62,22 +64,47 @@ describe("Top3Card (interactive)", () => {
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 
-  it("deletes a task when clicking delete button", async () => {
+  it("deletes a task via the overflow menu", async () => {
     const user = userEvent.setup();
     render(<TestComponent />);
 
-    const deleteBtn = screen.getByRole("button", { name: "刪除" });
-    await user.click(deleteBtn);
+    await user.click(screen.getByLabelText("更多動作"));
+    await user.click(await screen.findByRole("menuitem", { name: "刪除" }));
 
     expect(useTasksStore.getState().tasks.find((t) => t.id === "d1")).toBeUndefined();
   });
 
-  it("cycles priority when clicking the priority ring", async () => {
+  it("shows the unplanned chip for an adhoc top-3 task", async () => {
+    await useTasksStore.getState().setAdhoc("d1", true);
+    render(<TestComponent />);
+    expect(screen.getByText(/計劃外/)).toBeInTheDocument();
+  });
+
+  it("hides the unplanned chip for a planned top-3 task", async () => {
+    await useTasksStore.getState().setAdhoc("d1", false);
+    render(<TestComponent />);
+    expect(screen.queryByText(/計劃外/)).toBeNull();
+  });
+
+  it("toggles a top-3 task to unplanned via the overflow menu", async () => {
+    const user = userEvent.setup();
+    await useTasksStore.getState().setAdhoc("d1", false);
+    render(<TestComponent />);
+
+    await user.click(screen.getByLabelText("更多動作"));
+    await user.click(await screen.findByRole("menuitem", { name: /標為計畫外/ }));
+
+    expect(
+      useTasksStore.getState().tasks.find((t) => t.id === "d1")!.custom_fields.is_adhoc,
+    ).toBe("true");
+  });
+
+  it("opens a priority menu and sets the chosen slot", async () => {
     const user = userEvent.setup();
     render(<TestComponent />);
 
-    const ring = screen.getByRole("button", { name: "今日重點第 1" });
-    await user.click(ring);
+    await user.click(screen.getByRole("button", { name: "今日重點第 1" }));
+    await user.click(await screen.findByRole("menuitemradio", { name: /今日第二/ }));
 
     expect(
       useTasksStore.getState().tasks.find((t) => t.id === "d1")!.custom_fields.daily_priority,

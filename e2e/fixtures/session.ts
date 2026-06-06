@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-const WSPC_FAKE_URL = process.env.WSPC_FAKE_URL ?? "http://localhost:8788";
+const WSPC_FAKE_URL = process.env.WSPC_FAKE_URL ?? "http://127.0.0.1:8788";
 
 /**
  * Reset the fake WSPC to its seeded demo data and establish an authenticated
