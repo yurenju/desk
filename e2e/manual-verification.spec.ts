@@ -74,46 +74,44 @@ test.describe("Manual Verification — Today Interaction", () => {
     });
   });
 
-  test("Step 5: Priority ring — cycle and bump", async ({ page }) => {
-    // Find an "其他計劃內" task's priority ring (the dashed empty ring)
+  test("Step 5: Priority dropdown — assign a slot", async ({ page }) => {
+    // Find an "其他計劃內" task's priority ring (the dashed empty ring) and open
+    // its dropdown, then pick a slot (priority is now a dropdown, not a cycle).
     const otherSection = page.getByText("其他計劃內").locator("xpath=ancestor::section[1]");
-
-    // Click a ring in that section to assign priority
-    const ring = otherSection.getByRole("button", { name: /優先序/ }).first();
-    if (await ring.isVisible()) {
-      await ring.click();
-      await page.screenshot({
-        path: "test-results/screenshots/05-priority-ring-click.png",
-        fullPage: true,
-      });
-    }
+    const ring = otherSection.getByRole("button", { name: "設為今日重點" }).first();
+    await ring.click();
+    await page.getByRole("menuitemradio", { name: /今日第一/ }).click();
+    await expect(
+      otherSection.getByRole("button", { name: "今日重點第 1" }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: "test-results/screenshots/05-priority-dropdown.png",
+      fullPage: true,
+    });
   });
 
   test("Step 6: Inline edit — edit title and Enter to confirm", async ({ page }) => {
     // Use a task from "其他計劃內" section — d5 has no daily_priority and is not adhoc
     const taskText = "讀 WSPC custom fields 文件";
 
-    // Find the row and click the edit button using page.evaluate to avoid
-    // the blur race condition that occurs with Playwright's native click.
-    // When native click is used, the mousedown→render→mouseup sequence can
-    // cause the autoFocus input to immediately blur.
-    await page.evaluate((text) => {
-      // Find the text node, walk up to the row div
-      const allDivs = document.querySelectorAll("div");
-      for (const div of allDivs) {
-        if (
-          div.className.includes("row") &&
-          !div.className.includes("titleRow") &&
-          div.textContent?.includes(text)
-        ) {
-          const editBtn = div.querySelector('button[aria-label="編輯"]');
-          if (editBtn) {
-            (editBtn as HTMLButtonElement).click();
-            return;
-          }
+    // Edit now lives behind the ⋯ overflow menu. Open it, then trigger the
+    // edit item via page.evaluate to avoid the blur race condition that occurs
+    // with Playwright's native click — the mousedown→render→mouseup sequence
+    // can cause the autoFocus input to immediately blur.
+    const row = page
+      .locator(`text=${taskText}`)
+      .locator("xpath=ancestor::div[contains(@class, 'row') and not(contains(@class, 'titleRow'))]");
+    await row.hover();
+    await row.getByLabel("更多動作").click();
+    await page.evaluate(() => {
+      const items = document.querySelectorAll('[role="menuitem"]');
+      for (const item of items) {
+        if (item.textContent?.trim() === "編輯") {
+          (item as HTMLElement).click();
+          return;
         }
       }
-    }, taskText);
+    });
 
     // After click, the input should appear
     // Use a broader locator since the row structure may have changed
@@ -139,7 +137,8 @@ test.describe("Manual Verification — Today Interaction", () => {
       .locator("xpath=ancestor::div[contains(@class, 'row') and not(contains(@class, 'titleRow'))]");
 
     await row.hover();
-    await row.getByLabel("刪除").click();
+    await row.getByLabel("更多動作").click();
+    await page.getByRole("menuitem", { name: "刪除" }).click();
 
     // Verify task is gone and toast appears
     await expect(page.getByText(title, { exact: true })).toHaveCount(0);

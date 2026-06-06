@@ -28,8 +28,11 @@ test("deletes a task and undoes it", async ({ page }) => {
   const row = page
     .locator(`text=${title}`)
     .locator("xpath=ancestor::div[contains(@class, 'row') and not(contains(@class, 'titleRow'))]");
+  // Edit/delete now live behind the ⋯ overflow menu; reveal it on hover, open
+  // it, then click the menu item (rendered in a portal, so query globally).
   await row.hover();
-  await row.getByLabel("刪除").click();
+  await row.getByLabel("更多動作").click();
+  await page.getByRole("menuitem", { name: "刪除" }).click();
   await expect(page.getByText(title, { exact: true })).toHaveCount(0);
 
   await page.getByText("復原").click();
