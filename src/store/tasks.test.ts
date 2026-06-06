@@ -196,6 +196,26 @@ describe("server-backed tasks store", () => {
     expect(useTasksStore.getState().recentlyDeleted).not.toBeNull(); // undo remains retryable
   });
 
+  it("setAdhoc optimistically toggles and patches via queue", async () => {
+    vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+    useTasksStore.setState({ tasks: allTasks, today: MOCK_TODAY, status: "ready", error: null });
+    await useTasksStore.getState().setAdhoc("d6", false);
+    expect(
+      useTasksStore.getState().tasks.find((t) => t.id === "d6")!.custom_fields.is_adhoc,
+    ).toBe("false");
+  });
+
+  it("setAdhoc rolls back on failure", async () => {
+    vi.spyOn(api, "patchTodoApi").mockRejectedValue(new Error("boom"));
+    const before = allTasks.find((t) => t.id === "d5")!.custom_fields.is_adhoc;
+    useTasksStore.setState({ tasks: allTasks, today: MOCK_TODAY, status: "ready", error: null });
+    await useTasksStore.getState().setAdhoc("d5", true);
+    expect(
+      useTasksStore.getState().tasks.find((t) => t.id === "d5")!.custom_fields.is_adhoc,
+    ).toBe(before);
+    expect(useTasksStore.getState().error).toBe("save_failed");
+  });
+
   it("setDailyPriority reloads from server when a patch fails", async () => {
     useTasksStore.setState({
       tasks: allTasks,

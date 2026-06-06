@@ -7,6 +7,7 @@ import {
   deleteTask,
   editTitle,
   restoreTask as restoreTaskOp,
+  setAdhoc as setAdhocOp,
   setDailyPriority,
   toggleDone,
 } from "./taskOps";
@@ -32,6 +33,7 @@ interface TasksState {
   deleteTask: (id: string) => Promise<void>;
   restoreTask: () => Promise<void>;
   setDailyPriority: (id: string, n: Priority | null) => Promise<void>;
+  setAdhoc: (id: string, isAdhoc: boolean) => Promise<void>;
   clearTasks: () => void;
   clearRecentlyDeleted: () => void;
   clearError: () => void;
@@ -151,6 +153,16 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
       } catch {
         /* loadTasks already set status:"error" */
       }
+    }
+  },
+
+  async setAdhoc(id, isAdhoc) {
+    const prev = get().tasks;
+    set({ tasks: setAdhocOp(prev, id, isAdhoc), error: null });
+    try {
+      await enqueuePatch(id, { is_adhoc: isAdhoc ? "true" : "false" });
+    } catch {
+      set({ tasks: prev, error: "save_failed" });
     }
   },
 

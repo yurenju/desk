@@ -7,6 +7,7 @@ import {
   deleteTask,
   restoreTask,
   setDailyPriority,
+  setAdhoc,
 } from "./taskOps";
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
@@ -191,6 +192,28 @@ describe("setDailyPriority", () => {
     const next = setDailyPriority(tasks, "not-found", "1", today);
     expect(next).toBe(tasks);
     expect(next[0].custom_fields.daily_priority).toBe("1");
+  });
+});
+
+describe("setAdhoc", () => {
+  it("sets is_adhoc to the given value", () => {
+    const tasks = [
+      {
+        id: "x",
+        title: "t",
+        status: "open",
+        created_at: "",
+        updated_at: "",
+        custom_fields: { is_adhoc: "true" },
+      },
+    ] as never as Task[];
+    const next = setAdhoc(tasks, "x", false);
+    expect(next.find((t) => t.id === "x")!.custom_fields.is_adhoc).toBe("false");
+  });
+
+  it("returns the same array when id is missing", () => {
+    const tasks: Task[] = [];
+    expect(setAdhoc(tasks, "nope", true)).toBe(tasks);
   });
 });
 
