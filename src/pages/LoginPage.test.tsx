@@ -137,10 +137,22 @@ describe("LoginPage", () => {
     expect(await screen.findByText(/已過期/)).toBeInTheDocument();
     vi.useRealTimers();
     const restart = screen.getByRole("button", { name: /重新產生驗證碼/ });
+    // Count login POSTs before the click so we can prove restart re-POSTs.
+    const loginCallsBefore = fetchSpy.mock.calls.filter(
+      (c) => String(c[0]).includes("/api/auth/login") && c[1]?.method === "POST",
+    ).length;
     await userEvent.setup().click(restart);
-    expect(
-      fetchSpy.mock.calls.some((c) => String(c[0]).includes("/api/auth/login")),
-    ).toBe(true);
+    // restart() re-initiates the flow: a new login POST fires and the second
+    // login response's user_code surfaces in the DOM.
+    await waitFor(() =>
+      expect(
+        fetchSpy.mock.calls.filter(
+          (c) =>
+            String(c[0]).includes("/api/auth/login") && c[1]?.method === "POST",
+        ).length,
+      ).toBeGreaterThan(loginCallsBefore),
+    );
+    expect(await screen.findByText("WXYZ")).toBeInTheDocument();
   });
 
   it("shows error and stops polling when a status poll returns a non-OK response", async () => {

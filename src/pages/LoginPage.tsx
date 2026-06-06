@@ -143,7 +143,7 @@ export function LoginPage({ onAuthenticated }: Props) {
           target="_blank"
           rel="noopener noreferrer"
         >
-          在 WSPC 開啟授權頁 ↗
+          在 WSPC 開啟授權頁 <span aria-hidden="true">↗</span>
         </a>
 
         <div className={styles.codeBlock}>
@@ -152,10 +152,20 @@ export function LoginPage({ onAuthenticated }: Props) {
         </div>
 
         {state === "pending" && (
-          <p className={`${styles.status} ${styles.statusPending}`}>⟳ 等待授權中⋯</p>
+          <p
+            className={`${styles.status} ${styles.statusPending}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span aria-hidden="true">⟳</span> 等待授權中⋯
+          </p>
         )}
         {state === "denied" && (
-          <div className={`${styles.status} ${styles.statusDenied}`}>
+          <div
+            className={`${styles.status} ${styles.statusDenied}`}
+            role="status"
+            aria-live="polite"
+          >
             <p className={styles.statusText}>授權已被拒絕。</p>
             <Button variant="primary" onClick={restart}>
               重新登入
@@ -163,7 +173,11 @@ export function LoginPage({ onAuthenticated }: Props) {
           </div>
         )}
         {state === "expired" && (
-          <div className={`${styles.status} ${styles.statusExpired}`}>
+          <div
+            className={`${styles.status} ${styles.statusExpired}`}
+            role="status"
+            aria-live="polite"
+          >
             <p className={styles.statusText}>驗證碼已過期。</p>
             <Button variant="primary" onClick={restart}>
               重新產生驗證碼
@@ -171,7 +185,11 @@ export function LoginPage({ onAuthenticated }: Props) {
           </div>
         )}
         {state === "error" && (
-          <div className={`${styles.status} ${styles.statusError}`}>
+          <div
+            className={`${styles.status} ${styles.statusError}`}
+            role="status"
+            aria-live="polite"
+          >
             <p className={styles.statusText}>系統錯誤，請稍後再試。</p>
             <Button variant="primary" onClick={restart}>
               重試
