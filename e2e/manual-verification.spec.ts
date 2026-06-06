@@ -81,8 +81,10 @@ test.describe("Manual Verification — Today Interaction", () => {
     const ring = otherSection.getByRole("button", { name: "設為今日重點" }).first();
     await ring.click();
     await page.getByRole("menuitemradio", { name: /今日第一/ }).click();
+    // Assigning priority 1 promotes the task into the Top3 card (it leaves the
+    // 其他計劃內 section), so assert the ring page-wide rather than in-section.
     await expect(
-      otherSection.getByRole("button", { name: "今日重點第 1" }),
+      page.getByRole("button", { name: "今日重點第 1" }),
     ).toBeVisible();
     await page.screenshot({
       path: "test-results/screenshots/05-priority-dropdown.png",
@@ -94,24 +96,14 @@ test.describe("Manual Verification — Today Interaction", () => {
     // Use a task from "其他計劃內" section — d5 has no daily_priority and is not adhoc
     const taskText = "讀 WSPC custom fields 文件";
 
-    // Edit now lives behind the ⋯ overflow menu. Open it, then trigger the
-    // edit item via page.evaluate to avoid the blur race condition that occurs
-    // with Playwright's native click — the mousedown→render→mouseup sequence
-    // can cause the autoFocus input to immediately blur.
+    // Edit now lives behind the ⋯ overflow menu. Reveal it on hover, open it,
+    // then click the (portalled) edit item.
     const row = page
       .locator(`text=${taskText}`)
       .locator("xpath=ancestor::div[contains(@class, 'row') and not(contains(@class, 'titleRow'))]");
     await row.hover();
     await row.getByLabel("更多動作").click();
-    await page.evaluate(() => {
-      const items = document.querySelectorAll('[role="menuitem"]');
-      for (const item of items) {
-        if (item.textContent?.trim() === "編輯") {
-          (item as HTMLElement).click();
-          return;
-        }
-      }
-    });
+    await page.getByRole("menuitem", { name: "編輯" }).click();
 
     // After click, the input should appear
     // Use a broader locator since the row structure may have changed
