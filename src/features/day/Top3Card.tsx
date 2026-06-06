@@ -1,5 +1,6 @@
 import type { Task } from "@/lib/types";
 import { Checkbox } from "@/ui/Checkbox";
+import { Menu } from "@/ui/Menu";
 import { PriorityRing } from "@/ui/PriorityRing";
 import { useTaskRow } from "./useTaskRow";
 import styles from "./Top3Card.module.css";
@@ -50,7 +51,17 @@ function Top3Item({
         aria-label={t.title}
       />
       {interactive ? (
-        <PriorityRing value={t.custom_fields.daily_priority ?? null} onClick={row.cyclePriority} />
+        <Menu
+          ariaLabel="今日重點"
+          selectedKey={t.custom_fields.daily_priority ?? "none"}
+          trigger={<PriorityRing value={t.custom_fields.daily_priority ?? null} />}
+          items={[
+            { key: "1", label: "① 今日第一", onSelect: () => row.setPriority("1") },
+            { key: "2", label: "② 今日第二", onSelect: () => row.setPriority("2") },
+            { key: "3", label: "③ 今日第三", onSelect: () => row.setPriority("3") },
+            { key: "none", label: "— 移除重點", onSelect: () => row.setPriority(null) },
+          ]}
+        />
       ) : (
         order && <span className={styles.ring}>{order}</span>
       )}

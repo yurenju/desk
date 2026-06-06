@@ -72,12 +72,12 @@ describe("Top3Card (interactive)", () => {
     expect(useTasksStore.getState().tasks.find((t) => t.id === "d1")).toBeUndefined();
   });
 
-  it("cycles priority when clicking the priority ring", async () => {
+  it("opens a priority menu and sets the chosen slot", async () => {
     const user = userEvent.setup();
     render(<TestComponent />);
 
-    const ring = screen.getByRole("button", { name: "今日重點第 1" });
-    await user.click(ring);
+    await user.click(screen.getByRole("button", { name: "今日重點第 1" }));
+    await user.click(await screen.findByRole("menuitemradio", { name: /今日第二/ }));
 
     expect(
       useTasksStore.getState().tasks.find((t) => t.id === "d1")!.custom_fields.daily_priority,

@@ -49,23 +49,20 @@ describe("TaskRow (interactive)", () => {
     expect(screen.queryByLabelText("刪除")).toBeNull();
   });
 
-  it("renders priority ring when showRing is true and cycles priority on click", async () => {
+  it("opens a priority menu and sets the chosen slot", async () => {
     const user = userEvent.setup();
     const TestComponent = () => {
       const task = useTasksStore((s) => s.tasks.find((t) => t.id === "d5"))!;
       return <TaskRow task={task} kind="primary" interactive showRing />;
     };
-    // seed fills all three slots (d1/d2/d3); free them so promoting d5 lands on slot 1
     await useTasksStore.getState().setDailyPriority("d1", null);
     await useTasksStore.getState().setDailyPriority("d2", null);
     await useTasksStore.getState().setDailyPriority("d3", null);
     render(<TestComponent />);
-    const ring = screen.getByRole("button", { name: "設為今日重點" });
-    expect(ring).toBeDefined();
-    await user.click(ring);
+    await user.click(screen.getByRole("button", { name: "設為今日重點" }));
+    await user.click(await screen.findByRole("menuitemradio", { name: /今日第一/ }));
     expect(
       useTasksStore.getState().tasks.find((t) => t.id === "d5")!.custom_fields.daily_priority,
     ).toBe("1");
-    expect(screen.getByRole("button", { name: "今日重點第 1" })).toBeDefined();
   });
 });
