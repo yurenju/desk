@@ -7,6 +7,8 @@ export function useTaskRow(id: string) {
   const deleteTask = useTasksStore((s) => s.deleteTask);
   const editTitle = useTasksStore((s) => s.editTitle);
   const setDailyPriority = useTasksStore((s) => s.setDailyPriority);
+  const setAdhoc = useTasksStore((s) => s.setAdhoc);
+  const current = useTasksStore((s) => s.tasks.find((t) => t.id === id));
 
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -17,6 +19,10 @@ export function useTaskRow(id: string) {
     toggle: () => toggleDone(id),
     remove: () => deleteTask(id),
     setPriority: (n: Priority | null) => setDailyPriority(id, n),
+    toggleAdhoc: () => {
+      const isAdhoc = current?.custom_fields.is_adhoc === "true";
+      setAdhoc(id, !isAdhoc);
+    },
     startEdit: (initial: string) => {
       setDraft(initial);
       setIsEditing(true);

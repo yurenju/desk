@@ -67,24 +67,21 @@ export function TaskRow({ task, kind, showAdhocChip, interactive, showRing }: Ta
       </div>
       {showAdhocChip && isAdhoc && <UnplannedChip />}
       {editable && !row.isEditing && (
-        <div className={styles.actions}>
-          <button
-            type="button"
-            className={styles.iconBtn}
-            aria-label="編輯"
-            onClick={() => row.startEdit(task.title)}
-          >
-            ✎
-          </button>
-          <button
-            type="button"
-            className={[styles.iconBtn, styles.del].join(" ")}
-            aria-label="刪除"
-            onClick={row.remove}
-          >
-            🗑
-          </button>
-        </div>
+        <Menu
+          ariaLabel="更多動作"
+          trigger={
+            <button type="button" className={styles.iconBtn} aria-label="更多動作">
+              ⋯
+            </button>
+          }
+          items={[
+            isAdhoc
+              ? { key: "to-planned", label: "↑ 移到計畫內", onSelect: row.toggleAdhoc }
+              : { key: "to-adhoc", label: "↓ 標為計畫外", onSelect: row.toggleAdhoc },
+            { key: "edit", label: "編輯", onSelect: () => row.startEdit(task.title) },
+            { key: "delete", label: "刪除", onSelect: row.remove, danger: true },
+          ]}
+        />
       )}
     </div>
   );
