@@ -74,6 +74,18 @@ describe("Top3Card (interactive)", () => {
     expect(useTasksStore.getState().tasks.find((t) => t.id === "d1")).toBeUndefined();
   });
 
+  it("shows the unplanned chip for an adhoc top-3 task", async () => {
+    await useTasksStore.getState().setAdhoc("d1", true);
+    render(<TestComponent />);
+    expect(screen.getByText(/計劃外/)).toBeInTheDocument();
+  });
+
+  it("hides the unplanned chip for a planned top-3 task", async () => {
+    await useTasksStore.getState().setAdhoc("d1", false);
+    render(<TestComponent />);
+    expect(screen.queryByText(/計劃外/)).toBeNull();
+  });
+
   it("toggles a top-3 task to unplanned via the overflow menu", async () => {
     const user = userEvent.setup();
     await useTasksStore.getState().setAdhoc("d1", false);

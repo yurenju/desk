@@ -1,5 +1,6 @@
 import type { Task } from "@/lib/types";
 import { Checkbox } from "@/ui/Checkbox";
+import { UnplannedChip } from "@/ui/Chip";
 import { Menu } from "@/ui/Menu";
 import { PriorityRing } from "@/ui/PriorityRing";
 import { useTaskRow } from "./useTaskRow";
@@ -83,6 +84,7 @@ function Top3Item({
           <div className={styles.itemTitle}>{t.title}</div>
         )}
       </div>
+      {isAdhoc && <UnplannedChip />}
       {interactive && !row.isEditing && (
         <div className={styles.actions}>
           <Menu
