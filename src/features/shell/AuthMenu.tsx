@@ -23,8 +23,16 @@ export function AuthMenu() {
   const initial = label.slice(0, 1).toUpperCase();
 
   async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    clear();
+    // Always clear local auth state, even if the network request fails —
+    // otherwise a failed POST leaves the user looking signed-in. The backend
+    // session may linger, but the UI returns to the unauthenticated state.
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Network failure — fall through and clear local state anyway.
+    } finally {
+      clear();
+    }
   }
 
   return (

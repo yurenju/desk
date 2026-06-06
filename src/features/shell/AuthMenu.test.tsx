@@ -83,6 +83,23 @@ describe("AuthMenu", () => {
     expect(useAuthStore.getState().status).toBe("unauthenticated");
   });
 
+  it("clears local auth state even if the logout request fails", async () => {
+    useAuthStore.setState({
+      me: { userId: "u-1", email: "a@b", displayName: "Alice" },
+      status: "authenticated",
+    });
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network down"));
+
+    renderWithRouter();
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Alice|帳號選單/ }),
+    );
+    await userEvent.click(await screen.findByRole("menuitem", { name: /登出/ }));
+
+    expect(useAuthStore.getState().me).toBeNull();
+    expect(useAuthStore.getState().status).toBe("unauthenticated");
+  });
+
   it("falls back to email on the trigger when displayName is missing", async () => {
     useAuthStore.setState({
       me: { userId: "u-1", email: "a@b" },
