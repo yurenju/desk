@@ -53,11 +53,16 @@
 .actions {
   display: flex;
   gap: 4px;
-  opacity: 0;
+  opacity: 1;
   transition: opacity 0.12s ease;
 }
-.row:hover .actions {
-  opacity: 1;
+@media (hover: hover) and (pointer: fine) {
+  .actions {
+    opacity: 0;
+  }
+  .row:hover .actions {
+    opacity: 1;
+  }
 }
 .iconBtn {
   border: none;
@@ -83,9 +88,4 @@
   padding: 4px 8px;
   background: var(--color-paper-alt);
   color: inherit;
-}
-@media (max-width: 640px) {
-  .actions {
-    opacity: 1;
-  }
 }
