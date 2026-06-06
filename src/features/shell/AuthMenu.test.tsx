@@ -61,6 +61,15 @@ describe("AuthMenu", () => {
     ).toHaveAttribute("href", "/login");
   });
 
+  it("keeps theme inside a settings menu when unauthenticated (no standalone segmented)", async () => {
+    useAuthStore.setState({ me: null, status: "unauthenticated" });
+    renderWithRouter();
+    // theme is not directly visible — it lives inside the ⋯ menu
+    expect(screen.queryByRole("group", { name: "Theme" })).toBeNull();
+    await userEvent.click(await screen.findByRole("button", { name: /更多設定/ }));
+    expect(await screen.findByRole("group", { name: "Theme" })).toBeInTheDocument();
+  });
+
   it("shows display name; logout + theme live inside the dropdown", async () => {
     useAuthStore.setState({
       me: { userId: "u-1", email: "a@b", displayName: "Alice" },
