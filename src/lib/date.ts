@@ -18,17 +18,15 @@ export function currentMonthISO(now: Date = new Date()): string {
   return `${y}-${m}`;
 }
 
-/** Returns array of 7 ISO dates for the week containing `date` (Mon-Sun). */
+/** Returns array of 7 ISO dates for the week containing `date` (Sun-Sat). */
 export function weekOf(date: string): string[] {
   const d = new Date(date + "T00:00:00");
-  const day = d.getDay();
-  const mondayOffset = day === 0 ? -6 : 1 - day;
-  const monday = new Date(d);
-  monday.setDate(d.getDate() + mondayOffset);
+  const sunday = new Date(d);
+  sunday.setDate(d.getDate() - d.getDay()); // getDay() 0 = Sunday
   const out: string[] = [];
   for (let i = 0; i < 7; i++) {
-    const next = new Date(monday);
-    next.setDate(monday.getDate() + i);
+    const next = new Date(sunday);
+    next.setDate(sunday.getDate() + i);
     out.push(todayISO(next));
   }
   return out;
