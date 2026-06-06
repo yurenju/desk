@@ -35,6 +35,7 @@ function Top3Item({
   interactive?: boolean;
 }) {
   const row = useTaskRow(t.id);
+  const isAdhoc = t.custom_fields.is_adhoc === "true";
   const order = (t.custom_fields.daily_priority ?? t.custom_fields.monthly_priority) as
     | "1"
     | "2"
@@ -84,22 +85,21 @@ function Top3Item({
       </div>
       {interactive && !row.isEditing && (
         <div className={styles.actions}>
-          <button
-            type="button"
-            className={styles.iconBtn}
-            aria-label="編輯"
-            onClick={() => row.startEdit(t.title)}
-          >
-            ✎
-          </button>
-          <button
-            type="button"
-            className={[styles.iconBtn, styles.del].join(" ")}
-            aria-label="刪除"
-            onClick={row.remove}
-          >
-            🗑
-          </button>
+          <Menu
+            ariaLabel="更多動作"
+            trigger={
+              <button type="button" className={styles.iconBtn} aria-label="更多動作">
+                ⋯
+              </button>
+            }
+            items={[
+              isAdhoc
+                ? { key: "to-planned", label: "↑ 移到計畫內", onSelect: row.toggleAdhoc }
+                : { key: "to-adhoc", label: "↓ 標為計畫外", onSelect: row.toggleAdhoc },
+              { key: "edit", label: "編輯", onSelect: () => row.startEdit(t.title) },
+              { key: "delete", label: "刪除", onSelect: row.remove, danger: true },
+            ]}
+          />
         </div>
       )}
     </li>

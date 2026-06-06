@@ -67,11 +67,16 @@
 .actions {
   display: flex;
   gap: 4px;
-  opacity: 0;
+  opacity: 1; /* default visible (touch / no-hover) */
   transition: opacity 0.12s ease;
 }
-.item:hover .actions {
-  opacity: 1;
+@media (hover: hover) and (pointer: fine) {
+  .actions {
+    opacity: 0;
+  }
+  .item:hover .actions {
+    opacity: 1;
+  }
 }
 .iconBtn {
   border: none;
@@ -79,9 +84,6 @@
   cursor: pointer;
   font-size: 13px;
   color: var(--color-accent-text);
-}
-.del {
-  color: var(--color-flag, #c1432e);
 }
 .editInput {
   width: 100%;
@@ -91,9 +93,4 @@
   padding: 4px 8px;
   background: var(--color-paper-alt);
   color: inherit;
-}
-@media (max-width: 640px) {
-  .actions {
-    opacity: 1;
-  }
 }
