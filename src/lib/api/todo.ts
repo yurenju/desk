@@ -32,9 +32,12 @@ export async function postTodo(input: CreateTodoInput): Promise<Task> {
 export interface TodoPatch {
   status?: TaskStatus;
   daily_priority?: string | null;
+  monthly_priority?: string | null;
   done_on?: string | null;
   is_adhoc?: "true" | "false";
   title?: string;
+  scheduled_dates?: string[];
+  scheduled_months?: string[];
 }
 
 export async function patchTodoApi(id: string, patch: TodoPatch): Promise<Task> {

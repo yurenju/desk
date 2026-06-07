@@ -355,7 +355,7 @@ export async function patchTodo(
   id: string,
   body: {
     status?: Todo["status"];
-    customFields?: Record<string, string | null>;
+    customFields?: Record<string, string | string[] | null>;
     title?: string;
   },
 ): Promise<Todo> {

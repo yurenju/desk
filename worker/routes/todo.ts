@@ -40,7 +40,7 @@ export async function handleCreateTodo(request: Request, env: Env): Promise<Resp
     const customFields: Record<string, string | string[]> = {};
     if (body.scheduled_dates) customFields.scheduled_dates = body.scheduled_dates;
     if (body.scheduled_months) customFields.scheduled_months = body.scheduled_months;
-    if (body.is_adhoc) customFields.is_adhoc = body.is_adhoc;
+    if ("is_adhoc" in body && body.is_adhoc) customFields.is_adhoc = body.is_adhoc;
     const { projectId, typeId } = await ensureBootstrap(env.DESK_KV, accessToken, userId);
     const todo = await createTodo(accessToken, { title, projectId, typeId, customFields });
     return json({ task: mapTodoToTask(todo) }, 201);
@@ -57,25 +57,34 @@ export async function handlePatchTodo(
     let body: {
       status?: "open" | "in_progress" | "done" | "cancelled";
       daily_priority?: string | null;
+      monthly_priority?: string | null;
       done_on?: string | null;
       is_adhoc?: "true" | "false";
       title?: string;
+      scheduled_dates?: string[];
+      scheduled_months?: string[];
     };
     try {
       body = (await request.json()) as {
         status?: "open" | "in_progress" | "done" | "cancelled";
         daily_priority?: string | null;
+        monthly_priority?: string | null;
         done_on?: string | null;
         is_adhoc?: "true" | "false";
         title?: string;
+        scheduled_dates?: string[];
+        scheduled_months?: string[];
       };
     } catch {
       return json({ error: "invalid_json" }, 400);
     }
-    const customFields: Record<string, string | null> = {};
+    const customFields: Record<string, string | string[] | null> = {};
     if ("daily_priority" in body) customFields.daily_priority = body.daily_priority ?? null;
+    if ("monthly_priority" in body) customFields.monthly_priority = body.monthly_priority ?? null;
     if ("done_on" in body) customFields.done_on = body.done_on ?? null;
     if ("is_adhoc" in body) customFields.is_adhoc = body.is_adhoc ?? null;
+    if ("scheduled_dates" in body && body.scheduled_dates) customFields.scheduled_dates = body.scheduled_dates;
+    if ("scheduled_months" in body && body.scheduled_months) customFields.scheduled_months = body.scheduled_months;
     const todo = await patchTodo(accessToken, id, {
       status: body.status,
       customFields: Object.keys(customFields).length ? customFields : undefined,

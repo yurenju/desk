@@ -138,6 +138,45 @@ describe("PATCH /api/todo/:id", () => {
     );
   });
 
+  it("translates monthly_priority and array fields to custom fields", async () => {
+    const env = makeEnv();
+    await seedSession(env);
+    const spy = vi.spyOn(wspc, "patchTodo").mockResolvedValue({
+      id: "tod_1", status: "open", title: "A", created_at: 0, updated_at: 0, custom_fields: {},
+    });
+    const req = new Request("https://d/api/todo/tod_1", {
+      method: "PATCH",
+      headers: { ...cookie, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        monthly_priority: "1",
+        scheduled_dates: ["2026-05-22", "2026-05-23"],
+      }),
+    });
+    await handlePatchTodo(req, env, "tod_1");
+    expect(spy.mock.calls[0][2]).toEqual({
+      status: undefined,
+      customFields: {
+        monthly_priority: "1",
+        scheduled_dates: ["2026-05-22", "2026-05-23"],
+      },
+    });
+  });
+
+  it("sends monthly_priority null to clear", async () => {
+    const env = makeEnv();
+    await seedSession(env);
+    const spy = vi.spyOn(wspc, "patchTodo").mockResolvedValue({
+      id: "tod_1", status: "open", title: "A", created_at: 0, updated_at: 0, custom_fields: {},
+    });
+    const req = new Request("https://d/api/todo/tod_1", {
+      method: "PATCH",
+      headers: { ...cookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ monthly_priority: null }),
+    });
+    await handlePatchTodo(req, env, "tod_1");
+    expect(spy.mock.calls[0][2].customFields).toEqual({ monthly_priority: null });
+  });
+
   it("passes title through to patchTodo as a top-level field", async () => {
     const env = makeEnv();
     await seedSession(env);
