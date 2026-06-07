@@ -163,8 +163,8 @@ export function addBacklogTask(tasks: Task[], title: string, id: string, now: st
 }
 
 export function promoteToMonth(tasks: Task[], id: string, month: string): Task[] {
-  if (!tasks.some((t) => t.id === id)) return tasks;
-  const target = tasks.find((t) => t.id === id)!;
+  const target = tasks.find((t) => t.id === id);
+  if (!target) return tasks;
   const months = target.custom_fields.scheduled_months ?? [];
   if (months[months.length - 1] === month) return tasks; // already there
   return tasks.map((t) =>
@@ -185,6 +185,8 @@ export function planScheduleDay(tasks: Task[], id: string, date: string): Task[]
   else nextDates = [...dates, date];
 
   const months = target.custom_fields.scheduled_months ?? [];
+  // Re-scheduling to a day reactivates/ensures the month is the active primary month,
+  // even if it was previously dismissed (primaryMonth === null). Intentional backfill.
   const nextMonths = primaryMonth(target) === month ? months : [...months, month];
 
   if (nextDates === dates && nextMonths === months) return tasks; // no change
