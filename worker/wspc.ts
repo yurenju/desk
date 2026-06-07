@@ -300,19 +300,13 @@ export interface Todo {
   custom_fields?: Record<string, string | string[]>;
 }
 
-// `cf.<field>` 過濾未在主 OpenAPI 文件化(只在 llms.txt / MCP tool schema)。
-// 鎖成常數 + 測試鎖定組裝結果,讓 typo 在開發期就被擋下。
-// (歷史:早期 WSPC 對未宣告 cf 鍵會靜默回整包;2026-06 起改為 422 UNKNOWN_CUSTOM_FIELD,
-//  仍維持常數作為防呆與單一真實來源。)
-export const CF_SCHEDULED_DATES = "cf.scheduled_dates";
-
 export async function listTodos(
   accessToken: string,
-  opts: { projectId: string; date: string },
+  opts: { projectId: string; typeId: string },
 ): Promise<Todo[]> {
   const params = new URLSearchParams();
   params.set("project_id", opts.projectId);
-  params.set(CF_SCHEDULED_DATES, opts.date);
+  params.set("type_id", opts.typeId);
   for (const s of ["open", "in_progress", "done"]) params.append("status", s);
   const res = await fetch(`${WSPC_BASE}/todo/items?${params.toString()}`, {
     headers: { Authorization: `Bearer ${accessToken}` },

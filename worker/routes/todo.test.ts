@@ -23,38 +23,20 @@ const cookie = { Cookie: "__Host-Session=sid" };
 beforeEach(() => vi.restoreAllMocks());
 
 describe("GET /api/todo", () => {
-  it("400 when date missing", async () => {
+  it("lists all non-cancelled tasks without a date filter", async () => {
     const env = makeEnv();
     await seedSession(env);
-    const req = new Request("https://d/api/todo", { headers: cookie });
-    const res = await handleListTodo(req, env);
-    expect(res.status).toBe(400);
-  });
-
-  it("400 with invalid_date when date format is wrong", async () => {
-    const env = makeEnv();
-    await seedSession(env);
-    const spy = vi.spyOn(wspc, "listTodos");
-    const req = new Request("https://d/api/todo?date=garbage", { headers: cookie });
-    const res = await handleListTodo(req, env);
-    expect(res.status).toBe(400);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toBe("invalid_date");
-    expect(spy).not.toHaveBeenCalled();
-  });
-
-  it("returns mapped tasks filtered by date", async () => {
-    const env = makeEnv();
-    await seedSession(env);
-    vi.spyOn(wspc, "listTodos").mockResolvedValue([
+    const spy = vi.spyOn(wspc, "listTodos").mockResolvedValue([
       { id: "tod_1", status: "open", title: "A", created_at: 0, updated_at: 0,
-        custom_fields: { scheduled_dates: ["2026-05-31"] } },
+        custom_fields: { scheduled_months: ["2026-05"] } },
     ]);
-    const req = new Request("https://d/api/todo?date=2026-05-31", { headers: cookie });
+    const req = new Request("https://d/api/todo", { headers: cookie });
     const res = await handleListTodo(req, env);
     expect(res.status).toBe(200);
     const body = (await res.json()) as { tasks: { id: string }[] };
     expect(body.tasks[0].id).toBe("tod_1");
+    // scopes to the bootstrapped project + type, no date/cf filter
+    expect(spy.mock.calls[0][1]).toEqual({ projectId: "prj_1", typeId: "typ_1" });
   });
 });
 

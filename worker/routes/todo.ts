@@ -16,11 +16,8 @@ function json(body: unknown, status = 200): Response {
 
 export async function handleListTodo(request: Request, env: Env): Promise<Response> {
   return withSession(request, env, async ({ accessToken, userId }) => {
-    const date = new URL(request.url).searchParams.get("date");
-    if (!date) return json({ error: "date_required" }, 400);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({ error: "invalid_date" }, 400);
-    const { projectId } = await ensureBootstrap(env.DESK_KV, accessToken, userId);
-    const todos = await listTodos(accessToken, { projectId, date });
+    const { projectId, typeId } = await ensureBootstrap(env.DESK_KV, accessToken, userId);
+    const todos = await listTodos(accessToken, { projectId, typeId });
     return json({ tasks: todos.map(mapTodoToTask) });
   });
 }
