@@ -1,0 +1,64 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+}
+
+.title {
+  flex: 1;
+  color: var(--color-ink);
+  cursor: grab;
+}
+
+.done .title {
+  color: var(--color-ink-faint);
+  text-decoration: line-through;
+}
+
+.dragging {
+  opacity: 0.5;
+}
+
+.actions {
+  display: flex;
+  gap: 4px;
+  opacity: 1;
+  transition: opacity 0.12s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .actions {
+    opacity: 0;
+  }
+  .row:hover .actions {
+    opacity: 1;
+  }
+}
+
+.iconBtn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  font-size: 13px;
+  color: var(--color-ink-faint);
+}
+
+.iconBtn:hover {
+  background: var(--color-paper-alt);
+}
+
+.editInput {
+  width: 100%;
+  font: inherit;
+  border: 1.5px solid var(--color-flag, #c1432e);
+  border-radius: 5px;
+  padding: 4px 8px;
+  background: var(--color-paper-alt);
+  color: inherit;
+}
