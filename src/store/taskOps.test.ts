@@ -184,6 +184,21 @@ describe("setDailyPriority", () => {
     expect(next.find((t) => t.id === "x")!.custom_fields.daily_priority).toBe("1");
   });
 
+  it("does not evict a priority on a task scheduled for a different date (cross-date isolation)", () => {
+    const a = makeTask({
+      id: "a",
+      custom_fields: { scheduled_dates: ["2026-06-10"], daily_priority: "1" },
+    });
+    const b = makeTask({
+      id: "b",
+      custom_fields: { scheduled_dates: ["2026-06-17"] },
+    });
+    const tasks = [a, b];
+    const next = setDailyPriority(tasks, "b", "1", "2026-06-17");
+    expect(next.find((t) => t.id === "b")!.custom_fields.daily_priority).toBe("1");
+    expect(next.find((t) => t.id === "a")!.custom_fields.daily_priority).toBe("1");
+  });
+
   it("removes the priority when n is null", () => {
     const tasks = [onToday("a", "2")];
     const next = setDailyPriority(tasks, "a", null, today);
