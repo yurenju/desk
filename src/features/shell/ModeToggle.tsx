@@ -15,7 +15,7 @@ export function ModeToggle() {
       ariaLabel="Mode"
       options={[
         { value: "plan", label: "規劃" },
-        { value: "today", label: "今天" },
+        { value: "today", label: "專注" },
       ]}
     />
   );
