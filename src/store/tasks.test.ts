@@ -28,7 +28,6 @@ describe("useTasksStore (local behaviour)", () => {
       id: "srv-1",
       title: "臨時一件",
       status: "open",
-      parent_id: null,
       created_at: "x",
       updated_at: "x",
       custom_fields: { scheduled_dates: [MOCK_TODAY], is_adhoc: "true" },
@@ -101,7 +100,7 @@ describe("server-backed tasks store", () => {
 
   it("loadTasks populates from api", async () => {
     vi.spyOn(api, "fetchTodos").mockResolvedValue([
-      { id: "tod_1", title: "A", status: "open", parent_id: null,
+      { id: "tod_1", title: "A", status: "open",
         created_at: "x", updated_at: "x", custom_fields: { scheduled_dates: ["2026-05-31"] } },
     ]);
     await useTasksStore.getState().loadTasks("2026-05-31");
@@ -127,9 +126,9 @@ describe("server-backed tasks store", () => {
     const p2 = useTasksStore.getState().loadTasks("2026-05-31");
 
     // newer (second) call resolves first, older resolves last
-    resolveNew([{ id: "new", title: "N", status: "open", parent_id: null,
+    resolveNew([{ id: "new", title: "N", status: "open",
       created_at: "x", updated_at: "x", custom_fields: {} }]);
-    resolveOld([{ id: "old", title: "O", status: "open", parent_id: null,
+    resolveOld([{ id: "old", title: "O", status: "open",
       created_at: "x", updated_at: "x", custom_fields: {} }]);
     await Promise.all([p1, p2]);
 
@@ -141,7 +140,7 @@ describe("server-backed tasks store", () => {
 
   it("rolls back toggleDone when patch fails", async () => {
     useTasksStore.setState({
-      tasks: [{ id: "tod_1", title: "A", status: "open", parent_id: null,
+      tasks: [{ id: "tod_1", title: "A", status: "open",
         created_at: "x", updated_at: "x", custom_fields: { scheduled_dates: ["2026-05-31"] } }],
     });
     vi.spyOn(api, "patchTodoApi").mockRejectedValue(new Error("boom"));
@@ -151,7 +150,7 @@ describe("server-backed tasks store", () => {
   });
 
   it("editTitle optimistically renames and persists", async () => {
-    useTasksStore.setState({ tasks: [{ id: "t1", title: "Old", status: "open", parent_id: null,
+    useTasksStore.setState({ tasks: [{ id: "t1", title: "Old", status: "open",
       created_at: "x", updated_at: "x", custom_fields: {} }] });
     const spy = vi.spyOn(api, "patchTodoApi").mockResolvedValue({ id: "t1" } as never);
     await useTasksStore.getState().editTitle("t1", "New");
@@ -160,7 +159,7 @@ describe("server-backed tasks store", () => {
   });
 
   it("editTitle rolls back when patch fails", async () => {
-    useTasksStore.setState({ tasks: [{ id: "t1", title: "Old", status: "open", parent_id: null,
+    useTasksStore.setState({ tasks: [{ id: "t1", title: "Old", status: "open",
       created_at: "x", updated_at: "x", custom_fields: {} }] });
     vi.spyOn(api, "patchTodoApi").mockRejectedValue(new Error("boom"));
     await useTasksStore.getState().editTitle("t1", "New");
@@ -169,7 +168,7 @@ describe("server-backed tasks store", () => {
   });
 
   it("restoreTask re-inserts the task and patches with original status", async () => {
-    const task = { id: "r1", title: "Restore me", status: "open" as const, parent_id: null,
+    const task = { id: "r1", title: "Restore me", status: "open" as const,
       created_at: "x", updated_at: "x", custom_fields: {} };
     useTasksStore.setState({
       tasks: [],
@@ -183,7 +182,7 @@ describe("server-backed tasks store", () => {
   });
 
   it("restoreTask rolls back and sets error when patch fails", async () => {
-    const task = { id: "r1", title: "Restore me", status: "open" as const, parent_id: null,
+    const task = { id: "r1", title: "Restore me", status: "open" as const,
       created_at: "x", updated_at: "x", custom_fields: {} };
     useTasksStore.setState({
       tasks: [],
@@ -230,7 +229,6 @@ describe("server-backed tasks store", () => {
         id: "reloaded",
         title: "R",
         status: "open",
-        parent_id: null,
         created_at: "x",
         updated_at: "x",
         custom_fields: {},

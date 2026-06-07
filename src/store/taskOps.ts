@@ -40,7 +40,6 @@ export function addTodayTask(
     id,
     title: trimmed,
     status: "open",
-    parent_id: null,
     created_at: now,
     updated_at: now,
     custom_fields: { scheduled_dates: [today], is_adhoc: "true" },

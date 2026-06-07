@@ -9,7 +9,6 @@ function task(o: Partial<Task> & { id: string; title: string }): Task {
     title: o.title,
     description: o.description,
     status: o.status ?? "open",
-    parent_id: o.parent_id ?? null,
     created_at: o.created_at ?? "2026-05-01T00:00:00Z",
     updated_at: o.updated_at ?? "2026-05-01T00:00:00Z",
     custom_fields: o.custom_fields ?? {},
@@ -120,8 +119,6 @@ export const allTasks: Task[] = [
   task({
     id: "d1",
     title: "完成 desk.yurenju.me todo MVP demo",
-    description: "對應月度任務:推出 desk.yurenju.me MVP",
-    parent_id: "m1",
     custom_fields: {
       scheduled_months: ["2026-05"],
       scheduled_dates: ["2026-05-22"],

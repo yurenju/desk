@@ -6,7 +6,6 @@ export function mapTodoToTask(todo: Todo): Task {
     id: todo.id,
     title: todo.title,
     status: todo.status,
-    parent_id: null,
     created_at: new Date(todo.created_at).toISOString(),
     updated_at: new Date(todo.updated_at).toISOString(),
     custom_fields: (todo.custom_fields ?? {}) as TaskCustomFields,

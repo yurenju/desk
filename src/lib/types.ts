@@ -23,7 +23,6 @@ export interface Task {
   title: string;
   description?: string;
   status: TaskStatus;
-  parent_id?: string | null;
   created_at: string;
   updated_at: string;
   custom_fields: TaskCustomFields;

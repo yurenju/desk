@@ -9,7 +9,6 @@ const baseTask = {
   id: "del-1",
   title: "測試任務",
   status: "open" as const,
-  parent_id: null,
   created_at: "x",
   updated_at: "x",
   custom_fields: {},

@@ -19,7 +19,6 @@ describe("mapTodoToTask", () => {
       id: "tod_1",
       title: "Buy milk",
       status: "open",
-      parent_id: null,
       created_at: "2025-06-01T00:00:00.000Z",
       updated_at: "2025-06-01T00:00:00.000Z",
       custom_fields: {
