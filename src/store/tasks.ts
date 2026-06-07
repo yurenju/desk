@@ -4,11 +4,14 @@ import { fetchTodos, postTodo } from "@/lib/api/todo";
 import { enqueuePatch } from "@/lib/api/todoQueue";
 import {
   addTodayTask,
+  addMonthTask as addMonthTaskOp,
   deleteTask,
   editTitle,
+  promoteToDay as promoteToDayOp,
   restoreTask as restoreTaskOp,
   setAdhoc as setAdhocOp,
   setDailyPriority,
+  setMonthlyPriority as setMonthlyPriorityOp,
   toggleDone,
 } from "./taskOps";
 import type { RemovedTask } from "./taskOps";
@@ -35,6 +38,9 @@ interface TasksState {
   restoreTask: () => Promise<void>;
   setDailyPriority: (id: string, n: Priority | null) => Promise<void>;
   setAdhoc: (id: string, isAdhoc: boolean) => Promise<void>;
+  promoteToDay: (id: string, date: string) => Promise<void>;
+  setMonthlyPriority: (id: string, n: Priority | null, month: string) => Promise<void>;
+  addMonthTask: (title: string, month: string) => Promise<void>;
   clearTasks: () => void;
   clearRecentlyDeleted: () => void;
   clearError: () => void;
@@ -174,6 +180,60 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     set({ tasks: setAdhocOp(prev, id, isAdhoc), error: null });
     try {
       await enqueuePatch(id, { is_adhoc: isAdhoc ? "true" : "false" });
+    } catch {
+      set({ tasks: prev, error: "save_failed" });
+    }
+  },
+
+  async promoteToDay(id, date) {
+    const prev = get().tasks;
+    const next = promoteToDayOp(prev, id, date);
+    if (next === prev) return;
+    set({ tasks: next, error: null });
+    const updated = next.find((t) => t.id === id);
+    try {
+      await enqueuePatch(id, { scheduled_dates: updated!.custom_fields.scheduled_dates });
+    } catch {
+      set({ tasks: prev, error: "save_failed" });
+    }
+  },
+
+  async setMonthlyPriority(id, n, month) {
+    const prev = get().tasks;
+    const next = setMonthlyPriorityOp(prev, id, n, month);
+    set({ tasks: next, error: null });
+    const changed = next.filter((t) => {
+      const before = prev.find((p) => p.id === t.id);
+      return before && before.custom_fields.monthly_priority !== t.custom_fields.monthly_priority;
+    });
+    try {
+      await Promise.all(
+        changed.map((t) =>
+          enqueuePatch(t.id, { monthly_priority: t.custom_fields.monthly_priority ?? null }),
+        ),
+      );
+    } catch {
+      try {
+        await get().reload();
+      } catch {
+        /* reload already set status:"error" */
+      }
+    }
+  },
+
+  async addMonthTask(title, month) {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    const prev = get().tasks;
+    const tempId = `temp-${crypto.randomUUID()}`;
+    set({ tasks: addMonthTaskOp(prev, trimmed, month, tempId, now()), error: null });
+    try {
+      const created = await postTodo({
+        title: trimmed,
+        scheduled_months: [month],
+        is_adhoc: "false",
+      });
+      set({ tasks: get().tasks.map((t) => (t.id === tempId ? created : t)) });
     } catch {
       set({ tasks: prev, error: "save_failed" });
     }

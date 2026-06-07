@@ -235,6 +235,59 @@ describe("server-backed tasks store", () => {
     expect(spy).toHaveBeenCalled(); // load-once guard no longer blocks after clear
   });
 
+  it("promoteToDay appends date and patches scheduled_dates", async () => {
+    useTasksStore.setState({
+      tasks: [{ id: "a", title: "A", status: "open",
+        created_at: "x", updated_at: "x", custom_fields: { scheduled_months: ["2026-05"] } }],
+      status: "ready", error: null,
+    });
+    const spy = vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+    await useTasksStore.getState().promoteToDay("a", "2026-05-22");
+    expect(useTasksStore.getState().tasks[0].custom_fields.scheduled_dates).toEqual(["2026-05-22"]);
+    expect(spy).toHaveBeenCalledWith("a", { scheduled_dates: ["2026-05-22"] });
+  });
+
+  it("promoteToDay rolls back on failure", async () => {
+    useTasksStore.setState({
+      tasks: [{ id: "a", title: "A", status: "open",
+        created_at: "x", updated_at: "x", custom_fields: { scheduled_months: ["2026-05"] } }],
+      status: "ready", error: null,
+    });
+    vi.spyOn(api, "patchTodoApi").mockRejectedValue(new Error("boom"));
+    await useTasksStore.getState().promoteToDay("a", "2026-05-22");
+    expect(useTasksStore.getState().tasks[0].custom_fields.scheduled_dates).toBeUndefined();
+    expect(useTasksStore.getState().error).toBe("save_failed");
+  });
+
+  it("setMonthlyPriority sets and evicts within month, patching both", async () => {
+    useTasksStore.setState({
+      tasks: [
+        { id: "a", title: "A", status: "open", created_at: "x", updated_at: "x",
+          custom_fields: { scheduled_months: ["2026-05"], monthly_priority: "1" } },
+        { id: "b", title: "B", status: "open", created_at: "x", updated_at: "x",
+          custom_fields: { scheduled_months: ["2026-05"] } },
+      ],
+      status: "ready", error: null,
+    });
+    vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+    await useTasksStore.getState().setMonthlyPriority("b", "1", "2026-05");
+    const s = useTasksStore.getState();
+    expect(s.tasks.find((t) => t.id === "b")!.custom_fields.monthly_priority).toBe("1");
+    expect(s.tasks.find((t) => t.id === "a")!.custom_fields.monthly_priority).toBeUndefined();
+  });
+
+  it("addMonthTask adds a month-scoped task", async () => {
+    useTasksStore.setState({ tasks: [], status: "ready", error: null });
+    vi.spyOn(api, "postTodo").mockResolvedValue({
+      id: "srv-m", title: "計畫", status: "open",
+      created_at: "x", updated_at: "x",
+      custom_fields: { scheduled_months: ["2026-05"], is_adhoc: "false" },
+    });
+    await useTasksStore.getState().addMonthTask("計畫", "2026-05");
+    const added = useTasksStore.getState().tasks.find((t) => t.id === "srv-m");
+    expect(added?.custom_fields.scheduled_months).toEqual(["2026-05"]);
+  });
+
   it("setDailyPriority reloads from server when a patch fails", async () => {
     useTasksStore.setState({
       tasks: allTasks,
