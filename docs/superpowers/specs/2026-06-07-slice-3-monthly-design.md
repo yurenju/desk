@@ -15,15 +15,21 @@
 
 ---
 
-## WSPC OpenAPI 調查結論（實作前已查 `spec/wspc-openapi.json`）
+## WSPC OpenAPI 調查結論（已查線上最新版）
 
-落實作前針對 `todo_list` / `UpdateTodoBody` 查證，結論固定如下，作為本片 BFF 改動的依據：
+入口 `https://wspc.ai/llms.txt` → todo 規格 `https://api.wspc.ai/todo/openapi.json`（線上最新，為最終真實來源）。針對 `todo_list` / `UpdateTodoBody` 查證如下，作為本片 BFF 改動依據：
 
-1. **`todo_list` 沒有 `cf.<field>` 過濾參數**。文件化的 query 只有 `project_id`（必填）、`user_id`、`parent_id`、`status`、`include_deleted`、`include_templates`、`due_after` / `due_before`、`type_id`、`sort_by` / `order`、`include_orphan_fields`。Slice 2b 用的 `cf.scheduled_dates` 是未文件化擴充。方案 A 改用 `project_id` + `status` + 可選 `type_id`，**全部是文件化參數**，繞開那條脆弱路徑。
-2. **list 省略 `parent_id` 時預設只回 root-level todo**。我們的 DeskTask 一律 root-level（不設 `parent_id`），所以預設 list 會回全部——這也佐證該淘汰 `parent_id`。
-3. **`UpdateTodoBody.custom_fields` 的 PATCH 語意**：只有出現在 map 裡的 key 會變；傳 `null` 刪該欄；**陣列值整欄替換、無 element-level diff**；未宣告 key 回 `UNDECLARED_FIELD`。`scheduled_months` / `scheduled_dates` / `monthly_priority` 在 Slice 2b 的型態註冊已一次宣告完，皆可 patch。promote = client 算好整個 `scheduled_dates` 陣列再整欄 PATCH，與此語意相容。
-4. list **沒有**「scheduled 落在某月」的 server 端能力（只有 `due_at` 半開窗 `[due_after, due_before)`，且我們不用 `due_at`）。再次確認 client 端 derive 是唯一乾淨路徑。
-5. 可選強化：list 帶 `type_id`（bootstrap 已有 typeId）把範圍鎖在 DeskTask 型態，避免同 project 內其他型態混入。
+1. **`cf.<key>` 自訂欄位過濾「線上最新版已正式文件化」**（與 repo 內 `spec/wspc-openapi.json` 那份描述未提 `cf.` 不同——repo 那份已過時）。原文：「Custom-Field Filters (`cf.<key>=<value>`): Repeatable dynamic-prefix query parameters... for `string_array` custom fields the match is positive when the array contains the value.」即 Slice 2b 用的 `cf.scheduled_dates` array-contains 現在是**官方支援、非脆弱**；`cf.scheduled_months` 同理可用。
+
+   > 但這**不改變方案 A 的選擇**。方案 A 站得住腳的理由不是「繞開未文件化路徑」，而是：(a) client derivation（`tasksOnMonth` / `tasksOnDate` / `tasksInBacklog`）Slice 0 已寫好且測過；(b) 下游 slice（Backlog / 軌跡 / carryover）本來就要跨月跨日看資料，client 載入讓它們零 BFF 改動；(c) 切月即時 re-derive 不 refetch；(d) `cf.` 只能 array-contains，**仍無法表達**「Week 欄整週的 adhoc task（`scheduled_months` 為空者不會 match 月查詢）」與「scheduled 落在某月的 range」——server 端過濾蓋不到 Week 欄正確性。
+
+2. **list 文件化 query 參數**：`project_id`（必填）、`user_id`、`parent_id`、`status`（多值）、`include_deleted`、`include_templates`、`due_after` / `due_before`、`type_id`、`sort_by` / `order`、`include_orphan_fields`，外加動態 `cf.<key>`。方案 A 改用 `project_id` + `status`（多值）+ 可選 `type_id`，皆文件化。
+3. **list 省略 `parent_id` 時預設只回 root-level todo**。我們的 DeskTask 一律 root-level（不設 `parent_id`），所以預設 list 會回全部——也佐證該淘汰 `parent_id`。
+4. **`UpdateTodoBody.custom_fields` 的 PATCH 語意**（線上與 repo 版一致）：只有出現在 map 裡的 key 會變；傳 `null` 刪該欄；**陣列值整欄替換、無 element-level diff**；未宣告 key 回 `UNDECLARED_FIELD`。`scheduled_months` / `scheduled_dates` / `monthly_priority` 在 Slice 2b 的型態註冊已一次宣告完，皆可 patch。promote = client 算好整個 `scheduled_dates` 陣列再整欄 PATCH，與此語意相容。
+5. list **沒有**「scheduled 落在某月」的 server 端 range 能力（只有 `due_at` 半開窗 `[due_after, due_before)`，且我們不用 `due_at`），故 client 端 derive 是唯一能正確涵蓋月 / 週 / 日的路徑。
+6. 可選強化：list 帶 `type_id`（bootstrap 已有 typeId）把範圍鎖在 DeskTask 型態，避免同 project 內其他型態混入。
+
+> 附帶：repo 內 `spec/wspc-openapi.json` 相對線上已過時（缺 `cf.<key>` 文件）。更新它不屬於本片範圍，另案處理。
 
 ---
 
