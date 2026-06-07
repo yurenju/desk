@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isValidDateParam, weekOf } from "./date";
+import { isValidDateParam, weekOf, isValidMonthParam, prevMonth, nextMonth } from "./date";
 
 describe("isValidDateParam", () => {
   it("returns true for a valid YYYY-MM-DD string", () => {
@@ -16,6 +16,22 @@ describe("isValidDateParam", () => {
 
   it("returns false for single-digit month/day (YYYY-M-D)", () => {
     expect(isValidDateParam("2026-5-1")).toBe(false);
+  });
+});
+
+describe("month helpers", () => {
+  it("isValidMonthParam accepts YYYY-MM, rejects others", () => {
+    expect(isValidMonthParam("2026-05")).toBe(true);
+    expect(isValidMonthParam("2026-5")).toBe(false);
+    expect(isValidMonthParam("2026-05-01")).toBe(false);
+    expect(isValidMonthParam("garbage")).toBe(false);
+  });
+
+  it("prevMonth / nextMonth step with year rollover", () => {
+    expect(prevMonth("2026-05")).toBe("2026-04");
+    expect(nextMonth("2026-05")).toBe("2026-06");
+    expect(prevMonth("2026-01")).toBe("2025-12");
+    expect(nextMonth("2026-12")).toBe("2027-01");
   });
 });
 

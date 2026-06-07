@@ -73,3 +73,26 @@ export function shortWeekday(date: string): string {
 export function dayOfMonth(date: string): number {
   return Number(date.split("-")[2]);
 }
+
+/** Returns true if `s` matches the YYYY-MM format. */
+export function isValidMonthParam(s: string): boolean {
+  return /^\d{4}-\d{2}$/.test(s);
+}
+
+function shiftMonth(monthISO: string, delta: number): string {
+  const [y, m] = monthISO.split("-").map(Number);
+  const idx = y * 12 + (m - 1) + delta;
+  const ny = Math.floor(idx / 12);
+  const nm = (idx % 12) + 1;
+  return `${ny}-${String(nm).padStart(2, "0")}`;
+}
+
+/** Previous calendar month, e.g. "2026-01" -> "2025-12". */
+export function prevMonth(monthISO: string): string {
+  return shiftMonth(monthISO, -1);
+}
+
+/** Next calendar month, e.g. "2026-12" -> "2027-01". */
+export function nextMonth(monthISO: string): string {
+  return shiftMonth(monthISO, 1);
+}
