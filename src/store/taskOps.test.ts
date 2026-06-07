@@ -8,6 +8,9 @@ import {
   restoreTask,
   setDailyPriority,
   setAdhoc,
+  promoteToDay,
+  setMonthlyPriority,
+  addMonthTask,
 } from "./taskOps";
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
@@ -217,3 +220,60 @@ describe("setAdhoc", () => {
   });
 });
 
+// helper for month-layer tests
+function mk(id: string, cf: Record<string, unknown>) {
+  return {
+    id,
+    title: id,
+    status: "open" as const,
+    created_at: "x",
+    updated_at: "x",
+    custom_fields: cf,
+  };
+}
+
+describe("promoteToDay", () => {
+  it("appends the date to scheduled_dates", () => {
+    const tasks = [mk("a", { scheduled_months: ["2026-05"] })];
+    const out = promoteToDay(tasks, "a", "2026-05-22");
+    expect(out[0].custom_fields.scheduled_dates).toEqual(["2026-05-22"]);
+  });
+  it("is a no-op when date is already the last entry", () => {
+    const tasks = [mk("a", { scheduled_dates: ["2026-05-21", "2026-05-22"] })];
+    const out = promoteToDay(tasks, "a", "2026-05-22");
+    expect(out[0].custom_fields.scheduled_dates).toEqual(["2026-05-21", "2026-05-22"]);
+  });
+});
+
+describe("setMonthlyPriority", () => {
+  it("sets priority and evicts the collider within the same month", () => {
+    const tasks = [
+      mk("a", { scheduled_months: ["2026-05"], monthly_priority: "1" }),
+      mk("b", { scheduled_months: ["2026-05"] }),
+    ];
+    const out = setMonthlyPriority(tasks, "b", "1", "2026-05");
+    expect(out.find((t) => t.id === "b")!.custom_fields.monthly_priority).toBe("1");
+    expect(out.find((t) => t.id === "a")!.custom_fields.monthly_priority).toBeUndefined();
+  });
+  it("does not evict a collider in a different month", () => {
+    const tasks = [
+      mk("a", { scheduled_months: ["2026-04"], monthly_priority: "1" }),
+      mk("b", { scheduled_months: ["2026-05"] }),
+    ];
+    const out = setMonthlyPriority(tasks, "b", "1", "2026-05");
+    expect(out.find((t) => t.id === "a")!.custom_fields.monthly_priority).toBe("1");
+  });
+  it("clears priority when n is null", () => {
+    const tasks = [mk("a", { scheduled_months: ["2026-05"], monthly_priority: "2" })];
+    const out = setMonthlyPriority(tasks, "a", null, "2026-05");
+    expect(out[0].custom_fields.monthly_priority).toBeUndefined();
+  });
+});
+
+describe("addMonthTask", () => {
+  it("creates a month-scoped non-adhoc task", () => {
+    const out = addMonthTask([], "計畫", "2026-05", "tmp-1", "2026-05-01T00:00:00Z");
+    expect(out[0].custom_fields.scheduled_months).toEqual(["2026-05"]);
+    expect(out[0].custom_fields.is_adhoc).toBe("false");
+  });
+});

@@ -1,5 +1,5 @@
 import type { Task, TaskCustomFields, Priority } from "@/lib/types";
-import { primaryDate } from "@/lib/tasks";
+import { primaryDate, primaryMonth } from "@/lib/tasks";
 
 function patch(t: Task, cf: Partial<TaskCustomFields>, now?: string): Task {
   const newCustomFields = { ...t.custom_fields, ...cf };
@@ -98,5 +98,52 @@ export function setAdhoc(tasks: Task[], id: string, isAdhoc: boolean): Task[] {
   return tasks.map((t) =>
     t.id === id ? patch(t, { is_adhoc: isAdhoc ? "true" : "false" }) : t,
   );
+}
+
+export function promoteToDay(tasks: Task[], id: string, date: string): Task[] {
+  if (!tasks.some((t) => t.id === id)) return tasks;
+  return tasks.map((t) => {
+    if (t.id !== id) return t;
+    const arr = t.custom_fields.scheduled_dates ?? [];
+    if (arr[arr.length - 1] === date) return t; // already there
+    return patch(t, { scheduled_dates: [...arr, date] });
+  });
+}
+
+export function setMonthlyPriority(
+  tasks: Task[],
+  id: string,
+  n: Priority | null,
+  month: string,
+): Task[] {
+  if (!tasks.some((t) => t.id === id)) return tasks;
+  return tasks.map((t) => {
+    if (t.id === id) return patch(t, { monthly_priority: n ?? undefined });
+    // eviction: clear the collider among this month's primary tasks
+    if (n !== null && primaryMonth(t) === month && t.custom_fields.monthly_priority === n) {
+      return patch(t, { monthly_priority: undefined });
+    }
+    return t;
+  });
+}
+
+export function addMonthTask(
+  tasks: Task[],
+  title: string,
+  month: string,
+  id: string,
+  now: string,
+): Task[] {
+  const trimmed = title.trim();
+  if (!trimmed) return tasks;
+  const task: Task = {
+    id,
+    title: trimmed,
+    status: "open",
+    created_at: now,
+    updated_at: now,
+    custom_fields: { scheduled_months: [month], is_adhoc: "false" },
+  };
+  return [...tasks, task];
 }
 
