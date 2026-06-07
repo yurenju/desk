@@ -20,7 +20,16 @@
 
 e2e 的 server 位址在 `playwright.config.ts` 固定用 `127.0.0.1`（含 `vite --host 127.0.0.1`）—— Vite 在 Windows 預設 listen `::1`、Linux listen `127.0.0.1`，不釘死會讓 Windows 本機跑不起來。
 
+## 型別檢查一律用 `npm run build`（不要用 `tsc -p tsconfig.json --noEmit`）
+
+驗證型別**只信 `npm run build`（= `tsc -b && vite build`）**，這也是 CI / Cloudflare deploy build 跑的指令。
+
+**不要用 `npx tsc -p tsconfig.json --noEmit` 當型別檢查** —— 根 `tsconfig.json` 是 solution-style（`files: []` + 只有 `references`），`tsc -p` 對它**等於什麼都沒查**（no-op、永遠 clean），會給出假綠。Slice 3 就因此讓真型別錯（元件少傳必填 prop、測試檔 `it`/`expect` 沒 import）一路漏到 CI deploy build 才爆。
+
+`tsc -b` 會檢查所有 referenced project（含測試檔），所以：測試檔要**顯式 `import { describe, it, expect } from "vitest"`**（本專案不靠 global，雖然 vitest run 有 globals）。
+
 ## 慣例
 
 - 程式碼與註解一律英文；對話與文件敘述用繁體中文（spec / plan / research 文件全中文，程式碼區塊維持英文）。
 - 安裝相依套件需 `npm install --legacy-peer-deps`（openapi-typescript 與 typescript 6 的 peer 衝突）。
+- 型別檢查用 `npm run build`（見上節），不要用 `tsc -p tsconfig.json --noEmit`（no-op 假綠）。
