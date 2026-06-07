@@ -6,6 +6,7 @@ import { formatMonth, prevMonth, nextMonth } from "@/lib/date";
 import { BacklogSection } from "@/features/backlog/BacklogSection";
 import { MonthHeroCard } from "./MonthHeroCard";
 import { MonthRow } from "./MonthRow";
+import { AddMonthTaskInput } from "./AddMonthTaskInput";
 import styles from "./MonthColumn.module.css";
 
 export interface MonthColumnProps {
@@ -95,6 +96,8 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
       )}
 
       {nothing && <div className={styles.empty}>這個月還沒有任務</div>}
+
+      <AddMonthTaskInput month={month} />
     </div>
   );
 }
