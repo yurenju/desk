@@ -31,7 +31,9 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
   const otherPlanned = primary.filter(
     (e) => !e.task.custom_fields.monthly_priority && e.task.custom_fields.is_adhoc !== "true",
   );
-  const adhoc = primary.filter((e) => e.task.custom_fields.is_adhoc === "true");
+  const adhoc = primary.filter(
+    (e) => !e.task.custom_fields.monthly_priority && e.task.custom_fields.is_adhoc === "true",
+  );
   const trails = entries.filter((e) => e.kind !== "primary");
 
   const nothing =
@@ -71,7 +73,7 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
           <header className={styles.sectionHead}>其他計劃內</header>
           {otherPlanned.map((e) => (
             <MonthRow key={e.task.id} task={e.task} kind={e.kind}
-              month={month} selectedDate={selectedDate} interactive />
+              month={month} selectedDate={selectedDate} interactive showRing />
           ))}
         </section>
       )}
@@ -81,7 +83,7 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
           <header className={[styles.sectionHead, styles.adhocHead].join(" ")}>計劃外</header>
           {adhoc.map((e) => (
             <MonthRow key={e.task.id} task={e.task} kind={e.kind}
-              month={month} selectedDate={selectedDate} interactive />
+              month={month} selectedDate={selectedDate} interactive showRing />
           ))}
         </section>
       )}
