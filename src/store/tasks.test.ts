@@ -312,3 +312,49 @@ describe("server-backed tasks store", () => {
     expect(useTasksStore.getState().tasks.map((t) => t.id)).toEqual(["reloaded"]);
   });
 });
+
+describe("planScheduleDay action", () => {
+  it("optimistically schedules a backlog task to a day and backfills the month", async () => {
+    vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+    useTasksStore.setState({
+      tasks: [{
+        id: "a", title: "t", status: "open", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_months: [], scheduled_dates: [] },
+      }],
+      status: "ready", error: null,
+    });
+    await useTasksStore.getState().planScheduleDay("a", "2026-06-08");
+    const t = useTasksStore.getState().tasks.find((x) => x.id === "a")!;
+    expect(t.custom_fields.scheduled_dates).toEqual(["2026-06-08"]);
+    expect(t.custom_fields.scheduled_months).toEqual(["2026-06"]);
+  });
+});
+
+describe("promoteToMonth action", () => {
+  it("optimistically appends the month", async () => {
+    vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+    useTasksStore.setState({
+      tasks: [{
+        id: "a", title: "t", status: "open", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_months: [] },
+      }],
+      status: "ready", error: null,
+    });
+    await useTasksStore.getState().promoteToMonth("a", "2026-06");
+    expect(
+      useTasksStore.getState().tasks.find((x) => x.id === "a")!.custom_fields.scheduled_months,
+    ).toEqual(["2026-06"]);
+  });
+});
+
+describe("addBacklogTask action", () => {
+  it("creates a backlog task via postTodo", async () => {
+    vi.spyOn(api, "postTodo").mockResolvedValue({
+      id: "srv", title: "讀一本書", status: "open", created_at: "x", updated_at: "x",
+      custom_fields: { scheduled_months: [], scheduled_dates: [], is_adhoc: "false" },
+    });
+    useTasksStore.setState({ tasks: [], status: "ready", error: null });
+    await useTasksStore.getState().addBacklogTask("讀一本書");
+    expect(useTasksStore.getState().tasks.some((t) => t.id === "srv")).toBe(true);
+  });
+});
