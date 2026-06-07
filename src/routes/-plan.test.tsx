@@ -1,10 +1,25 @@
-import { render, screen } from "@testing-library/react";
-import { PlanView } from "./plan";
+import { it, expect, vi, beforeEach } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import { RouterProvider, createRouter, createMemoryHistory } from "@tanstack/react-router";
+import { routeTree } from "@/routeTree.gen";
 import { useTasksStore } from "@/store/tasks";
 import { allTasks, MOCK_TODAY } from "@/mock/data";
 
-it("renders the given month's tasks", () => {
+beforeEach(() => {
+  vi.restoreAllMocks();
+  vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response("{}", { status: 401 }),
+  );
+});
+
+it("renders the given month's tasks", async () => {
   useTasksStore.setState({ tasks: allTasks, today: MOCK_TODAY, status: "ready", error: null });
-  render(<PlanView month="2026-05" />);
-  expect(screen.getByText("推出 desk.yurenju.me MVP")).toBeInTheDocument();
+  const router = createRouter({
+    routeTree,
+    history: createMemoryHistory({ initialEntries: ["/plan/2026-05"] }),
+  });
+  render(<RouterProvider router={router} />);
+  await waitFor(() =>
+    expect(screen.getByText("推出 desk.yurenju.me MVP")).toBeInTheDocument(),
+  );
 });
