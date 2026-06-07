@@ -357,4 +357,48 @@ describe("addBacklogTask action", () => {
     await useTasksStore.getState().addBacklogTask("讀一本書");
     expect(useTasksStore.getState().tasks.some((t) => t.id === "srv")).toBe(true);
   });
+
+  it("rolls back the optimistic task and sets error when postTodo fails", async () => {
+    vi.spyOn(api, "postTodo").mockRejectedValue(new Error("x"));
+    useTasksStore.setState({ tasks: [], status: "ready", error: null });
+    await useTasksStore.getState().addBacklogTask("foo");
+    expect(useTasksStore.getState().tasks).toHaveLength(0);
+    expect(useTasksStore.getState().error).toBe("save_failed");
+  });
+});
+
+describe("promoteToMonth rollback", () => {
+  it("rolls back scheduled_months and sets error when patch fails", async () => {
+    vi.spyOn(api, "patchTodoApi").mockRejectedValue(new Error("x"));
+    useTasksStore.setState({
+      tasks: [{
+        id: "a", title: "t", status: "open", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_months: [] },
+      }],
+      status: "ready", error: null,
+    });
+    await useTasksStore.getState().promoteToMonth("a", "2026-06");
+    expect(
+      useTasksStore.getState().tasks.find((t) => t.id === "a")!.custom_fields.scheduled_months,
+    ).toEqual([]);
+    expect(useTasksStore.getState().error).toBe("save_failed");
+  });
+});
+
+describe("planScheduleDay rollback", () => {
+  it("rolls back scheduled_dates and scheduled_months and sets error when patch fails", async () => {
+    vi.spyOn(api, "patchTodoApi").mockRejectedValue(new Error("x"));
+    useTasksStore.setState({
+      tasks: [{
+        id: "a", title: "t", status: "open", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_dates: [], scheduled_months: [] },
+      }],
+      status: "ready", error: null,
+    });
+    await useTasksStore.getState().planScheduleDay("a", "2026-06-08");
+    const task = useTasksStore.getState().tasks.find((t) => t.id === "a")!;
+    expect(task.custom_fields.scheduled_dates).toEqual([]);
+    expect(task.custom_fields.scheduled_months).toEqual([]);
+    expect(useTasksStore.getState().error).toBe("save_failed");
+  });
 });
