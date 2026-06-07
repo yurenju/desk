@@ -80,6 +80,32 @@ function seed(): void {
     // 今天臨時加的
     mk("d6", "回覆 Acme 客戶整合詢問", "open", { is_adhoc: "true" }),
   ];
+
+  // Month-scoped todos for the Plan/Monthly column
+  const month = today.slice(0, 7);
+  todos.push(
+    {
+      id: "pm1",
+      project_id: PROJECT_ID,
+      type_id: TYPE_ID,
+      status: "open",
+      title: "本月最重要的事 A",
+      created_at: base,
+      updated_at: base,
+      custom_fields: { scheduled_months: [month], monthly_priority: "1", is_adhoc: "false" },
+    },
+    {
+      id: "pm2",
+      project_id: PROJECT_ID,
+      type_id: TYPE_ID,
+      status: "open",
+      title: "本月其他計畫 B",
+      created_at: base,
+      updated_at: base,
+      custom_fields: { scheduled_months: [month], is_adhoc: "false" },
+    },
+  );
+
   idCounter = 0;
 }
 
@@ -124,15 +150,10 @@ const server = createServer(async (req, res) => {
   // ── Todo items ─────────────────────────────────────────────────────────
   if (path === "/todo/items" && method === "GET") {
     const projectId = url.searchParams.get("project_id");
-    const date = url.searchParams.get("cf.scheduled_dates");
     const statuses = url.searchParams.getAll("status");
     const result = todos.filter((t) => {
       if (projectId && t.project_id !== projectId) return false;
       if (statuses.length && !statuses.includes(t.status)) return false;
-      if (date) {
-        const dates = t.custom_fields.scheduled_dates;
-        if (!Array.isArray(dates) || !dates.includes(date)) return false;
-      }
       return true;
     });
     return send(res, 200, { todos: result });
