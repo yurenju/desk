@@ -300,6 +300,10 @@ export interface Todo {
   custom_fields?: Record<string, string | string[]>;
 }
 
+// Returns all non-cancelled tasks for the given type. Cancelled is excluded by
+// omission: we enumerate the three live statuses (open/in_progress/done) rather
+// than requesting cancelled. The frontend derives month/week/day/backlog views
+// from this full set client-side (no server-side date/cf filter).
 export async function listTodos(
   accessToken: string,
   opts: { projectId: string; typeId: string },

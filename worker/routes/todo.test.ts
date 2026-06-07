@@ -28,7 +28,7 @@ describe("GET /api/todo", () => {
     await seedSession(env);
     const spy = vi.spyOn(wspc, "listTodos").mockResolvedValue([
       { id: "tod_1", status: "open", title: "A", created_at: 0, updated_at: 0,
-        custom_fields: { scheduled_months: ["2026-05"] } },
+        custom_fields: {} },
     ]);
     const req = new Request("https://d/api/todo", { headers: cookie });
     const res = await handleListTodo(req, env);

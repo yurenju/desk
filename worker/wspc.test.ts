@@ -425,6 +425,7 @@ describe("listTodos", () => {
     );
     await listTodos("at", { projectId: "prj_1", typeId: "typ_1" });
     const u = new URL(fetchSpy.mock.calls[0][0] as string);
+    expect(u.pathname).toBe("/todo/items");
     expect(u.searchParams.get("project_id")).toBe("prj_1");
     expect(u.searchParams.get("type_id")).toBe("typ_1");
     expect(u.searchParams.getAll("status")).toEqual(["open", "in_progress", "done"]);
