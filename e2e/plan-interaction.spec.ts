@@ -46,3 +46,21 @@ test("plan day column can add a task to the focus date", async ({ page }) => {
   await input.press("Enter");
   await expect(page.getByText("焦點日新增測試")).toBeVisible();
 });
+
+test("promotes a month task into the focus day's top-3 via the overflow menu", async ({ page }) => {
+  // "本月其他計畫 B" is a pure month task (no day scheduling). Promoting it as ①
+  // schedules it onto the focus day AND lands it in that day's top-3 card.
+  const row = page
+    .locator("div")
+    .filter({ has: page.getByText("本月其他計畫 B") })
+    .filter({ has: page.getByRole("button", { name: "更多動作" }) })
+    .last();
+  await row.getByRole("button", { name: "更多動作" }).click();
+  await page.getByRole("menuitem", { name: /· ① 三件事/ }).click();
+
+  const top3Card = page
+    .locator("div")
+    .filter({ has: page.getByRole("heading", { name: "今天最重要的三件事" }) })
+    .last();
+  await expect(top3Card.getByText("本月其他計畫 B")).toBeVisible();
+});

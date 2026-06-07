@@ -25,3 +25,20 @@ it("sets monthly priority via the ring menu and evicts the collider", async () =
   expect(s.tasks.find((t) => t.id === "b")!.custom_fields.monthly_priority).toBe("1");
   expect(s.tasks.find((t) => t.id === "a")!.custom_fields.monthly_priority).toBeUndefined();
 });
+
+it("promotes a hero task into the day's top-3", async () => {
+  vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+  useTasksStore.setState({
+    tasks: [
+      { id: "h1", title: "寫月報", status: "open", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_months: ["2026-05"], monthly_priority: "1" } },
+    ],
+    today: "2026-05-22", status: "ready", error: null,
+  });
+  render(<MonthHeroCard top3={useTasksStore.getState().tasks} month="2026-05" selectedDate="2026-05-22" />);
+  await userEvent.click(screen.getByLabelText("更多動作"));
+  await userEvent.click(await screen.findByRole("menuitem", { name: /22 日 · ② 三件事/ }));
+  const t = useTasksStore.getState().tasks.find((x) => x.id === "h1")!;
+  expect(t.custom_fields.scheduled_dates).toEqual(["2026-05-22"]);
+  expect(t.custom_fields.daily_priority).toBe("2");
+});

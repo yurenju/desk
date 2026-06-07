@@ -19,7 +19,7 @@ it("sets monthly priority via the ring", async () => {
   expect(useTasksStore.getState().tasks[0].custom_fields.monthly_priority).toBe("1");
 });
 
-it("promotes via the overflow menu", async () => {
+it("promotes into the day's other-planned via the overflow menu", async () => {
   vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
   useTasksStore.setState({
     tasks: [{ id: "m5", title: "讀完《Deep Work》", status: "open",
@@ -29,6 +29,24 @@ it("promotes via the overflow menu", async () => {
   render(<MonthRow task={useTasksStore.getState().tasks[0]} kind="primary"
     month="2026-05" selectedDate="2026-05-22" interactive />);
   await userEvent.click(screen.getByLabelText("更多動作"));
-  await userEvent.click(await screen.findByRole("menuitem", { name: /排到 22 日/ }));
-  expect(useTasksStore.getState().tasks[0].custom_fields.scheduled_dates).toEqual(["2026-05-22"]);
+  await userEvent.click(await screen.findByRole("menuitem", { name: /22 日 · 其他/ }));
+  const t = useTasksStore.getState().tasks[0];
+  expect(t.custom_fields.scheduled_dates).toEqual(["2026-05-22"]);
+  expect(t.custom_fields.daily_priority).toBeUndefined();
+});
+
+it("promotes into the day's top-3 via the overflow menu", async () => {
+  vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+  useTasksStore.setState({
+    tasks: [{ id: "m9", title: "排版", status: "open", created_at: "x", updated_at: "x",
+      custom_fields: { scheduled_months: ["2026-05"] } }],
+    today: "2026-05-22", status: "ready", error: null,
+  });
+  render(<MonthRow task={useTasksStore.getState().tasks[0]} kind="primary"
+    month="2026-05" selectedDate="2026-05-22" interactive />);
+  await userEvent.click(screen.getByLabelText("更多動作"));
+  await userEvent.click(await screen.findByRole("menuitem", { name: /22 日 · ① 三件事/ }));
+  const t = useTasksStore.getState().tasks[0];
+  expect(t.custom_fields.scheduled_dates).toEqual(["2026-05-22"]);
+  expect(t.custom_fields.daily_priority).toBe("1");
 });
