@@ -35,7 +35,7 @@ test.describe("Manual Verification — Today Interaction", () => {
   });
 
   test("Step 3: Add a task — appears in adhoc section with chip", async ({ page }) => {
-    const input = page.getByPlaceholder("+ 加一件今天的事…");
+    const input = page.getByPlaceholder("+ 加一件這天的事…");
     await input.fill("驗收用任務");
     await input.press("Enter");
 
@@ -153,7 +153,7 @@ test.describe("Manual Verification — Today Interaction", () => {
 
   test("Step 8: Persistence across reload", async ({ page }) => {
     // Add a task
-    const input = page.getByPlaceholder("+ 加一件今天的事…");
+    const input = page.getByPlaceholder("+ 加一件這天的事…");
     await input.fill("持久化測試任務");
     await input.press("Enter");
     await expect(page.getByText("持久化測試任務")).toBeVisible();

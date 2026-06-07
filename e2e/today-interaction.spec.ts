@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("adds a task and persists it across reload", async ({ page }) => {
-  const input = page.getByPlaceholder("+ 加一件今天的事…");
+  const input = page.getByPlaceholder("+ 加一件這天的事…");
   await input.fill("打電話給水電師傅");
   await input.press("Enter");
   await expect(page.getByText("打電話給水電師傅")).toBeVisible();
