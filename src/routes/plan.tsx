@@ -3,6 +3,7 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useTasksStore } from "@/store/tasks";
 import { PlanLayout } from "@/features/plan-view/PlanLayout";
 import { Button } from "@/ui/Button/Button";
+import { currentMonthISO } from "@/lib/date";
 
 function PlanSkeleton() {
   return (
@@ -15,10 +16,9 @@ function PlanSkeleton() {
   );
 }
 
-export function PlanView({ month }: { month: string }) {
+export function PlanView({ date }: { date: string }) {
   const status = useTasksStore((s) => s.status);
   const tasks = useTasksStore((s) => s.tasks);
-  const today = useTasksStore((s) => s.today);
 
   useEffect(() => {
     useTasksStore.getState().loadTasks();
@@ -33,7 +33,8 @@ export function PlanView({ month }: { month: string }) {
       </div>
     );
   }
-  return <PlanLayout allTasks={tasks} selectedDate={today} month={month} />;
+  const month = currentMonthISO(new Date(date + "T00:00:00"));
+  return <PlanLayout allTasks={tasks} selectedDate={date} month={month} />;
 }
 
 function PlanLayoutRoute() {

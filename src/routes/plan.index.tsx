@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { currentMonthISO } from "@/lib/date";
+import { todayISO } from "@/lib/date";
 import { PlanView } from "./plan";
 
 function PlanIndexRoute() {
-  return <PlanView month={currentMonthISO()} />;
+  return <PlanView date={todayISO()} />;
 }
 
 export const Route = createFileRoute("/plan/")({

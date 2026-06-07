@@ -22,21 +22,21 @@ beforeEach(() => {
 });
 
 it("shows empty-state when month has no tasks", async () => {
-  renderInRouter("/plan/2099-01");
+  renderInRouter("/plan/2099-01-15");
   await waitFor(() =>
     expect(screen.getByText("這個月還沒有任務")).toBeInTheDocument(),
   );
 });
 
 it("renders the month title via formatMonth", async () => {
-  renderInRouter("/plan/2099-01");
+  renderInRouter("/plan/2099-01-15");
   await waitFor(() =>
     expect(screen.getByText(formatMonth("2099-01"))).toBeInTheDocument(),
   );
 });
 
 it("renders prev/next stepper links", async () => {
-  renderInRouter("/plan/2099-01");
+  renderInRouter("/plan/2099-01-15");
   await waitFor(() => {
     expect(screen.getByRole("link", { name: "上個月" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "下個月" })).toBeInTheDocument();

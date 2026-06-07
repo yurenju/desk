@@ -57,7 +57,7 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
         <div
           className={[styles.cell, tab !== "day" && styles.mobileHidden].filter(Boolean).join(" ")}
         >
-          <DayColumn allTasks={allTasks} selectedDate={selectedDate} variant="plan-narrow" />
+          <DayColumn allTasks={allTasks} selectedDate={selectedDate} variant="plan-narrow" interactive />
         </div>
       </div>
     </main>
