@@ -14,7 +14,9 @@ import { Route as PlanRouteImport } from './routes/plan'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TodayIndexRouteImport } from './routes/today.index'
+import { Route as PlanIndexRouteImport } from './routes/plan.index'
 import { Route as TodayDateRouteImport } from './routes/today.$date'
+import { Route as PlanMonthRouteImport } from './routes/plan.$month'
 
 const TodayRoute = TodayRouteImport.update({
   id: '/today',
@@ -41,55 +43,80 @@ const TodayIndexRoute = TodayIndexRouteImport.update({
   path: '/',
   getParentRoute: () => TodayRoute,
 } as any)
+const PlanIndexRoute = PlanIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PlanRoute,
+} as any)
 const TodayDateRoute = TodayDateRouteImport.update({
   id: '/$date',
   path: '/$date',
   getParentRoute: () => TodayRoute,
 } as any)
+const PlanMonthRoute = PlanMonthRouteImport.update({
+  id: '/$month',
+  path: '/$month',
+  getParentRoute: () => PlanRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/plan': typeof PlanRoute
+  '/plan': typeof PlanRouteWithChildren
   '/today': typeof TodayRouteWithChildren
+  '/plan/$month': typeof PlanMonthRoute
   '/today/$date': typeof TodayDateRoute
+  '/plan/': typeof PlanIndexRoute
   '/today/': typeof TodayIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/plan': typeof PlanRoute
+  '/plan/$month': typeof PlanMonthRoute
   '/today/$date': typeof TodayDateRoute
+  '/plan': typeof PlanIndexRoute
   '/today': typeof TodayIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/plan': typeof PlanRoute
+  '/plan': typeof PlanRouteWithChildren
   '/today': typeof TodayRouteWithChildren
+  '/plan/$month': typeof PlanMonthRoute
   '/today/$date': typeof TodayDateRoute
+  '/plan/': typeof PlanIndexRoute
   '/today/': typeof TodayIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/plan' | '/today' | '/today/$date' | '/today/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/plan'
+    | '/today'
+    | '/plan/$month'
+    | '/today/$date'
+    | '/plan/'
+    | '/today/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/plan' | '/today/$date' | '/today'
+  to: '/' | '/login' | '/plan/$month' | '/today/$date' | '/plan' | '/today'
   id:
     | '__root__'
     | '/'
     | '/login'
     | '/plan'
     | '/today'
+    | '/plan/$month'
     | '/today/$date'
+    | '/plan/'
     | '/today/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
-  PlanRoute: typeof PlanRoute
+  PlanRoute: typeof PlanRouteWithChildren
   TodayRoute: typeof TodayRouteWithChildren
 }
 
@@ -130,6 +157,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TodayIndexRouteImport
       parentRoute: typeof TodayRoute
     }
+    '/plan/': {
+      id: '/plan/'
+      path: '/'
+      fullPath: '/plan/'
+      preLoaderRoute: typeof PlanIndexRouteImport
+      parentRoute: typeof PlanRoute
+    }
     '/today/$date': {
       id: '/today/$date'
       path: '/$date'
@@ -137,8 +171,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TodayDateRouteImport
       parentRoute: typeof TodayRoute
     }
+    '/plan/$month': {
+      id: '/plan/$month'
+      path: '/$month'
+      fullPath: '/plan/$month'
+      preLoaderRoute: typeof PlanMonthRouteImport
+      parentRoute: typeof PlanRoute
+    }
   }
 }
+
+interface PlanRouteChildren {
+  PlanMonthRoute: typeof PlanMonthRoute
+  PlanIndexRoute: typeof PlanIndexRoute
+}
+
+const PlanRouteChildren: PlanRouteChildren = {
+  PlanMonthRoute: PlanMonthRoute,
+  PlanIndexRoute: PlanIndexRoute,
+}
+
+const PlanRouteWithChildren = PlanRoute._addFileChildren(PlanRouteChildren)
 
 interface TodayRouteChildren {
   TodayDateRoute: typeof TodayDateRoute
@@ -155,7 +208,7 @@ const TodayRouteWithChildren = TodayRoute._addFileChildren(TodayRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
-  PlanRoute: PlanRoute,
+  PlanRoute: PlanRouteWithChildren,
   TodayRoute: TodayRouteWithChildren,
 }
 export const routeTree = rootRouteImport
