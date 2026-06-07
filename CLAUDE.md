@@ -7,7 +7,7 @@
 寫設計文件（`docs/superpowers/specs/**`）的「測試策略」時，除了自動化測試（vitest / Testing Library / e2e），**一律加入「手動測試（preview + AI agent）」一項**：
 
 - 由 AI agent 透過 `preview_start` 開預覽，實際操作畫面驗證視覺與互動 —— 那些難用單元測試涵蓋的觀感、過場、觸控目標、響應式排版等。
-- 需要真實登入時（WSPC device flow 要在 WSPC 端按 Approve），**請使用者協助完成登入**後再續跑驗證。
+- **先直接啟動 preview 探測登入狀態**：開預覽後看畫面是否已登入（header 顯示帳號、能進 Today/Plan 操作）。**已登入就直接開始**手動驗收，不要每次都先問使用者；**只有在需要登入才能驗時**（畫面停在 `/login`、或要驗的流程需要真實 WSPC 資料而目前未登入）**才告知使用者、請其協助**完成 device flow（WSPC 端按 Approve）後再續跑。
 - 對照該 spec 的「驗收標準」逐項手動驗收。
 
 理由：這個專案大量是視覺 / 互動打磨，單元測試抓不到觀感與真實資料流；手動 preview 驗收是必要補充，且涉及 WSPC 登入時必須有使用者在場。

@@ -12,14 +12,24 @@ beforeEach(() => {
   );
 });
 
-it("renders the given month's tasks", async () => {
+it("opens the plan at the given focus date and renders that month's tasks", async () => {
   useTasksStore.setState({ tasks: allTasks, today: MOCK_TODAY, status: "ready", error: null });
   const router = createRouter({
     routeTree,
-    history: createMemoryHistory({ initialEntries: ["/plan/2026-05"] }),
+    history: createMemoryHistory({ initialEntries: ["/plan/2026-05-15"] }),
   });
   render(<RouterProvider router={router} />);
   await waitFor(() =>
     expect(screen.getByText("推出 desk.yurenju.me MVP")).toBeInTheDocument(),
   );
+});
+
+it("redirects an invalid focus date back to /plan", async () => {
+  useTasksStore.setState({ tasks: allTasks, today: MOCK_TODAY, status: "ready", error: null });
+  const router = createRouter({
+    routeTree,
+    history: createMemoryHistory({ initialEntries: ["/plan/garbage"] }),
+  });
+  render(<RouterProvider router={router} />);
+  await waitFor(() => expect(router.state.location.pathname).toBe("/plan"));
 });

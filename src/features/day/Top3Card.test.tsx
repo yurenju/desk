@@ -15,7 +15,14 @@ beforeEach(() => {
 const TestComponent = ({ interactive = true }: { interactive?: boolean }) => {
   const tasks = useTasksStore((s) => s.tasks);
   const d1Tasks = tasks.filter((t) => t.id === "d1");
-  return <Top3Card tasks={d1Tasks} title="今天最重要的三件事" interactive={interactive} />;
+  return (
+    <Top3Card
+      tasks={d1Tasks}
+      title="今天最重要的三件事"
+      date={useTasksStore.getState().today}
+      interactive={interactive}
+    />
+  );
 };
 
 describe("Top3Card (interactive)", () => {

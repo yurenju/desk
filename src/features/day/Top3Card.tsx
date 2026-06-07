@@ -9,17 +9,18 @@ import styles from "./Top3Card.module.css";
 export interface Top3CardProps {
   tasks: Task[];
   title: string;
+  date: string;
   variant?: "accent" | "plain";
   interactive?: boolean;
 }
 
-export function Top3Card({ tasks, title, variant = "accent", interactive }: Top3CardProps) {
+export function Top3Card({ tasks, title, date, variant = "accent", interactive }: Top3CardProps) {
   return (
     <div className={[styles.card, styles[`v_${variant}`]].join(" ")}>
       <h3 className={styles.heading}>{title}</h3>
       <ul className={styles.list}>
         {tasks.map((t) => (
-          <Top3Item key={t.id} task={t} variant={variant} interactive={interactive} />
+          <Top3Item key={t.id} task={t} date={date} variant={variant} interactive={interactive} />
         ))}
       </ul>
     </div>
@@ -28,14 +29,16 @@ export function Top3Card({ tasks, title, variant = "accent", interactive }: Top3
 
 function Top3Item({
   task: t,
+  date,
   variant,
   interactive,
 }: {
   task: Task;
+  date: string;
   variant: "accent" | "plain";
   interactive?: boolean;
 }) {
-  const row = useTaskRow(t.id);
+  const row = useTaskRow(t.id, date);
   const isAdhoc = t.custom_fields.is_adhoc === "true";
   const order = (t.custom_fields.daily_priority ?? t.custom_fields.monthly_priority) as
     | "1"

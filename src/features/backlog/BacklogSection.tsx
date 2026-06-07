@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Task } from "@/lib/types";
 import { tasksInBacklog } from "@/lib/tasks";
+import { todayISO } from "@/lib/date";
 import { TaskRow } from "@/features/day/TaskRow";
 import styles from "./BacklogSection.module.css";
 
@@ -29,7 +30,7 @@ export function BacklogSection({ allTasks, defaultOpen = false }: BacklogSection
       {open && (
         <div className={styles.list}>
           {items.map((t) => (
-            <TaskRow key={t.id} task={t} kind="primary" />
+            <TaskRow key={t.id} task={t} kind="primary" date={todayISO()} />
           ))}
           {items.length === 0 && <div className={styles.empty}>Backlog 是空的</div>}
         </div>

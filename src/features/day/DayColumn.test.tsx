@@ -41,6 +41,31 @@ describe("DayColumn empty state", () => {
   });
 });
 
+describe("DayColumn copy adapts to the focus date", () => {
+  const OTHER = "2099-01-15"; // not today
+
+  it("uses neutral empty-state copy when the focus date is not today", () => {
+    render(<DayColumn allTasks={[]} selectedDate={OTHER} variant="plan-narrow" interactive />);
+    expect(screen.getByText("這天還很空白")).toBeInTheDocument();
+    expect(screen.queryByText("今天還很空白")).not.toBeInTheDocument();
+  });
+
+  it("uses neutral section headers when the focus date is not today", () => {
+    const mockTasks = [
+      { id: "p", title: "重點", status: "open" as const, created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_dates: [OTHER], daily_priority: "1" as const } },
+      { id: "a", title: "臨時", status: "open" as const, created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_dates: [OTHER], is_adhoc: "true" as const } },
+    ];
+    useTasksStore.setState({ tasks: mockTasks, today: MOCK_TODAY, status: "ready", error: null });
+    render(<DayColumn allTasks={mockTasks} selectedDate={OTHER} variant="plan-narrow" interactive />);
+    expect(screen.getByText("最重要的三件事")).toBeInTheDocument();
+    expect(screen.getByText("臨時加的")).toBeInTheDocument();
+    expect(screen.queryByText("今天最重要的三件事")).not.toBeInTheDocument();
+    expect(screen.queryByText("今天臨時加的")).not.toBeInTheDocument();
+  });
+});
+
 describe("DayColumn section assignment", () => {
   it("shows a promoted adhoc task only in Top3, not also in the adhoc section", () => {
     const mockTasks = [

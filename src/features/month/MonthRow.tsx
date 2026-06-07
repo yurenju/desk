@@ -73,7 +73,10 @@ export function MonthRow({ task, kind, month, selectedDate, interactive, showRin
               <button type="button" className={styles.iconBtn} aria-label="更多動作">⋯</button>
             }
             items={[
-              { key: "promote", label: `→ 排到 ${selectedDate.slice(8)} 日`, onSelect: row.promote },
+              { key: "promote-1", label: `→ ${selectedDate.slice(8)} 日 · ① 三件事`, onSelect: () => row.promote("1") },
+              { key: "promote-2", label: `→ ${selectedDate.slice(8)} 日 · ② 三件事`, onSelect: () => row.promote("2") },
+              { key: "promote-3", label: `→ ${selectedDate.slice(8)} 日 · ③ 三件事`, onSelect: () => row.promote("3") },
+              { key: "promote-other", label: `→ ${selectedDate.slice(8)} 日 · 其他`, onSelect: () => row.promote() },
               isAdhoc
                 ? { key: "to-planned", label: "↑ 移到計畫內", onSelect: row.toggleAdhoc }
                 : { key: "to-adhoc", label: "↓ 標為計畫外", onSelect: row.toggleAdhoc },

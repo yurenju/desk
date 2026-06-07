@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import type { Task } from "@/lib/types";
 import { tasksOnMonth } from "@/lib/tasks";
-import { formatMonth, prevMonth, nextMonth } from "@/lib/date";
+import { formatMonth, addMonths } from "@/lib/date";
 import { BacklogSection } from "@/features/backlog/BacklogSection";
 import { MonthHeroCard } from "./MonthHeroCard";
 import { MonthRow } from "./MonthRow";
@@ -45,8 +45,8 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
         <div className={styles.eyebrow}>MONTH · 規劃</div>
         <div className={styles.titleRow}>
           <Link
-            to="/plan/$month"
-            params={{ month: prevMonth(month) }}
+            to="/plan/$date"
+            params={{ date: addMonths(selectedDate, -1) }}
             className={styles.step}
             aria-label="上個月"
           >
@@ -54,8 +54,8 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
           </Link>
           <h2 className={styles.title}>{formatMonth(month)}</h2>
           <Link
-            to="/plan/$month"
-            params={{ month: nextMonth(month) }}
+            to="/plan/$date"
+            params={{ date: addMonths(selectedDate, 1) }}
             className={styles.step}
             aria-label="下個月"
           >

@@ -32,11 +32,11 @@ interface TasksState {
   loadTasks: () => Promise<void>;
   reload: () => Promise<void>;
   toggleDone: (id: string) => Promise<void>;
-  addTodayTask: (title: string) => Promise<void>;
+  addTodayTask: (title: string, date: string) => Promise<void>;
   editTitle: (id: string, title: string) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   restoreTask: () => Promise<void>;
-  setDailyPriority: (id: string, n: Priority | null) => Promise<void>;
+  setDailyPriority: (id: string, n: Priority | null, date: string) => Promise<void>;
   setAdhoc: (id: string, isAdhoc: boolean) => Promise<void>;
   promoteToDay: (id: string, date: string) => Promise<void>;
   setMonthlyPriority: (id: string, n: Priority | null, month: string) => Promise<void>;
@@ -89,21 +89,18 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     }
   },
 
-  async addTodayTask(title) {
+  async addTodayTask(title, date) {
     const trimmed = title.trim();
     if (!trimmed) return;
     const prev = get().tasks;
-    // Intentional: new tasks schedule to the real today (store.today), not the
-    // viewed date — the input adds "today's" tasks; viewing past dates is read-mostly.
-    const today = get().today;            // capture once, before any await
     const tempId = `temp-${crypto.randomUUID()}`;
-    set({ tasks: addTodayTask(prev, trimmed, today, tempId, now()), error: null });
+    set({ tasks: addTodayTask(prev, trimmed, date, tempId, now()), error: null });
     try {
       const created = await postTodo({
         title: trimmed,
-        scheduled_dates: [today],
+        scheduled_dates: [date],
         is_adhoc: "true",
-      });   // use captured value
+      });
       set({ tasks: get().tasks.map((t) => (t.id === tempId ? created : t)) });
     } catch {
       set({ tasks: prev, error: "save_failed" });
@@ -146,9 +143,9 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     }
   },
 
-  async setDailyPriority(id, n) {
+  async setDailyPriority(id, n, date) {
     const prev = get().tasks;
-    const next = setDailyPriority(prev, id, n, get().today);
+    const next = setDailyPriority(prev, id, n, date);
     set({ tasks: next, error: null });
     const changed = next.filter((t) => {
       const before = prev.find((p) => p.id === t.id);
