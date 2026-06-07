@@ -1,5 +1,6 @@
 import type { Task, TaskCustomFields, Priority } from "@/lib/types";
 import { primaryDate, primaryMonth } from "@/lib/tasks";
+import { monthOf } from "@/lib/date";
 
 function patch(t: Task, cf: Partial<TaskCustomFields>, now?: string): Task {
   const newCustomFields = { ...t.custom_fields, ...cf };
@@ -145,5 +146,51 @@ export function addMonthTask(
     custom_fields: { scheduled_months: [month], is_adhoc: "false" },
   };
   return [...tasks, task];
+}
+
+export function addBacklogTask(tasks: Task[], title: string, id: string, now: string): Task[] {
+  const trimmed = title.trim();
+  if (!trimmed) return tasks;
+  const task: Task = {
+    id,
+    title: trimmed,
+    status: "open",
+    created_at: now,
+    updated_at: now,
+    custom_fields: { scheduled_months: [], scheduled_dates: [], is_adhoc: "false" },
+  };
+  return [...tasks, task];
+}
+
+export function promoteToMonth(tasks: Task[], id: string, month: string): Task[] {
+  if (!tasks.some((t) => t.id === id)) return tasks;
+  const target = tasks.find((t) => t.id === id)!;
+  const months = target.custom_fields.scheduled_months ?? [];
+  if (months[months.length - 1] === month) return tasks; // already there
+  return tasks.map((t) =>
+    t.id === id ? patch(t, { scheduled_months: [...months, month] }) : t,
+  );
+}
+
+export function planScheduleDay(tasks: Task[], id: string, date: string): Task[] {
+  const target = tasks.find((t) => t.id === id);
+  if (!target) return tasks;
+  const month = monthOf(date);
+  const dates = target.custom_fields.scheduled_dates ?? [];
+  const hasPrimaryDate = primaryDate(target) !== null;
+
+  let nextDates: string[];
+  if (dates[dates.length - 1] === date) nextDates = dates;
+  else if (hasPrimaryDate) nextDates = [...dates.slice(0, -1), date];
+  else nextDates = [...dates, date];
+
+  const months = target.custom_fields.scheduled_months ?? [];
+  const nextMonths = primaryMonth(target) === month ? months : [...months, month];
+
+  if (nextDates === dates && nextMonths === months) return tasks; // no change
+
+  return tasks.map((t) =>
+    t.id === id ? patch(t, { scheduled_dates: nextDates, scheduled_months: nextMonths }) : t,
+  );
 }
 
