@@ -11,9 +11,10 @@ import styles from "./MonthColumn.module.css";
 export interface MonthColumnProps {
   allTasks: Task[];
   month: string;
+  selectedDate: string;
 }
 
-export function MonthColumn({ allTasks, month }: MonthColumnProps) {
+export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps) {
   const entries = useMemo(() => tasksOnMonth(allTasks, month), [allTasks, month]);
   const primary = entries.filter((e) => e.kind === "primary");
 
@@ -68,7 +69,8 @@ export function MonthColumn({ allTasks, month }: MonthColumnProps) {
         <section className={styles.section}>
           <header className={styles.sectionHead}>其他計劃內</header>
           {otherPlanned.map((e) => (
-            <MonthRow key={e.task.id} task={e.task} kind={e.kind} />
+            <MonthRow key={e.task.id} task={e.task} kind={e.kind}
+              month={month} selectedDate={selectedDate} interactive />
           ))}
         </section>
       )}
@@ -77,7 +79,8 @@ export function MonthColumn({ allTasks, month }: MonthColumnProps) {
         <section className={styles.section}>
           <header className={[styles.sectionHead, styles.adhocHead].join(" ")}>計劃外</header>
           {adhoc.map((e) => (
-            <MonthRow key={e.task.id} task={e.task} kind={e.kind} />
+            <MonthRow key={e.task.id} task={e.task} kind={e.kind}
+              month={month} selectedDate={selectedDate} interactive />
           ))}
         </section>
       )}
@@ -85,7 +88,8 @@ export function MonthColumn({ allTasks, month }: MonthColumnProps) {
       {trails.length > 0 && (
         <section className={styles.section}>
           {trails.map((e) => (
-            <MonthRow key={e.task.id} task={e.task} kind={e.kind} />
+            <MonthRow key={e.task.id} task={e.task} kind={e.kind}
+              month={month} selectedDate={selectedDate} />
           ))}
         </section>
       )}
