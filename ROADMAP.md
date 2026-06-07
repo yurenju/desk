@@ -26,7 +26,7 @@
 | Slice 2b 加固 — patch queue 修競態 | ✅ 完成 | [#13](https://github.com/yurenju/desk/pull/13) |
 | Slice 2c — UI 打磨（登入流程 + Today 互動） | ✅ 完成 | — |
 | Slice 3 — Monthly 互動 + promote | ✅ 完成 | — |
-| Slice 3.5 — Plan 週導覽 + Day 欄可規劃 | ✅ 完成 | 本 PR |
+| Slice 3.5 — Plan 週導覽 + Day 欄可規劃 | ✅ 完成 | [#16](https://github.com/yurenju/desk/pull/16) |
 | Slice 4+ | ⏳ 規劃中 | — |
 
 **Slice 0 比原規劃多做的部分**(因為「中高保真度」視覺要做到位,自然把後面 slice 的純視覺工作也帶進來了):
