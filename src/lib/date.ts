@@ -104,6 +104,11 @@ export function addDays(date: string, n: number): string {
   return todayISO(d);
 }
 
+/** Returns the YYYY-MM month of a YYYY-MM-DD date. */
+export function monthOf(date: string): string {
+  return date.slice(0, 7);
+}
+
 /**
  * Shift an ISO date by n months, clamping the day to the target month's last
  * day (e.g. addMonths("2026-01-31", 1) === "2026-02-28").

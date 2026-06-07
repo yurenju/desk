@@ -7,6 +7,7 @@ import {
   nextMonth,
   addDays,
   addMonths,
+  monthOf,
 } from "./date";
 
 describe("isValidDateParam", () => {
@@ -105,5 +106,11 @@ describe("addMonths", () => {
   it("crosses year boundary", () => {
     expect(addMonths("2026-12-15", 1)).toBe("2027-01-15");
     expect(addMonths("2026-01-15", -1)).toBe("2025-12-15");
+  });
+});
+
+describe("monthOf", () => {
+  it("extracts YYYY-MM from a YYYY-MM-DD date", () => {
+    expect(monthOf("2026-06-08")).toBe("2026-06");
   });
 });
