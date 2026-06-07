@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { vi } from "vitest";
+import { it, expect, vi } from "vitest";
 import { MonthHeroCard } from "./MonthHeroCard";
 import { useTasksStore } from "@/store/tasks";
 import * as api from "@/lib/api/todo";

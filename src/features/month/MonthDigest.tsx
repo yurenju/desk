@@ -57,7 +57,13 @@ export function MonthDigest({ allTasks, month, today }: MonthDigestProps) {
         <section className={styles.section}>
           <header className={styles.sectionHead}>其他 ({others.length})</header>
           {others.map((e) => (
-            <MonthRow key={e.task.id} task={e.task} kind={e.kind} />
+            <MonthRow
+              key={e.task.id}
+              task={e.task}
+              kind={e.kind}
+              month={month}
+              selectedDate={today}
+            />
           ))}
         </section>
       )}
