@@ -21,7 +21,6 @@ describe("DayColumn empty state", () => {
         id: "test-task-1",
         title: "測試任務",
         status: "open" as const,
-        parent_id: null,
         created_at: "2026-05-22T00:00:00Z",
         updated_at: "2026-05-22T00:00:00Z",
         custom_fields: {
@@ -49,7 +48,6 @@ describe("DayColumn section assignment", () => {
         id: "adhoc-promoted",
         title: "升上重點的臨時任務",
         status: "open" as const,
-        parent_id: null,
         created_at: "2026-05-22T00:00:00Z",
         updated_at: "2026-05-22T00:00:00Z",
         custom_fields: {

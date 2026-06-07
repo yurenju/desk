@@ -193,7 +193,56 @@
 - [ ] Monthly 內 task 完成 / 編輯 / 刪除
 - [ ] 淘汰 mock data 的 `parent_id`:月 / 日改以「同一個 task 跨層級」呈現(`scheduled_months` + `scheduled_dates`),取代 Slice 1 移除的「對應月度任務」chip
 
-**不做**:軌跡的寫入語意、略過、carryover 動作。
+**不做**:軌跡的寫入語意、略過、carryover 動作。Plan 模式「選哪一天 promote」的日選取留到 **Slice 3.5**(這片 promote 暫時只能排到寫死的今天)。
+
+> **實作差異(已完成,待 merge)**:第 4 項「拖曳」簡化成 MonthRow / 月度 hero 的 `⋯` menu「→ 排到選取日」按鈕(真實拖曳延到 Slice 7)。第 3 項 `monthly_priority` 在月度 hero 用 ring + dropdown,並補了 MonthRow 上的 ring 讓「其他計劃內 / 計劃外」的列也能設 priority(手動驗收時補的缺口)。
+
+### Slice 3.5 — Plan 週導覽 + Day 欄可規劃 ⏳
+
+**緣由**:手動驗收 Slice 3 時發現 Plan 模式有兩個相連的盲點:
+
+1. **無法選哪一天 promote**:Plan 的選取日(`selectedDate`)在 [src/routes/plan.tsx](src/routes/plan.tsx) **寫死成真實今天**,且 [src/features/week/WeekColumn.tsx](src/features/week/WeekColumn.tsx) 日格唯讀不可點。promote 永遠只能排到今天,挑不了「本週的星期三」。「Selected Day」這概念從 Slice 0 起被假設存在、卻沒任何片實作。
+2. **排到某天後無法在 Plan 裡排那天的每日三件事**:Plan 的 Day 欄是 `plan-narrow` **唯讀**(`interactive = variant === "today-hero"` 把互動性跟版型綁死),沒有 ring、不能設 `daily_priority`、不能勾完成。要設每日三件事得切到 Focus tab 才行——規劃動線被切成兩個 tab。
+
+**Plan 與 Focus 的本質區分(產品脈絡,兩 tab 非冗餘,是同資料的兩種鏡頭)**:
+
+| | **Plan(規劃)** | **Focus(專注於某日,現叫 Today)** |
+|---|---|---|
+| 何時用 | 每週開始的儀式 | 每天執行時 |
+| 心智尺度 | **多尺度**:月 / 週 / 日同等並列 | **單尺度**:某日放大成 hero,月 / 週降權為輔助 |
+| 目的 | 把大範圍(月)工作往下排到這週、某幾天 | 焦點鎖在那天該做的事,不被大範圍任務分心 |
+
+→ Focus 刻意把大尺度資訊**降權**(執行畫面)、Plan 刻意**升權**(規劃畫面);同樣的互動能力、不同的視覺權重與時機。**Focus 現有版型(Day hero + 兩側輔助)已符合,不動。**
+
+**月度三件事 vs 每日三件事**:`monthly_priority`(整月最重要 3 件,從 ~10+ 挑,Month 欄設)與 `daily_priority`(某天最重要 3 件,各天獨立,**該天的 Day 欄設**)是兩個獨立欄位、獨立排名。「排到某天」與「設那天三件事」是兩個都要做的動作。
+
+**最終模樣(完成形)**:三欄 Month / Week / Day 是同一個「**焦點日**」的三種視角,單一真實來源,且 Plan 的 Day 欄完全可互動:
+
+- 焦點日(預設今天)放 URL,可書籤:route 從 `/plan/$month` 改為 `/plan/$date`(path param,與 `/today/$date` 一致);月份由 `monthOf(date)` 推導。
+- **Week 欄 = 主導覽**:顯示焦點日那一週;日格可點(移焦點到該天);加 `‹ ›` 換週。
+- **Day 欄 = 焦點日,且完全互動**:設 `daily_priority`(每日三件事 ring)、勾完成、編輯、刪除、新增——與 Focus 的 Day 欄**同等能力**。
+- **Month 欄 = 焦點日所屬月**:`‹ ›` 改為焦點日跳一個月。
+
+**本片範圍**:
+
+- [ ] route `/plan/$month` → `/plan/$date`(焦點日;month 推導;`beforeLoad` 驗 `YYYY-MM-DD`)
+- [ ] `WeekColumn` 日格可點 → 設焦點日(改 route)
+- [ ] `WeekColumn` 加 `‹ ›` 換週(焦點日 ±7 天)
+- [ ] **`DayColumn` 互動性與 variant 解耦**:加獨立 `interactive` prop,`plan-narrow` 也能互動但維持窄版視覺
+- [ ] **Plan 的 Day 欄改為互動**:每日三件事 ring + 勾完成 + 編輯 + 刪除 + 新增
+- [ ] Day 欄 + promote 目標皆跟焦點日
+- [ ] Month 欄改由焦點日推導月份;`‹ ›` 改為跳月
+- [ ] `selectedDate` 不再寫死今天
+
+**待定(實作時再拍板)**:Today tab 改名 **Focus / 專注**——因 `/today/$date` 能 focus 任一天,「今天」名實不符;純標籤 + 文案。
+
+**做完後的細調(只能做完看結果才知道)**:上面兩個重點(週導覽 + Day 欄可規劃)完成、實際用一輪後才會浮現的小工作——例如三欄在 Plan 的視覺權重微調、選日 / 換週手感、promote 後焦點要不要自動跳到該日等。這些等做完再列。
+
+**設計決策(為何不做「獨立、限本週」小版本)**:曾考慮讓「選取日」與「月份」各自獨立、限本週可選。但最終是「月 / 週 / 日繞單一焦點日耦合」,獨立版會變技術債、之後得打掉重做,不是乾淨子集。週為主完整模型只比「讓日格可點」多一個「Week `‹ ›` 換週」,故直接做完整版。
+
+**延後到 Slice 7 打磨**:跳回今天按鈕、過場動畫、鍵盤導覽、**真實拖曳**(把 Monthly / Backlog row 拖放到某天,取代按鈕式 promote)。
+
+**不做**:跨月遠期日的特別處理——遠期留月層,該週到了再排日,符合「日層排程是近期」的節奏。
 
 ### Slice 4 — Backlog 互動 + 三層漏斗完整 ⏳
 

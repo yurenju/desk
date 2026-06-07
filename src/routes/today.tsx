@@ -33,16 +33,16 @@ export function TodayView({ date }: { date: string }) {
   const today = useTasksStore((s) => s.today);
 
   useEffect(() => {
-    useTasksStore.getState().loadTasks(date);
-  }, [date]);
+    useTasksStore.getState().loadTasks();
+  }, []);
 
-  if (status === "loading") return <TodaySkeleton />;
+  if (status === "loading" || status === "idle") return <TodaySkeleton />;
 
   if (status === "error") {
     return (
       <div role="alert" style={{ padding: "1.5rem" }}>
         載入失敗
-        <Button variant="ghost" size="sm" onClick={() => useTasksStore.getState().loadTasks(date)}>重試</Button>
+        <Button variant="ghost" size="sm" onClick={() => useTasksStore.getState().reload()}>重試</Button>
       </div>
     );
   }

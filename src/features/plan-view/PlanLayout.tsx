@@ -47,7 +47,7 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
             .filter(Boolean)
             .join(" ")}
         >
-          <MonthColumn allTasks={allTasks} month={month} />
+          <MonthColumn allTasks={allTasks} month={month} selectedDate={selectedDate} />
         </div>
         <div
           className={[styles.cell, tab !== "week" && styles.mobileHidden].filter(Boolean).join(" ")}

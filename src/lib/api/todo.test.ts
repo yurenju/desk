@@ -4,12 +4,13 @@ import { fetchTodos, patchTodoApi } from "./todo";
 beforeEach(() => vi.restoreAllMocks());
 
 describe("todo api client", () => {
-  it("fetchTodos hits /api/todo?date= and returns tasks", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+  it("fetchTodos hits /api/todo and returns tasks", async () => {
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ tasks: [{ id: "tod_1" }] }), { status: 200 }),
     );
-    const tasks = await fetchTodos("2026-05-31");
+    const tasks = await fetchTodos();
     expect(tasks).toEqual([{ id: "tod_1" }]);
+    expect((spy.mock.calls[0][0] as string)).toBe("/api/todo");
   });
 
   it("patchTodoApi sends semantic body", async () => {

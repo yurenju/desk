@@ -3,6 +3,7 @@ import { useTasksStore } from "./tasks";
 import { allTasks, MOCK_TODAY } from "@/mock/data";
 import * as api from "@/lib/api/todo";
 import { resetTodoQueue } from "@/lib/api/todoQueue";
+import { todayISO } from "@/lib/date";
 
 // Silence unhandled floating-promise warnings from fire-and-forget store actions
 // by ensuring all API calls are mocked by default.
@@ -28,7 +29,6 @@ describe("useTasksStore (local behaviour)", () => {
       id: "srv-1",
       title: "臨時一件",
       status: "open",
-      parent_id: null,
       created_at: "x",
       updated_at: "x",
       custom_fields: { scheduled_dates: [MOCK_TODAY], is_adhoc: "true" },
@@ -96,22 +96,31 @@ describe("server-backed tasks store", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     resetTodoQueue();
-    useTasksStore.setState({ tasks: [], error: null, recentlyDeleted: null });
+    useTasksStore.setState({ tasks: [], status: "idle", error: null, recentlyDeleted: null });
   });
 
-  it("loadTasks populates from api", async () => {
+  it("loadTasks populates from api (load-once)", async () => {
+    useTasksStore.setState({ tasks: [], status: "idle" });
     vi.spyOn(api, "fetchTodos").mockResolvedValue([
-      { id: "tod_1", title: "A", status: "open", parent_id: null,
-        created_at: "x", updated_at: "x", custom_fields: { scheduled_dates: ["2026-05-31"] } },
+      { id: "tod_1", title: "A", status: "open",
+        created_at: "x", updated_at: "x", custom_fields: { scheduled_months: ["2026-05"] } },
     ]);
-    await useTasksStore.getState().loadTasks("2026-05-31");
+    await useTasksStore.getState().loadTasks();
     expect(useTasksStore.getState().tasks.map((t) => t.id)).toEqual(["tod_1"]);
     expect(useTasksStore.getState().status).toBe("ready");
   });
 
+  it("loadTasks is a no-op when already ready", async () => {
+    useTasksStore.setState({ tasks: [], status: "ready" });
+    const spy = vi.spyOn(api, "fetchTodos");
+    await useTasksStore.getState().loadTasks();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it("sets status=error when load fails", async () => {
+    useTasksStore.setState({ tasks: [], status: "idle" });
     vi.spyOn(api, "fetchTodos").mockRejectedValue(new Error("boom"));
-    await useTasksStore.getState().loadTasks("2026-05-31");
+    await useTasksStore.getState().loadTasks();
     expect(useTasksStore.getState().status).toBe("error");
   });
 
@@ -123,25 +132,25 @@ describe("server-backed tasks store", () => {
     const spy = vi.spyOn(api, "fetchTodos");
     spy.mockReturnValueOnce(oldP).mockReturnValueOnce(newP);
 
-    const p1 = useTasksStore.getState().loadTasks("2026-05-30");
-    const p2 = useTasksStore.getState().loadTasks("2026-05-31");
+    const p1 = useTasksStore.getState().reload();
+    const p2 = useTasksStore.getState().reload();
 
     // newer (second) call resolves first, older resolves last
-    resolveNew([{ id: "new", title: "N", status: "open", parent_id: null,
+    resolveNew([{ id: "new", title: "N", status: "open",
       created_at: "x", updated_at: "x", custom_fields: {} }]);
-    resolveOld([{ id: "old", title: "O", status: "open", parent_id: null,
+    resolveOld([{ id: "old", title: "O", status: "open",
       created_at: "x", updated_at: "x", custom_fields: {} }]);
     await Promise.all([p1, p2]);
 
-    // the LATEST requested date (05-31 / "new") must win, not the last-to-resolve
+    // the LAST reload's result ("new") must win, not the last-to-resolve ("old")
     expect(useTasksStore.getState().tasks.map((t) => t.id)).toEqual(["new"]);
-    expect(useTasksStore.getState().today).toBe("2026-05-31");
+    expect(useTasksStore.getState().today).toBe(todayISO());
     expect(useTasksStore.getState().status).toBe("ready");
   });
 
   it("rolls back toggleDone when patch fails", async () => {
     useTasksStore.setState({
-      tasks: [{ id: "tod_1", title: "A", status: "open", parent_id: null,
+      tasks: [{ id: "tod_1", title: "A", status: "open",
         created_at: "x", updated_at: "x", custom_fields: { scheduled_dates: ["2026-05-31"] } }],
     });
     vi.spyOn(api, "patchTodoApi").mockRejectedValue(new Error("boom"));
@@ -151,7 +160,7 @@ describe("server-backed tasks store", () => {
   });
 
   it("editTitle optimistically renames and persists", async () => {
-    useTasksStore.setState({ tasks: [{ id: "t1", title: "Old", status: "open", parent_id: null,
+    useTasksStore.setState({ tasks: [{ id: "t1", title: "Old", status: "open",
       created_at: "x", updated_at: "x", custom_fields: {} }] });
     const spy = vi.spyOn(api, "patchTodoApi").mockResolvedValue({ id: "t1" } as never);
     await useTasksStore.getState().editTitle("t1", "New");
@@ -160,7 +169,7 @@ describe("server-backed tasks store", () => {
   });
 
   it("editTitle rolls back when patch fails", async () => {
-    useTasksStore.setState({ tasks: [{ id: "t1", title: "Old", status: "open", parent_id: null,
+    useTasksStore.setState({ tasks: [{ id: "t1", title: "Old", status: "open",
       created_at: "x", updated_at: "x", custom_fields: {} }] });
     vi.spyOn(api, "patchTodoApi").mockRejectedValue(new Error("boom"));
     await useTasksStore.getState().editTitle("t1", "New");
@@ -169,7 +178,7 @@ describe("server-backed tasks store", () => {
   });
 
   it("restoreTask re-inserts the task and patches with original status", async () => {
-    const task = { id: "r1", title: "Restore me", status: "open" as const, parent_id: null,
+    const task = { id: "r1", title: "Restore me", status: "open" as const,
       created_at: "x", updated_at: "x", custom_fields: {} };
     useTasksStore.setState({
       tasks: [],
@@ -183,7 +192,7 @@ describe("server-backed tasks store", () => {
   });
 
   it("restoreTask rolls back and sets error when patch fails", async () => {
-    const task = { id: "r1", title: "Restore me", status: "open" as const, parent_id: null,
+    const task = { id: "r1", title: "Restore me", status: "open" as const,
       created_at: "x", updated_at: "x", custom_fields: {} };
     useTasksStore.setState({
       tasks: [],
@@ -216,6 +225,69 @@ describe("server-backed tasks store", () => {
     expect(useTasksStore.getState().error).toBe("save_failed");
   });
 
+  it("clearTasks resets status to idle so the next login re-fetches", async () => {
+    useTasksStore.setState({ tasks: [{ id: "x", title: "X", status: "open",
+      created_at: "x", updated_at: "x", custom_fields: {} }], status: "ready" });
+    useTasksStore.getState().clearTasks();
+    expect(useTasksStore.getState().status).toBe("idle");
+    const spy = vi.spyOn(api, "fetchTodos").mockResolvedValue([]);
+    await useTasksStore.getState().loadTasks();
+    expect(spy).toHaveBeenCalled(); // load-once guard no longer blocks after clear
+  });
+
+  it("promoteToDay appends date and patches scheduled_dates", async () => {
+    useTasksStore.setState({
+      tasks: [{ id: "a", title: "A", status: "open",
+        created_at: "x", updated_at: "x", custom_fields: { scheduled_months: ["2026-05"] } }],
+      status: "ready", error: null,
+    });
+    const spy = vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+    await useTasksStore.getState().promoteToDay("a", "2026-05-22");
+    expect(useTasksStore.getState().tasks[0].custom_fields.scheduled_dates).toEqual(["2026-05-22"]);
+    expect(spy).toHaveBeenCalledWith("a", { scheduled_dates: ["2026-05-22"] });
+  });
+
+  it("promoteToDay rolls back on failure", async () => {
+    useTasksStore.setState({
+      tasks: [{ id: "a", title: "A", status: "open",
+        created_at: "x", updated_at: "x", custom_fields: { scheduled_months: ["2026-05"] } }],
+      status: "ready", error: null,
+    });
+    vi.spyOn(api, "patchTodoApi").mockRejectedValue(new Error("boom"));
+    await useTasksStore.getState().promoteToDay("a", "2026-05-22");
+    expect(useTasksStore.getState().tasks[0].custom_fields.scheduled_dates).toBeUndefined();
+    expect(useTasksStore.getState().error).toBe("save_failed");
+  });
+
+  it("setMonthlyPriority sets and evicts within month, patching both", async () => {
+    useTasksStore.setState({
+      tasks: [
+        { id: "a", title: "A", status: "open", created_at: "x", updated_at: "x",
+          custom_fields: { scheduled_months: ["2026-05"], monthly_priority: "1" } },
+        { id: "b", title: "B", status: "open", created_at: "x", updated_at: "x",
+          custom_fields: { scheduled_months: ["2026-05"] } },
+      ],
+      status: "ready", error: null,
+    });
+    vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+    await useTasksStore.getState().setMonthlyPriority("b", "1", "2026-05");
+    const s = useTasksStore.getState();
+    expect(s.tasks.find((t) => t.id === "b")!.custom_fields.monthly_priority).toBe("1");
+    expect(s.tasks.find((t) => t.id === "a")!.custom_fields.monthly_priority).toBeUndefined();
+  });
+
+  it("addMonthTask adds a month-scoped task", async () => {
+    useTasksStore.setState({ tasks: [], status: "ready", error: null });
+    vi.spyOn(api, "postTodo").mockResolvedValue({
+      id: "srv-m", title: "計畫", status: "open",
+      created_at: "x", updated_at: "x",
+      custom_fields: { scheduled_months: ["2026-05"], is_adhoc: "false" },
+    });
+    await useTasksStore.getState().addMonthTask("計畫", "2026-05");
+    const added = useTasksStore.getState().tasks.find((t) => t.id === "srv-m");
+    expect(added?.custom_fields.scheduled_months).toEqual(["2026-05"]);
+  });
+
   it("setDailyPriority reloads from server when a patch fails", async () => {
     useTasksStore.setState({
       tasks: allTasks,
@@ -230,14 +302,13 @@ describe("server-backed tasks store", () => {
         id: "reloaded",
         title: "R",
         status: "open",
-        parent_id: null,
         created_at: "x",
         updated_at: "x",
         custom_fields: {},
       },
     ]);
     await useTasksStore.getState().setDailyPriority("d5", "1");
-    expect(reload).toHaveBeenCalledWith(MOCK_TODAY);
+    expect(reload).toHaveBeenCalled();
     expect(useTasksStore.getState().tasks.map((t) => t.id)).toEqual(["reloaded"]);
   });
 });

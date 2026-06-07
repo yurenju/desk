@@ -419,16 +419,17 @@ describe("getWhoami", () => {
 });
 
 describe("listTodos", () => {
-  it("builds project_id + cf.scheduled_dates + status query", async () => {
+  it("listTodos queries project + type + statuses, no cf filter", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ todos: [] }), { status: 200 }),
     );
-    await listTodos("at", { projectId: "prj_1", date: "2026-05-31" });
-    const url = new URL(fetchSpy.mock.calls[0][0] as string);
-    expect(url.pathname).toBe("/todo/items");
-    expect(url.searchParams.get("project_id")).toBe("prj_1");
-    expect(url.searchParams.get("cf.scheduled_dates")).toBe("2026-05-31");
-    expect(url.searchParams.getAll("status")).toEqual(["open", "in_progress", "done"]);
+    await listTodos("at", { projectId: "prj_1", typeId: "typ_1" });
+    const u = new URL(fetchSpy.mock.calls[0][0] as string);
+    expect(u.pathname).toBe("/todo/items");
+    expect(u.searchParams.get("project_id")).toBe("prj_1");
+    expect(u.searchParams.get("type_id")).toBe("typ_1");
+    expect(u.searchParams.getAll("status")).toEqual(["open", "in_progress", "done"]);
+    expect(fetchSpy.mock.calls[0][0] as string).not.toContain("cf.");
   });
 });
 

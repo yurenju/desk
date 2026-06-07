@@ -4,29 +4,33 @@ import { fetchTodos, postTodo } from "@/lib/api/todo";
 import { enqueuePatch } from "@/lib/api/todoQueue";
 import {
   addTodayTask,
+  addMonthTask as addMonthTaskOp,
   deleteTask,
   editTitle,
+  promoteToDay as promoteToDayOp,
   restoreTask as restoreTaskOp,
   setAdhoc as setAdhocOp,
   setDailyPriority,
+  setMonthlyPriority as setMonthlyPriorityOp,
   toggleDone,
 } from "./taskOps";
 import type { RemovedTask } from "./taskOps";
+import { todayISO } from "@/lib/date";
 
 const now = () => new Date().toISOString();
-const todayISO = () => new Date().toISOString().slice(0, 10);
 
-// Monotonic counter used to sequence loadTasks calls. Only the most-recent
+// Monotonic counter used to sequence reload calls. Only the most-recent
 // invocation is allowed to commit its result to the store.
 let loadSeq = 0;
 
 interface TasksState {
   tasks: Task[];
   today: string;
-  status: "loading" | "ready" | "error";
+  status: "idle" | "loading" | "ready" | "error";
   error: string | null;
   recentlyDeleted: RemovedTask | null;
-  loadTasks: (date: string) => Promise<void>;
+  loadTasks: () => Promise<void>;
+  reload: () => Promise<void>;
   toggleDone: (id: string) => Promise<void>;
   addTodayTask: (title: string) => Promise<void>;
   editTitle: (id: string, title: string) => Promise<void>;
@@ -34,6 +38,9 @@ interface TasksState {
   restoreTask: () => Promise<void>;
   setDailyPriority: (id: string, n: Priority | null) => Promise<void>;
   setAdhoc: (id: string, isAdhoc: boolean) => Promise<void>;
+  promoteToDay: (id: string, date: string) => Promise<void>;
+  setMonthlyPriority: (id: string, n: Priority | null, month: string) => Promise<void>;
+  addMonthTask: (title: string, month: string) => Promise<void>;
   clearTasks: () => void;
   clearRecentlyDeleted: () => void;
   clearError: () => void;
@@ -42,17 +49,23 @@ interface TasksState {
 export const useTasksStore = create<TasksState>()((set, get) => ({
   tasks: [],
   today: todayISO(),
-  status: "loading",
+  status: "idle",
   error: null,
   recentlyDeleted: null,
 
-  async loadTasks(date) {
+  async loadTasks() {
+    const st = get().status;
+    if (st === "ready" || st === "loading") return; // load-once
+    await get().reload();
+  },
+
+  async reload() {
     const seq = ++loadSeq;
     set({ status: "loading", error: null });
     try {
-      const tasks = await fetchTodos(date);
+      const tasks = await fetchTodos();
       if (seq !== loadSeq) return;          // a newer load superseded this one
-      set({ tasks, today: date, status: "ready" });
+      set({ tasks, today: todayISO(), status: "ready" });
     } catch {
       if (seq !== loadSeq) return;
       set({ status: "error", error: "load_failed" });
@@ -80,11 +93,17 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     const trimmed = title.trim();
     if (!trimmed) return;
     const prev = get().tasks;
+    // Intentional: new tasks schedule to the real today (store.today), not the
+    // viewed date — the input adds "today's" tasks; viewing past dates is read-mostly.
     const today = get().today;            // capture once, before any await
     const tempId = `temp-${crypto.randomUUID()}`;
     set({ tasks: addTodayTask(prev, trimmed, today, tempId, now()), error: null });
     try {
-      const created = await postTodo(trimmed, today);   // use captured value
+      const created = await postTodo({
+        title: trimmed,
+        scheduled_dates: [today],
+        is_adhoc: "true",
+      });   // use captured value
       set({ tasks: get().tasks.map((t) => (t.id === tempId ? created : t)) });
     } catch {
       set({ tasks: prev, error: "save_failed" });
@@ -145,13 +164,13 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
       // Unlike other mutations we do NOT roll back to `prev` here: Promise.all
       // may span multiple ids and some may have already been patched, so a
       // per-call rollback would leave priorities inconsistent. Reload from the
-      // server to restore a coherent state instead. loadTasks handles its own
+      // server to restore a coherent state instead. reload handles its own
       // failures internally (sets status:"error"); the extra try makes that
       // contract explicit at the call site and guards against future drift.
       try {
-        await get().loadTasks(get().today);
+        await get().reload();
       } catch {
-        /* loadTasks already set status:"error" */
+        /* reload already set status:"error" */
       }
     }
   },
@@ -166,8 +185,62 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     }
   },
 
+  async promoteToDay(id, date) {
+    const prev = get().tasks;
+    const next = promoteToDayOp(prev, id, date);
+    if (next === prev) return;
+    set({ tasks: next, error: null });
+    const updated = next.find((t) => t.id === id);
+    try {
+      await enqueuePatch(id, { scheduled_dates: updated!.custom_fields.scheduled_dates });
+    } catch {
+      set({ tasks: prev, error: "save_failed" });
+    }
+  },
+
+  async setMonthlyPriority(id, n, month) {
+    const prev = get().tasks;
+    const next = setMonthlyPriorityOp(prev, id, n, month);
+    set({ tasks: next, error: null });
+    const changed = next.filter((t) => {
+      const before = prev.find((p) => p.id === t.id);
+      return before && before.custom_fields.monthly_priority !== t.custom_fields.monthly_priority;
+    });
+    try {
+      await Promise.all(
+        changed.map((t) =>
+          enqueuePatch(t.id, { monthly_priority: t.custom_fields.monthly_priority ?? null }),
+        ),
+      );
+    } catch {
+      try {
+        await get().reload();
+      } catch {
+        /* reload already set status:"error" */
+      }
+    }
+  },
+
+  async addMonthTask(title, month) {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    const prev = get().tasks;
+    const tempId = `temp-${crypto.randomUUID()}`;
+    set({ tasks: addMonthTaskOp(prev, trimmed, month, tempId, now()), error: null });
+    try {
+      const created = await postTodo({
+        title: trimmed,
+        scheduled_months: [month],
+        is_adhoc: "false",
+      });
+      set({ tasks: get().tasks.map((t) => (t.id === tempId ? created : t)) });
+    } catch {
+      set({ tasks: prev, error: "save_failed" });
+    }
+  },
+
   clearTasks() {
-    set({ tasks: [], error: null, recentlyDeleted: null });
+    set({ tasks: [], status: "idle", error: null, recentlyDeleted: null });
   },
 
   clearRecentlyDeleted() {

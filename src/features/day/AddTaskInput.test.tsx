@@ -17,7 +17,6 @@ describe("AddTaskInput", () => {
       id: "srv-new",
       title: "新的一件",
       status: "open",
-      parent_id: null,
       created_at: "x",
       updated_at: "x",
       custom_fields: { scheduled_dates: [MOCK_TODAY], is_adhoc: "true" },
