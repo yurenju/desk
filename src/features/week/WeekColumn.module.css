@@ -149,3 +149,11 @@
   color: var(--color-ink-faint);
   font-size: var(--text-sm);
 }
+
+.more {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.04em;
+  color: var(--color-ink-faint);
+  margin-top: 2px;
+}

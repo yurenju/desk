@@ -54,6 +54,9 @@ export function WeekColumn({ allTasks, selectedDate }: WeekColumnProps) {
                 Number(b.task.custom_fields.daily_priority),
             )
             .slice(0, 3);
+          // Tasks scheduled on this day that aren't shown as one of the top-3
+          // (planned-without-priority + adhoc). Surfaces work added to "其他".
+          const otherCount = primary.length - top3.length;
           const isSelected = date === selectedDate;
           return (
             <li key={date} className={styles.dayItem}>
@@ -79,7 +82,10 @@ export function WeekColumn({ allTasks, selectedDate }: WeekColumnProps) {
                       <span className={styles.taskOrder}>{i + 1}.</span> {e.task.title}
                     </li>
                   ))}
-                  {top3.length === 0 && <li className={styles.empty}>—</li>}
+                  {otherCount > 0 && (
+                    <li className={styles.more}>還有 {otherCount} 件其他任務</li>
+                  )}
+                  {primary.length === 0 && <li className={styles.empty}>—</li>}
                 </ol>
               </Link>
             </li>
