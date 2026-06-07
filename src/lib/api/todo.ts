@@ -5,10 +5,8 @@ async function jsonOrThrow<T>(res: Response): Promise<T> {
   return (await res.json()) as T;
 }
 
-export async function fetchTodos(date: string): Promise<Task[]> {
-  const res = await fetch(`/api/todo?date=${encodeURIComponent(date)}`, {
-    credentials: "same-origin",
-  });
+export async function fetchTodos(): Promise<Task[]> {
+  const res = await fetch(`/api/todo`, { credentials: "same-origin" });
   const data = await jsonOrThrow<{ tasks: Task[] }>(res);
   return data.tasks;
 }

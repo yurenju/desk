@@ -12,21 +12,22 @@ import {
   toggleDone,
 } from "./taskOps";
 import type { RemovedTask } from "./taskOps";
+import { todayISO } from "@/lib/date";
 
 const now = () => new Date().toISOString();
-const todayISO = () => new Date().toISOString().slice(0, 10);
 
-// Monotonic counter used to sequence loadTasks calls. Only the most-recent
+// Monotonic counter used to sequence reload calls. Only the most-recent
 // invocation is allowed to commit its result to the store.
 let loadSeq = 0;
 
 interface TasksState {
   tasks: Task[];
   today: string;
-  status: "loading" | "ready" | "error";
+  status: "idle" | "loading" | "ready" | "error";
   error: string | null;
   recentlyDeleted: RemovedTask | null;
-  loadTasks: (date: string) => Promise<void>;
+  loadTasks: () => Promise<void>;
+  reload: () => Promise<void>;
   toggleDone: (id: string) => Promise<void>;
   addTodayTask: (title: string) => Promise<void>;
   editTitle: (id: string, title: string) => Promise<void>;
@@ -42,17 +43,23 @@ interface TasksState {
 export const useTasksStore = create<TasksState>()((set, get) => ({
   tasks: [],
   today: todayISO(),
-  status: "loading",
+  status: "idle",
   error: null,
   recentlyDeleted: null,
 
-  async loadTasks(date) {
+  async loadTasks() {
+    const st = get().status;
+    if (st === "ready" || st === "loading") return; // load-once
+    await get().reload();
+  },
+
+  async reload() {
     const seq = ++loadSeq;
     set({ status: "loading", error: null });
     try {
-      const tasks = await fetchTodos(date);
+      const tasks = await fetchTodos();
       if (seq !== loadSeq) return;          // a newer load superseded this one
-      set({ tasks, today: date, status: "ready" });
+      set({ tasks, today: todayISO(), status: "ready" });
     } catch {
       if (seq !== loadSeq) return;
       set({ status: "error", error: "load_failed" });
@@ -145,13 +152,13 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
       // Unlike other mutations we do NOT roll back to `prev` here: Promise.all
       // may span multiple ids and some may have already been patched, so a
       // per-call rollback would leave priorities inconsistent. Reload from the
-      // server to restore a coherent state instead. loadTasks handles its own
+      // server to restore a coherent state instead. reload handles its own
       // failures internally (sets status:"error"); the extra try makes that
       // contract explicit at the call site and guards against future drift.
       try {
-        await get().loadTasks(get().today);
+        await get().reload();
       } catch {
-        /* loadTasks already set status:"error" */
+        /* reload already set status:"error" */
       }
     }
   },

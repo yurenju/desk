@@ -3,6 +3,7 @@ import { useTasksStore } from "./tasks";
 import { allTasks, MOCK_TODAY } from "@/mock/data";
 import * as api from "@/lib/api/todo";
 import { resetTodoQueue } from "@/lib/api/todoQueue";
+import { todayISO } from "@/lib/date";
 
 // Silence unhandled floating-promise warnings from fire-and-forget store actions
 // by ensuring all API calls are mocked by default.
@@ -95,22 +96,31 @@ describe("server-backed tasks store", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     resetTodoQueue();
-    useTasksStore.setState({ tasks: [], error: null, recentlyDeleted: null });
+    useTasksStore.setState({ tasks: [], status: "idle", error: null, recentlyDeleted: null });
   });
 
-  it("loadTasks populates from api", async () => {
+  it("loadTasks populates from api (load-once)", async () => {
+    useTasksStore.setState({ tasks: [], status: "idle" });
     vi.spyOn(api, "fetchTodos").mockResolvedValue([
       { id: "tod_1", title: "A", status: "open",
-        created_at: "x", updated_at: "x", custom_fields: { scheduled_dates: ["2026-05-31"] } },
+        created_at: "x", updated_at: "x", custom_fields: { scheduled_months: ["2026-05"] } },
     ]);
-    await useTasksStore.getState().loadTasks("2026-05-31");
+    await useTasksStore.getState().loadTasks();
     expect(useTasksStore.getState().tasks.map((t) => t.id)).toEqual(["tod_1"]);
     expect(useTasksStore.getState().status).toBe("ready");
   });
 
+  it("loadTasks is a no-op when already ready", async () => {
+    useTasksStore.setState({ tasks: [], status: "ready" });
+    const spy = vi.spyOn(api, "fetchTodos");
+    await useTasksStore.getState().loadTasks();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it("sets status=error when load fails", async () => {
+    useTasksStore.setState({ tasks: [], status: "idle" });
     vi.spyOn(api, "fetchTodos").mockRejectedValue(new Error("boom"));
-    await useTasksStore.getState().loadTasks("2026-05-31");
+    await useTasksStore.getState().loadTasks();
     expect(useTasksStore.getState().status).toBe("error");
   });
 
@@ -122,8 +132,8 @@ describe("server-backed tasks store", () => {
     const spy = vi.spyOn(api, "fetchTodos");
     spy.mockReturnValueOnce(oldP).mockReturnValueOnce(newP);
 
-    const p1 = useTasksStore.getState().loadTasks("2026-05-30");
-    const p2 = useTasksStore.getState().loadTasks("2026-05-31");
+    const p1 = useTasksStore.getState().reload();
+    const p2 = useTasksStore.getState().reload();
 
     // newer (second) call resolves first, older resolves last
     resolveNew([{ id: "new", title: "N", status: "open",
@@ -132,9 +142,9 @@ describe("server-backed tasks store", () => {
       created_at: "x", updated_at: "x", custom_fields: {} }]);
     await Promise.all([p1, p2]);
 
-    // the LATEST requested date (05-31 / "new") must win, not the last-to-resolve
+    // the LAST reload's result ("new") must win, not the last-to-resolve ("old")
     expect(useTasksStore.getState().tasks.map((t) => t.id)).toEqual(["new"]);
-    expect(useTasksStore.getState().today).toBe("2026-05-31");
+    expect(useTasksStore.getState().today).toBe(todayISO());
     expect(useTasksStore.getState().status).toBe("ready");
   });
 
@@ -235,7 +245,7 @@ describe("server-backed tasks store", () => {
       },
     ]);
     await useTasksStore.getState().setDailyPriority("d5", "1");
-    expect(reload).toHaveBeenCalledWith(MOCK_TODAY);
+    expect(reload).toHaveBeenCalled();
     expect(useTasksStore.getState().tasks.map((t) => t.id)).toEqual(["reloaded"]);
   });
 });
