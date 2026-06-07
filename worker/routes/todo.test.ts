@@ -51,12 +51,31 @@ describe("POST /api/todo", () => {
     const req = new Request("https://d/api/todo", {
       method: "POST",
       headers: { ...cookie, "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "New", date: "2026-05-31" }),
+      body: JSON.stringify({ title: "New", scheduled_dates: ["2026-05-31"], is_adhoc: "true" }),
     });
     const res = await handleCreateTodo(req, env);
     expect(res.status).toBe(201);
     expect(spy.mock.calls[0][1].customFields).toEqual({
       scheduled_dates: ["2026-05-31"], is_adhoc: "true",
+    });
+  });
+
+  it("creates a month-scoped task", async () => {
+    const env = makeEnv();
+    await seedSession(env);
+    const spy = vi.spyOn(wspc, "createTodo").mockResolvedValue({
+      id: "tod_m", status: "open", title: "Plan", created_at: 0, updated_at: 0,
+      custom_fields: { scheduled_months: ["2026-05"], is_adhoc: "false" },
+    });
+    const req = new Request("https://d/api/todo", {
+      method: "POST",
+      headers: { ...cookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Plan", scheduled_months: ["2026-05"], is_adhoc: "false" }),
+    });
+    const res = await handleCreateTodo(req, env);
+    expect(res.status).toBe(201);
+    expect(spy.mock.calls[0][1].customFields).toEqual({
+      scheduled_months: ["2026-05"], is_adhoc: "false",
     });
   });
 });

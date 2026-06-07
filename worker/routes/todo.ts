@@ -24,21 +24,25 @@ export async function handleListTodo(request: Request, env: Env): Promise<Respon
 
 export async function handleCreateTodo(request: Request, env: Env): Promise<Response> {
   return withSession(request, env, async ({ accessToken, userId }) => {
-    let body: { title?: string; date?: string };
+    let body: {
+      title?: string;
+      scheduled_dates?: string[];
+      scheduled_months?: string[];
+      is_adhoc?: "true" | "false";
+    };
     try {
-      body = (await request.json()) as { title?: string; date?: string };
+      body = (await request.json()) as typeof body;
     } catch {
       return json({ error: "invalid_json" }, 400);
     }
     const title = body.title?.trim();
-    if (!title || !body.date) return json({ error: "title_and_date_required" }, 400);
+    if (!title) return json({ error: "title_required" }, 400);
+    const customFields: Record<string, string | string[]> = {};
+    if (body.scheduled_dates) customFields.scheduled_dates = body.scheduled_dates;
+    if (body.scheduled_months) customFields.scheduled_months = body.scheduled_months;
+    if (body.is_adhoc) customFields.is_adhoc = body.is_adhoc;
     const { projectId, typeId } = await ensureBootstrap(env.DESK_KV, accessToken, userId);
-    const todo = await createTodo(accessToken, {
-      title,
-      projectId,
-      typeId,
-      customFields: { scheduled_dates: [body.date], is_adhoc: "true" },
-    });
+    const todo = await createTodo(accessToken, { title, projectId, typeId, customFields });
     return json({ task: mapTodoToTask(todo) }, 201);
   });
 }

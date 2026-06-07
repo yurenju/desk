@@ -11,12 +11,19 @@ export async function fetchTodos(): Promise<Task[]> {
   return data.tasks;
 }
 
-export async function postTodo(title: string, date: string): Promise<Task> {
+export interface CreateTodoInput {
+  title: string;
+  scheduled_dates?: string[];
+  scheduled_months?: string[];
+  is_adhoc?: "true" | "false";
+}
+
+export async function postTodo(input: CreateTodoInput): Promise<Task> {
   const res = await fetch("/api/todo", {
     method: "POST",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title, date }),
+    body: JSON.stringify(input),
   });
   const data = await jsonOrThrow<{ task: Task }>(res);
   return data.task;

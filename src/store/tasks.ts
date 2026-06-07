@@ -93,7 +93,11 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     const tempId = `temp-${crypto.randomUUID()}`;
     set({ tasks: addTodayTask(prev, trimmed, today, tempId, now()), error: null });
     try {
-      const created = await postTodo(trimmed, today);   // use captured value
+      const created = await postTodo({
+        title: trimmed,
+        scheduled_dates: [today],
+        is_adhoc: "true",
+      });   // use captured value
       set({ tasks: get().tasks.map((t) => (t.id === tempId ? created : t)) });
     } catch {
       set({ tasks: prev, error: "save_failed" });
