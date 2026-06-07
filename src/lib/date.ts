@@ -112,7 +112,7 @@ export function addMonths(date: string, n: number): string {
   const [y, m, day] = date.split("-").map(Number);
   const targetIdx = y * 12 + (m - 1) + n;
   const ny = Math.floor(targetIdx / 12);
-  const nm = targetIdx % 12; // 0-based month
+  const nm = (((targetIdx % 12) + 12) % 12); // 0-based month, always 0-11
   const lastDay = new Date(ny, nm + 1, 0).getDate();
   const clampedDay = Math.min(day, lastDay);
   return `${ny}-${String(nm + 1).padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
