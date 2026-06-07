@@ -63,7 +63,7 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
 
       <BacklogSection allTasks={allTasks} />
 
-      {top3.length > 0 && <MonthHeroCard top3={top3} />}
+      {top3.length > 0 && <MonthHeroCard top3={top3} month={month} selectedDate={selectedDate} />}
 
       {otherPlanned.length > 0 && (
         <section className={styles.section}>
