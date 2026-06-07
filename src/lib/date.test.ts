@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { isValidDateParam, weekOf, isValidMonthParam, prevMonth, nextMonth } from "./date";
+import {
+  isValidDateParam,
+  weekOf,
+  isValidMonthParam,
+  prevMonth,
+  nextMonth,
+  addDays,
+  addMonths,
+} from "./date";
 
 describe("isValidDateParam", () => {
   it("returns true for a valid YYYY-MM-DD string", () => {
@@ -62,5 +70,36 @@ describe("weekOf (Sunday start)", () => {
     const r = weekOf("2026-06-02");
     expect(r[0]).toBe("2026-05-31");
     expect(r).toHaveLength(7);
+  });
+});
+
+describe("addDays", () => {
+  it("shifts forward and backward within a month", () => {
+    expect(addDays("2026-06-10", 7)).toBe("2026-06-17");
+    expect(addDays("2026-06-10", -7)).toBe("2026-06-03");
+  });
+
+  it("crosses month and year boundaries", () => {
+    expect(addDays("2026-06-30", 1)).toBe("2026-07-01");
+    expect(addDays("2026-01-01", -1)).toBe("2025-12-31");
+  });
+});
+
+describe("addMonths", () => {
+  it("shifts by whole months keeping the day", () => {
+    expect(addMonths("2026-06-10", 1)).toBe("2026-07-10");
+    expect(addMonths("2026-06-10", -1)).toBe("2026-05-10");
+  });
+
+  it("clamps the day to the target month's last day", () => {
+    // Jan 31 + 1 month → Feb has no 31st → clamp to Feb 28 (2026 not leap)
+    expect(addMonths("2026-01-31", 1)).toBe("2026-02-28");
+    // Mar 31 - 1 month → Feb 28
+    expect(addMonths("2026-03-31", -1)).toBe("2026-02-28");
+  });
+
+  it("crosses year boundary", () => {
+    expect(addMonths("2026-12-15", 1)).toBe("2027-01-15");
+    expect(addMonths("2026-01-15", -1)).toBe("2025-12-15");
   });
 });

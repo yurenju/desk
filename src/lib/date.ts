@@ -96,3 +96,24 @@ export function prevMonth(monthISO: string): string {
 export function nextMonth(monthISO: string): string {
   return shiftMonth(monthISO, 1);
 }
+
+/** Shift an ISO date (YYYY-MM-DD) by n days. */
+export function addDays(date: string, n: number): string {
+  const d = new Date(date + "T00:00:00");
+  d.setDate(d.getDate() + n);
+  return todayISO(d);
+}
+
+/**
+ * Shift an ISO date by n months, clamping the day to the target month's last
+ * day (e.g. addMonths("2026-01-31", 1) === "2026-02-28").
+ */
+export function addMonths(date: string, n: number): string {
+  const [y, m, day] = date.split("-").map(Number);
+  const targetIdx = y * 12 + (m - 1) + n;
+  const ny = Math.floor(targetIdx / 12);
+  const nm = targetIdx % 12; // 0-based month
+  const lastDay = new Date(ny, nm + 1, 0).getDate();
+  const clampedDay = Math.min(day, lastDay);
+  return `${ny}-${String(nm + 1).padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
+}
