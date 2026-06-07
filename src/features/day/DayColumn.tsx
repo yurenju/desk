@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import type { Task } from "@/lib/types";
 import { tasksOnDate } from "@/lib/tasks";
-import { dayOfMonth, shortWeekday, todayISO } from "@/lib/date";
+import { dayOfMonth, shortWeekday } from "@/lib/date";
+import { useTasksStore } from "@/store/tasks";
 import { TaskRow } from "./TaskRow";
 import { Top3Card } from "./Top3Card";
 import { AddTaskInput } from "./AddTaskInput";
@@ -15,6 +16,7 @@ export interface DayColumnProps {
 }
 
 export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayColumnProps) {
+  const storeToday = useTasksStore((s) => s.today);
   const entries = useMemo(() => tasksOnDate(allTasks, selectedDate), [allTasks, selectedDate]);
 
   const primary = entries.filter((e) => e.kind === "primary");
@@ -43,7 +45,10 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
     top3.length === 0 && otherPlanned.length === 0 && adhoc.length === 0 && trails.length === 0;
 
   const isInteractive = interactive ?? variant === "today-hero";
-  const isToday = selectedDate === todayISO();
+  // "today" is the store's notion of today (set to the real local date at load),
+  // the single source of truth — not a fresh todayISO() read, which would
+  // disagree in tests and at a midnight rollover.
+  const isToday = selectedDate === storeToday;
 
   return (
     <div className={[styles.col, styles[`v_${variant}`]].join(" ")}>
@@ -60,7 +65,7 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
       {top3.length > 0 && (
         <Top3Card
           tasks={top3}
-          title="今天最重要的三件事"
+          title={isToday ? "今天最重要的三件事" : "最重要的三件事"}
           variant="accent"
           date={selectedDate}
           interactive={isInteractive}
@@ -88,7 +93,7 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
       {adhoc.length > 0 && (
         <section className={styles.section}>
           <header className={[styles.sectionHead, styles.adhocHead].join(" ")}>
-            今天臨時加的 <span className={styles.count}>{adhoc.length}</span>
+            {isToday ? "今天臨時加的" : "臨時加的"} <span className={styles.count}>{adhoc.length}</span>
           </header>
           {adhoc.map((e) => (
             <TaskRow
@@ -114,7 +119,7 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
 
       {isInteractive && isEmpty && (
         <div className={styles.empty}>
-          <div className={styles.emptyBig}>今天還很空白</div>
+          <div className={styles.emptyBig}>{isToday ? "今天還很空白" : "這天還很空白"}</div>
           <div className={styles.emptySub}>從下面加一件最想推進的事吧</div>
         </div>
       )}
