@@ -25,7 +25,9 @@
 | Slice 2b — /api/todo + 前端銜接 | ✅ 完成(已部署驗收) | [#10](https://github.com/yurenju/desk/pull/10) |
 | Slice 2b 加固 — patch queue 修競態 | ✅ 完成 | [#13](https://github.com/yurenju/desk/pull/13) |
 | Slice 2c — UI 打磨（登入流程 + Today 互動） | ✅ 完成 | — |
-| Slice 3+ | ⏳ 規劃中 | — |
+| Slice 3 — Monthly 互動 + promote | ✅ 完成 | — |
+| Slice 3.5 — Plan 週導覽 + Day 欄可規劃 | ✅ 完成 | 本 PR |
+| Slice 4+ | ⏳ 規劃中 | — |
 
 **Slice 0 比原規劃多做的部分**(因為「中高保真度」視覺要做到位,自然把後面 slice 的純視覺工作也帶進來了):
 
@@ -197,7 +199,15 @@
 
 > **實作差異(已完成,待 merge)**:第 4 項「拖曳」簡化成 MonthRow / 月度 hero 的 `⋯` menu「→ 排到選取日」按鈕(真實拖曳延到 Slice 7)。第 3 項 `monthly_priority` 在月度 hero 用 ring + dropdown,並補了 MonthRow 上的 ring 讓「其他計劃內 / 計劃外」的列也能設 priority(手動驗收時補的缺口)。
 
-### Slice 3.5 — Plan 週導覽 + Day 欄可規劃 ⏳
+### Slice 3.5 — Plan 週導覽 + Day 欄可規劃 ✅
+
+**完成**：route `/plan/$date`（焦點日進 URL）、Week 欄日格可點 + `‹ ›` 換週、Month `‹ ›` 改跳焦點日一個月、`DayColumn` 互動性與 variant 解耦讓 Plan Day 欄完全可規劃、Today→「專注」標籤改名。連帶修一個 latent bug：Focus 用 `/today/<非今天>` 檢視某日時，設優先權 / 新增原本誤 scope 到真實今天。
+
+> 設計：[2026-06-07-slice-3.5-plan-week-day-design.md](docs/superpowers/specs/2026-06-07-slice-3.5-plan-week-day-design.md)・計畫：[2026-06-07-slice-3.5-plan-week-day.md](docs/superpowers/plans/2026-06-07-slice-3.5-plan-week-day.md)（subagent-driven 執行，每片兩段 review）。手動 preview 驗收對照設計「驗收標準」1–11 逐項通過。
+
+**手動驗收後加的兩個細調**：
+- **月任務 promote 可選名次**：`MonthRow` / `MonthHeroCard` 的 ⋯ 選單從單一「→ 排到 N 日」擴成「→ N 日 · ①/②/③ 三件事」+「→ N 日 · 其他」——排到某天時直接決定進當天三件事或其他（沿用 day ring 的擲位語意）。
+- **Week 日格顯示「還有 n 件其他任務」**：週欄日格原本只顯示那天的三件事，排到「其他」的任務在週視圖看不到；現補一行計數，且「—」只在那天完全沒任務時才顯示。
 
 **緣由**:手動驗收 Slice 3 時發現 Plan 模式有兩個相連的盲點:
 
