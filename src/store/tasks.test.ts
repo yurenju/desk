@@ -39,7 +39,7 @@ describe("useTasksStore (local behaviour)", () => {
     expect(added?.custom_fields.is_adhoc).toBe("true");
   });
 
-  it("setDailyPriority routes through store.today for eviction", async () => {
+  it("setDailyPriority scopes eviction to the passed date", async () => {
     vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
     await useTasksStore.getState().setDailyPriority("d5", "1", useTasksStore.getState().today);
     const s = useTasksStore.getState();
