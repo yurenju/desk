@@ -87,6 +87,8 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     const trimmed = title.trim();
     if (!trimmed) return;
     const prev = get().tasks;
+    // Intentional: new tasks schedule to the real today (store.today), not the
+    // viewed date — the input adds "today's" tasks; viewing past dates is read-mostly.
     const today = get().today;            // capture once, before any await
     const tempId = `temp-${crypto.randomUUID()}`;
     set({ tasks: addTodayTask(prev, trimmed, today, tempId, now()), error: null });
@@ -174,7 +176,7 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
   },
 
   clearTasks() {
-    set({ tasks: [], error: null, recentlyDeleted: null });
+    set({ tasks: [], status: "idle", error: null, recentlyDeleted: null });
   },
 
   clearRecentlyDeleted() {

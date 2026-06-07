@@ -225,6 +225,16 @@ describe("server-backed tasks store", () => {
     expect(useTasksStore.getState().error).toBe("save_failed");
   });
 
+  it("clearTasks resets status to idle so the next login re-fetches", async () => {
+    useTasksStore.setState({ tasks: [{ id: "x", title: "X", status: "open",
+      created_at: "x", updated_at: "x", custom_fields: {} }], status: "ready" });
+    useTasksStore.getState().clearTasks();
+    expect(useTasksStore.getState().status).toBe("idle");
+    const spy = vi.spyOn(api, "fetchTodos").mockResolvedValue([]);
+    await useTasksStore.getState().loadTasks();
+    expect(spy).toHaveBeenCalled(); // load-once guard no longer blocks after clear
+  });
+
   it("setDailyPriority reloads from server when a patch fails", async () => {
     useTasksStore.setState({
       tasks: allTasks,
