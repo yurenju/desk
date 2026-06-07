@@ -1,0 +1,28 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  margin-top: 8px;
+  border: 1.5px solid var(--color-rule);
+  border-radius: 7px;
+  background: var(--color-paper-alt);
+}
+.bar:focus-within {
+  border-color: var(--color-flag, #c1432e);
+}
+.box {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--color-rule);
+  border-radius: 4px;
+  flex: none;
+}
+.input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  outline: none;
+}

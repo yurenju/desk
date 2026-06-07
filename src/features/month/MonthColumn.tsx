@@ -64,7 +64,7 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
         </div>
       </header>
 
-      <BacklogSection allTasks={allTasks} />
+      <BacklogSection allTasks={allTasks} focusDate={selectedDate} />
 
       {top3.length > 0 && <MonthHeroCard top3={top3} month={month} selectedDate={selectedDate} />}
 
