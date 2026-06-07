@@ -9,15 +9,16 @@ import styles from "./TaskRow.module.css";
 export interface TaskRowProps {
   task: Task;
   kind: TrailKind;
+  date: string;
   showAdhocChip?: boolean;
   interactive?: boolean;
   showRing?: boolean;
 }
 
-export function TaskRow({ task, kind, showAdhocChip, interactive, showRing }: TaskRowProps) {
+export function TaskRow({ task, kind, date, showAdhocChip, interactive, showRing }: TaskRowProps) {
   const isDone = task.status === "done";
   const isAdhoc = task.custom_fields.is_adhoc === "true";
-  const row = useTaskRow(task.id);
+  const row = useTaskRow(task.id, date);
   const editable = Boolean(interactive) && kind === "primary";
 
   return (

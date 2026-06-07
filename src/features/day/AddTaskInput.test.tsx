@@ -22,8 +22,8 @@ describe("AddTaskInput", () => {
       custom_fields: { scheduled_dates: [MOCK_TODAY], is_adhoc: "true" },
     });
     const user = userEvent.setup();
-    render(<AddTaskInput />);
-    const input = screen.getByPlaceholderText("+ 加一件今天的事…");
+    render(<AddTaskInput date={useTasksStore.getState().today} />);
+    const input = screen.getByPlaceholderText("+ 加一件這天的事…");
     await user.type(input, "新的一件{Enter}");
     expect(useTasksStore.getState().tasks.some((t) => t.title === "新的一件")).toBe(true);
     expect(input).toHaveValue("");
@@ -31,9 +31,9 @@ describe("AddTaskInput", () => {
 
   it("does not add a blank task", async () => {
     const user = userEvent.setup();
-    render(<AddTaskInput />);
+    render(<AddTaskInput date={useTasksStore.getState().today} />);
     const before = useTasksStore.getState().tasks.length;
-    await user.type(screen.getByPlaceholderText("+ 加一件今天的事…"), "   {Enter}");
+    await user.type(screen.getByPlaceholderText("+ 加一件這天的事…"), "   {Enter}");
     expect(useTasksStore.getState().tasks).toHaveLength(before);
   });
 });

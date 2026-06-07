@@ -33,7 +33,7 @@ describe("useTasksStore (local behaviour)", () => {
       updated_at: "x",
       custom_fields: { scheduled_dates: [MOCK_TODAY], is_adhoc: "true" },
     });
-    await useTasksStore.getState().addTodayTask("臨時一件");
+    await useTasksStore.getState().addTodayTask("臨時一件", useTasksStore.getState().today);
     const added = useTasksStore.getState().tasks.find((t) => t.id === "srv-1");
     expect(added?.custom_fields.scheduled_dates).toEqual([MOCK_TODAY]);
     expect(added?.custom_fields.is_adhoc).toBe("true");
@@ -41,7 +41,7 @@ describe("useTasksStore (local behaviour)", () => {
 
   it("setDailyPriority routes through store.today for eviction", async () => {
     vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
-    await useTasksStore.getState().setDailyPriority("d5", "1");
+    await useTasksStore.getState().setDailyPriority("d5", "1", useTasksStore.getState().today);
     const s = useTasksStore.getState();
     expect(s.tasks.find((t) => t.id === "d5")!.custom_fields.daily_priority).toBe("1");
     expect(s.tasks.find((t) => t.id === "d1")!.custom_fields.daily_priority).toBeUndefined();
@@ -307,7 +307,7 @@ describe("server-backed tasks store", () => {
         custom_fields: {},
       },
     ]);
-    await useTasksStore.getState().setDailyPriority("d5", "1");
+    await useTasksStore.getState().setDailyPriority("d5", "1", useTasksStore.getState().today);
     expect(reload).toHaveBeenCalled();
     expect(useTasksStore.getState().tasks.map((t) => t.id)).toEqual(["reloaded"]);
   });

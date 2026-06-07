@@ -18,11 +18,12 @@ describe("useTaskRow", () => {
   it("setPriority sets the chosen slot", async () => {
     await act(async () => {
       const s = useTasksStore.getState();
-      await s.setDailyPriority("d1", null);
-      await s.setDailyPriority("d2", null);
-      await s.setDailyPriority("d3", null);
+      const today = useTasksStore.getState().today;
+      await s.setDailyPriority("d1", null, today);
+      await s.setDailyPriority("d2", null, today);
+      await s.setDailyPriority("d3", null, today);
     });
-    const { result } = renderHook(() => useTaskRow("d5"));
+    const { result } = renderHook(() => useTaskRow("d5", useTasksStore.getState().today));
     await act(async () => result.current.setPriority("1"));
     expect(
       useTasksStore.getState().tasks.find((t) => t.id === "d5")!.custom_fields.daily_priority,
@@ -32,9 +33,9 @@ describe("useTaskRow", () => {
   it("setPriority evicts the previous occupant of the chosen slot", async () => {
     await act(async () => {
       const s = useTasksStore.getState();
-      await s.setDailyPriority("d1", "1");
+      await s.setDailyPriority("d1", "1", useTasksStore.getState().today);
     });
-    const { result } = renderHook(() => useTaskRow("d5"));
+    const { result } = renderHook(() => useTaskRow("d5", useTasksStore.getState().today));
     await act(async () => result.current.setPriority("1"));
     const tasks = useTasksStore.getState().tasks;
     expect(tasks.find((t) => t.id === "d5")!.custom_fields.daily_priority).toBe("1");
@@ -42,8 +43,10 @@ describe("useTaskRow", () => {
   });
 
   it("setPriority(null) removes the priority", async () => {
-    await act(async () => useTasksStore.getState().setDailyPriority("d1", "1"));
-    const { result } = renderHook(() => useTaskRow("d1"));
+    await act(async () =>
+      useTasksStore.getState().setDailyPriority("d1", "1", useTasksStore.getState().today),
+    );
+    const { result } = renderHook(() => useTaskRow("d1", useTasksStore.getState().today));
     await act(async () => result.current.setPriority(null));
     expect(
       useTasksStore.getState().tasks.find((t) => t.id === "d1")!.custom_fields.daily_priority,
@@ -51,7 +54,7 @@ describe("useTaskRow", () => {
   });
 
   it("startEdit / commitEdit writes the draft via the store", async () => {
-    const { result } = renderHook(() => useTaskRow("d5"));
+    const { result } = renderHook(() => useTaskRow("d5", useTasksStore.getState().today));
     act(() => result.current.startEdit("讀文件"));
     expect(result.current.isEditing).toBe(true);
     act(() => result.current.changeDraft("讀完文件"));
@@ -61,7 +64,7 @@ describe("useTaskRow", () => {
   });
 
   it("cancelEdit leaves the title untouched", () => {
-    const { result } = renderHook(() => useTaskRow("d5"));
+    const { result } = renderHook(() => useTaskRow("d5", useTasksStore.getState().today));
     act(() => result.current.startEdit("讀文件"));
     act(() => result.current.changeDraft("亂改"));
     act(() => result.current.cancelEdit());

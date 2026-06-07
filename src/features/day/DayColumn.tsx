@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { Task } from "@/lib/types";
 import { tasksOnDate } from "@/lib/tasks";
-import { dayOfMonth, shortWeekday } from "@/lib/date";
+import { dayOfMonth, shortWeekday, todayISO } from "@/lib/date";
 import { TaskRow } from "./TaskRow";
 import { Top3Card } from "./Top3Card";
 import { AddTaskInput } from "./AddTaskInput";
@@ -11,9 +11,10 @@ export interface DayColumnProps {
   allTasks: Task[];
   selectedDate: string;
   variant: "plan-narrow" | "today-hero";
+  interactive?: boolean;
 }
 
-export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
+export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayColumnProps) {
   const entries = useMemo(() => tasksOnDate(allTasks, selectedDate), [allTasks, selectedDate]);
 
   const primary = entries.filter((e) => e.kind === "primary");
@@ -41,13 +42,15 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
   const isEmpty =
     top3.length === 0 && otherPlanned.length === 0 && adhoc.length === 0 && trails.length === 0;
 
-  const interactive = variant === "today-hero";
+  const isInteractive = interactive ?? variant === "today-hero";
+  const isToday = selectedDate === todayISO();
 
   return (
     <div className={[styles.col, styles[`v_${variant}`]].join(" ")}>
       <div className={styles.header}>
         <div className={styles.eyebrow}>
-          {shortWeekday(selectedDate).toUpperCase()} · {variant === "today-hero" ? "今天" : ""}
+          {shortWeekday(selectedDate).toUpperCase()}
+          {isToday ? " · 今天" : ""}
         </div>
         <h2 className={styles.bigDate}>
           {monthShort(selectedDate)} {dayOfMonth(selectedDate)}
@@ -59,7 +62,8 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
           tasks={top3}
           title="今天最重要的三件事"
           variant="accent"
-          interactive={interactive}
+          date={selectedDate}
+          interactive={isInteractive}
         />
       )}
 
@@ -73,8 +77,9 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
               key={e.task.id}
               task={e.task}
               kind={e.kind}
-              interactive={interactive}
-              showRing={interactive}
+              date={selectedDate}
+              interactive={isInteractive}
+              showRing={isInteractive}
             />
           ))}
         </section>
@@ -90,9 +95,10 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
               key={e.task.id}
               task={e.task}
               kind={e.kind}
+              date={selectedDate}
               showAdhocChip
-              interactive={interactive}
-              showRing={interactive}
+              interactive={isInteractive}
+              showRing={isInteractive}
             />
           ))}
         </section>
@@ -101,19 +107,19 @@ export function DayColumn({ allTasks, selectedDate, variant }: DayColumnProps) {
       {trails.length > 0 && (
         <section className={styles.section}>
           {trails.map((e) => (
-            <TaskRow key={e.task.id} task={e.task} kind={e.kind} />
+            <TaskRow key={e.task.id} task={e.task} kind={e.kind} date={selectedDate} />
           ))}
         </section>
       )}
 
-      {interactive && isEmpty && (
+      {isInteractive && isEmpty && (
         <div className={styles.empty}>
           <div className={styles.emptyBig}>今天還很空白</div>
           <div className={styles.emptySub}>從下面加一件最想推進的事吧</div>
         </div>
       )}
 
-      {interactive && <AddTaskInput />}
+      {isInteractive && <AddTaskInput date={selectedDate} />}
     </div>
   );
 }

@@ -14,7 +14,7 @@ beforeEach(() => {
 
 function rowFor(id: string) {
   const task = useTasksStore.getState().tasks.find((t) => t.id === id)!;
-  return <TaskRow task={task} kind="primary" interactive />;
+  return <TaskRow task={task} kind="primary" date={useTasksStore.getState().today} interactive />;
 }
 
 describe("TaskRow (interactive)", () => {
@@ -70,7 +70,14 @@ describe("TaskRow (interactive)", () => {
 
   it("is read-only when interactive is false", () => {
     const task = useTasksStore.getState().tasks.find((t) => t.id === "d5")!;
-    render(<TaskRow task={task} kind="primary" interactive={false} />);
+    render(
+      <TaskRow
+        task={task}
+        kind="primary"
+        date={useTasksStore.getState().today}
+        interactive={false}
+      />,
+    );
     expect(screen.getByRole("checkbox")).toBeDisabled();
     expect(screen.queryByLabelText("刪除")).toBeNull();
   });
@@ -79,11 +86,19 @@ describe("TaskRow (interactive)", () => {
     const user = userEvent.setup();
     const TestComponent = () => {
       const task = useTasksStore((s) => s.tasks.find((t) => t.id === "d5"))!;
-      return <TaskRow task={task} kind="primary" interactive showRing />;
+      return (
+        <TaskRow
+          task={task}
+          kind="primary"
+          date={useTasksStore.getState().today}
+          interactive
+          showRing
+        />
+      );
     };
-    await useTasksStore.getState().setDailyPriority("d1", null);
-    await useTasksStore.getState().setDailyPriority("d2", null);
-    await useTasksStore.getState().setDailyPriority("d3", null);
+    await useTasksStore.getState().setDailyPriority("d1", null, useTasksStore.getState().today);
+    await useTasksStore.getState().setDailyPriority("d2", null, useTasksStore.getState().today);
+    await useTasksStore.getState().setDailyPriority("d3", null, useTasksStore.getState().today);
     render(<TestComponent />);
     await user.click(screen.getByRole("button", { name: "設為今日重點" }));
     await user.click(await screen.findByRole("menuitemradio", { name: /今日第一/ }));

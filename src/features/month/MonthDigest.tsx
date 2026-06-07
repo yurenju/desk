@@ -51,7 +51,9 @@ export function MonthDigest({ allTasks, month, today }: MonthDigestProps) {
         </div>
       </div>
 
-      {top3.length > 0 && <Top3Card tasks={top3} title="本月三件大事" variant="plain" />}
+      {top3.length > 0 && (
+        <Top3Card tasks={top3} title="本月三件大事" date={today} variant="plain" />
+      )}
 
       {others.length > 0 && (
         <section className={styles.section}>
