@@ -11,6 +11,11 @@ describe("dropId / parseDropId", () => {
     expect(parseDropId(id)).toEqual({ kind: "day", date: "2026-06-08", zone: "top3" });
   });
 
+  it("round-trips a weekday target", () => {
+    const id = dropId({ kind: "weekday", date: "2026-06-08" });
+    expect(parseDropId(id)).toEqual({ kind: "weekday", date: "2026-06-08" });
+  });
+
   it("returns null for an unknown id", () => {
     expect(parseDropId("nonsense")).toBeNull();
   });

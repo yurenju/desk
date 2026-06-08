@@ -70,17 +70,29 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
       void store.promoteToMonth(id, month);
       return;
     }
+    // Resolve the destination day + zone. Day-column drops carry their zone in
+    // the drop id; week cells are a single droppable, so derive top-3 vs other
+    // from where in the cell the pointer released (upper half = top-3).
+    const date = target.date;
+    let zone: "top3" | "other";
+    if (target.kind === "weekday") {
+      const rect = e.over.rect;
+      const pointerY = (e.activatorEvent as PointerEvent).clientY + e.delta.y;
+      zone = pointerY < rect.top + rect.height / 2 ? "top3" : "other";
+    } else {
+      zone = target.zone;
+    }
     void (async () => {
-      await store.planScheduleDay(id, target.date);
+      await store.planScheduleDay(id, date);
       const s = useTasksStore.getState();
       const task = s.tasks.find((t) => t.id === id);
       // Only set priority if the schedule actually landed (guards the rollback-on-failure case)
       const dates = task?.custom_fields.scheduled_dates ?? [];
-      if (dates[dates.length - 1] !== target.date) return;
-      if (target.zone === "top3") {
-        void s.setDailyPriority(id, nextFreeDailySlot(s.tasks, target.date, id), target.date);
+      if (dates[dates.length - 1] !== date) return;
+      if (zone === "top3") {
+        void s.setDailyPriority(id, nextFreeDailySlot(s.tasks, date, id), date);
       } else {
-        void s.setDailyPriority(id, null, target.date);
+        void s.setDailyPriority(id, null, date);
       }
     })();
   }

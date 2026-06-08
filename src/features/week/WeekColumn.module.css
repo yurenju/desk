@@ -165,13 +165,10 @@
   gap: var(--space-1);
   flex: 1;
   min-width: 0;
-}
-
-.zone {
   border-radius: var(--radius-sm);
 }
 
-.zone.isOver {
+.cellBody.isOver {
   outline: 2px dashed var(--color-accent);
   outline-offset: -2px;
 }

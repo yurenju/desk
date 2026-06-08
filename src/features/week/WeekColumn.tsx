@@ -40,8 +40,10 @@ interface WeekDayCellProps {
 }
 
 function WeekDayCell({ date, allTasks, selectedDate }: WeekDayCellProps) {
-  const top3Drop = useDroppableZone({ kind: "day", date, zone: "top3" });
-  const otherDrop = useDroppableZone({ kind: "day", date, zone: "other" });
+  // One droppable per cell. top-3 vs other is decided by the drop's vertical
+  // position (upper half = top-3) in PlanLayout — two stacked sub-zones this
+  // small are unreliable for dnd-kit collision when dragging within one cell.
+  const cellDrop = useDroppableZone({ kind: "weekday", date });
   const entries = tasksOnDate(allTasks, date);
   const primary = entries.filter((e) => e.kind === "primary");
   const top3 = primary
@@ -70,14 +72,14 @@ function WeekDayCell({ date, allTasks, selectedDate }: WeekDayCellProps) {
           <div className={styles.dayNum}>{dayOfMonth(date)}</div>
           <div className={styles.dayWk}>{shortWeekday(date).toUpperCase()}</div>
         </div>
-        <div className={styles.cellBody}>
-          <ol
-            ref={top3Drop.ref}
-            data-testid={`week-top3-${date}`}
-            className={[styles.tasks, styles.zone, top3Drop.isOver && styles.isOver]
-              .filter(Boolean)
-              .join(" ")}
-          >
+        {/* Single droppable for the whole cell. Content stays identical while
+            dragging over (only the outline changes) so the layout never shifts
+            mid-drag — a shift would move the zones out from under the pointer. */}
+        <div
+          ref={cellDrop.ref}
+          className={[styles.cellBody, cellDrop.isOver && styles.isOver].filter(Boolean).join(" ")}
+        >
+          <ol data-testid={`week-top3-${date}`} className={styles.tasks}>
             {top3.map((e, i) => (
               <WeekTaskItem
                 key={e.task.id}
@@ -88,19 +90,9 @@ function WeekDayCell({ date, allTasks, selectedDate }: WeekDayCellProps) {
                 done={e.task.status === "done"}
               />
             ))}
-            {top3.length === 0 && top3Drop.isOver && <li className={styles.zoneHint}>三件事</li>}
           </ol>
-          <div
-            ref={otherDrop.ref}
-            className={[styles.otherZone, styles.zone, otherDrop.isOver && styles.isOver]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            {otherCount > 0 ? (
-              <span className={styles.more}>還有 {otherCount} 件其他任務</span>
-            ) : (
-              otherDrop.isOver && <span className={styles.zoneHint}>其他</span>
-            )}
+          <div className={styles.otherZone}>
+            {otherCount > 0 && <span className={styles.more}>還有 {otherCount} 件其他任務</span>}
           </div>
           {primary.length === 0 && <div className={styles.empty}>—</div>}
         </div>
