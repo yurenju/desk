@@ -4,8 +4,10 @@ import {
   DragOverlay,
   PointerSensor,
   pointerWithin,
+  rectIntersection,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragMoveEvent,
   type DragStartEvent,
@@ -26,6 +28,16 @@ import { parseDropId } from "./dnd";
 import styles from "./PlanLayout.module.css";
 
 const ACTIVATION = { distance: 8 };
+
+// pointerWithin keeps the over-cell exactly under the cursor (rectIntersection
+// would pick a neighbour via the drag ghost's larger rect, making the week hint
+// jump). But pointerWithin returns nothing when the pointer is in a gap between
+// droppables (e.g. the space between the Day column's top-3 and other zones),
+// which would silently drop the task; fall back to rectIntersection there.
+const collisionDetection: CollisionDetection = (args) => {
+  const within = pointerWithin(args);
+  return within.length > 0 ? within : rectIntersection(args);
+};
 
 /**
  * Top-3 (upper half) vs other (lower half) of a week cell, from the live pointer
@@ -97,7 +109,7 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
     const over = e.over;
     const target = over ? parseDropId(String(over.id)) : null;
     if (!over || target?.kind !== "weekday") {
-      setWeekHint((prev) => (prev === null ? prev : null));
+      setWeekHint(null); // React bails out of the re-render when already null
       return;
     }
     const zone = weekCellZone(over, pointerY.current);
@@ -141,7 +153,7 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={pointerWithin}
+      collisionDetection={collisionDetection}
       onDragStart={handleDragStart}
       onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
