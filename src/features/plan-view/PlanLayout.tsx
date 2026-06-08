@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  pointerWithin,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -26,9 +27,14 @@ import styles from "./PlanLayout.module.css";
 
 const ACTIVATION = { distance: 8 };
 
-/** Top-3 (upper half) vs other (lower half) of a week cell from the drop point. */
-function weekCellZone(over: Over, activatorEvent: Event, deltaY: number): "top3" | "other" {
-  const pointerY = activatorEvent instanceof PointerEvent ? activatorEvent.clientY + deltaY : Infinity;
+/**
+ * Top-3 (upper half) vs other (lower half) of a week cell, from the live pointer
+ * Y. Both `pointerY` (viewport clientY) and `over.rect` are viewport-relative and
+ * re-measured during the drag, so this stays correct even while the page
+ * auto-scrolls — unlike `activatorEvent.clientY + delta`, where the fixed
+ * activator coordinate diverges from the scrolled content.
+ */
+function weekCellZone(over: Over, pointerY: number): "top3" | "other" {
   return pointerY < over.rect.top + over.rect.height / 2 ? "top3" : "other";
 }
 
@@ -45,6 +51,17 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [weekHint, setWeekHint] = useState<WeekDropHint | null>(null);
   const dragEnabled = useHoverCapable();
+
+  // dnd-kit events don't carry the live pointer position, and deriving it from
+  // activator + delta breaks under auto-scroll, so track it from the window.
+  const pointerY = useRef(0);
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      pointerY.current = e.clientY;
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => window.removeEventListener("pointermove", onMove);
+  }, []);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: ACTIVATION }));
 
   const activeTask = activeId ? allTasks.find((t) => t.id === activeId) : null;
@@ -83,7 +100,7 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
       setWeekHint((prev) => (prev === null ? prev : null));
       return;
     }
-    const zone = weekCellZone(over, e.activatorEvent, e.delta.y);
+    const zone = weekCellZone(over, pointerY.current);
     setWeekHint((prev) =>
       prev && prev.date === target.date && prev.zone === zone ? prev : { date: target.date, zone },
     );
@@ -105,8 +122,7 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
     // the drop id; week cells are a single droppable, so derive top-3 vs other
     // from where in the cell the pointer released (upper half = top-3).
     const date = target.date;
-    const zone =
-      target.kind === "weekday" ? weekCellZone(e.over, e.activatorEvent, e.delta.y) : target.zone;
+    const zone = target.kind === "weekday" ? weekCellZone(e.over, pointerY.current) : target.zone;
     void (async () => {
       await store.planScheduleDay(id, date);
       const s = useTasksStore.getState();
@@ -125,6 +141,7 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={pointerWithin}
       onDragStart={handleDragStart}
       onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}

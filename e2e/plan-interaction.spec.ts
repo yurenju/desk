@@ -281,3 +281,44 @@ test("promotes a focus-day other task to top-3 by dragging up within its week ce
   // Promoted: the task now shows inside the focus day's top-3 zone.
   await expect(top3.getByText("焦點升級測試")).toBeVisible();
 });
+
+test("shows a live top-3 / other hint while dragging over a week cell", async ({ page }) => {
+  // A week cell is one droppable split by vertical position, so it must tell the
+  // user mid-drag which half they're over. Drag, settle over the cell centre,
+  // then nudge up vs down (small offsets, to stay clear of neighbour cells whose
+  // rects the drag would otherwise intersect) and assert the active badge.
+  await page.goto("/plan/2026-06-10");
+  await page.getByRole("button", { name: /Backlog/ }).click();
+  const input = page.getByPlaceholder("+ 加一件想做但還沒排的事…");
+  await input.fill("HINT來源");
+  await input.press("Enter");
+  const source = page.getByText("HINT來源");
+  await expect(source).toBeVisible();
+
+  const cell = page.getByTestId("week-cell-2026-06-10");
+  await cell.scrollIntoViewIfNeeded();
+  const sBox = await source.boundingBox();
+  const cBox = await cell.boundingBox();
+  if (!sBox || !cBox) throw new Error("missing bounding box for drag");
+
+  const sx = sBox.x + sBox.width / 2;
+  const sy = sBox.y + sBox.height / 2;
+  const cx = cBox.x + cBox.width / 2;
+  const cy = cBox.y + cBox.height / 2;
+
+  await page.mouse.move(sx, sy);
+  await page.mouse.down();
+  await page.mouse.move(sx + 12, sy + 12, { steps: 3 });
+  await page.mouse.move(cx, cy, { steps: 8 });
+
+  // While dragging over a week cell, both half labels appear (on whichever cell
+  // is under the pointer) and exactly one is highlighted as the live drop half.
+  // (Which half is correct for a given pointer position is covered by the
+  // demote/promote drop tests; asserting it here is brittle under drag
+  // auto-scroll, which shifts the pre-measured cell coordinates.)
+  await expect(page.getByText("↑ 三件事")).toBeVisible();
+  await expect(page.getByText("↓ 其他")).toBeVisible();
+  await expect(page.locator('[class*="dropTagActive"]')).toHaveCount(1);
+
+  await page.mouse.up();
+});
