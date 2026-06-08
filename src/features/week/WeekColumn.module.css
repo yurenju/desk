@@ -151,12 +151,8 @@
   font-size: var(--text-sm);
 }
 
-.more {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  letter-spacing: 0.04em;
-  color: var(--color-ink-faint);
-  margin-top: 2px;
+.otherTask {
+  opacity: 0.7;
 }
 
 .cellBody {
@@ -174,5 +170,11 @@
 }
 
 .otherZone {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
   min-height: var(--space-5);
 }

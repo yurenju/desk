@@ -44,7 +44,9 @@ test("plan day column can add a task to the focus date", async ({ page }) => {
   const input = page.getByPlaceholder("+ 加一件這天的事…");
   await input.fill("焦點日新增測試");
   await input.press("Enter");
-  await expect(page.getByText("焦點日新增測試")).toBeVisible();
+  // The new task shows in the Day column AND the focus day's week cell (as an
+  // "other" item), so scope to the first match instead of asserting uniqueness.
+  await expect(page.getByText("焦點日新增測試").first()).toBeVisible();
 });
 
 test("promotes a month task into the focus day's top-3 via the overflow menu", async ({ page }) => {
@@ -238,4 +240,44 @@ test("demotes a focus-day top-3 task to other by dragging within its week cell",
 
   // Demoted: the task is no longer in the focus day's top-3 zone.
   await expect(top3.getByText("焦點降級測試")).toBeHidden();
+});
+
+test("promotes a focus-day other task to top-3 by dragging up within its week cell", async ({
+  page,
+}) => {
+  // The reverse of the demote: an "other" task is now a draggable item in the
+  // week cell (not just a count), so it can be dragged UP into the top-3 area.
+  await page.goto("/plan/2026-06-10");
+
+  // Add a task to the focus day via the Day column — it lands as "other" (no
+  // priority), and appears as an item in the focus day's week cell.
+  const input = page.getByPlaceholder("+ 加一件這天的事…");
+  await input.fill("焦點升級測試");
+  await input.press("Enter");
+
+  const cell = page.getByTestId("week-cell-2026-06-10");
+  const top3 = page.getByTestId("week-top3-2026-06-10");
+  // Starts outside the top-3 zone.
+  await expect(top3.getByText("焦點升級測試")).toBeHidden();
+  const source = cell.getByText("焦點升級測試");
+  await expect(source).toBeVisible();
+
+  await source.scrollIntoViewIfNeeded();
+  const sBox = await source.boundingBox();
+  const tBox = await top3.boundingBox();
+  if (!sBox || !tBox) throw new Error("missing bounding box for drag");
+
+  const sx = sBox.x + sBox.width / 2;
+  const sy = sBox.y + sBox.height / 2;
+  const tx = tBox.x + tBox.width / 2;
+  const ty = tBox.y + tBox.height / 2; // upper (top-3) area
+
+  await page.mouse.move(sx, sy);
+  await page.mouse.down();
+  await page.mouse.move(sx + 12, sy - 12, { steps: 5 });
+  await page.mouse.move(tx, ty, { steps: 10 });
+  await page.mouse.up();
+
+  // Promoted: the task now shows inside the focus day's top-3 zone.
+  await expect(top3.getByText("焦點升級測試")).toBeVisible();
 });

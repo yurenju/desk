@@ -15,7 +15,8 @@ export interface WeekColumnProps {
 interface WeekTaskItemProps {
   taskId: string;
   date: string;
-  order: number;
+  // 1/2/3 for the day's top-3; omitted for "other" tasks (rendered with a bullet).
+  order?: number;
   title: string;
   done: boolean;
 }
@@ -26,9 +27,11 @@ function WeekTaskItem({ taskId, date, order, title, done }: WeekTaskItemProps) {
     <li
       ref={draggable.ref}
       {...draggable.handleProps}
-      className={[styles.task, done && styles.done].filter(Boolean).join(" ")}
+      className={[styles.task, done && styles.done, order == null && styles.otherTask]
+        .filter(Boolean)
+        .join(" ")}
     >
-      <span className={styles.taskOrder}>{order}.</span> {title}
+      <span className={styles.taskOrder}>{order == null ? "·" : `${order}.`}</span> {title}
     </li>
   );
 }
@@ -54,9 +57,10 @@ function WeekDayCell({ date, allTasks, selectedDate }: WeekDayCellProps) {
         Number(b.task.custom_fields.daily_priority),
     )
     .slice(0, 3);
-  // Tasks scheduled on this day that aren't shown as one of the top-3
-  // (planned-without-priority + adhoc). Surfaces work added to "其他".
-  const otherCount = primary.length - top3.length;
+  // Tasks scheduled on this day that aren't one of the top-3
+  // (planned-without-priority + adhoc). Rendered as draggable items too so the
+  // user can drag one UP into the top-3 (promote) directly from the week cell.
+  const others = primary.filter((e) => !top3.includes(e));
   const isSelected = date === selectedDate;
 
   return (
@@ -92,9 +96,17 @@ function WeekDayCell({ date, allTasks, selectedDate }: WeekDayCellProps) {
               />
             ))}
           </ol>
-          <div className={styles.otherZone}>
-            {otherCount > 0 && <span className={styles.more}>還有 {otherCount} 件其他任務</span>}
-          </div>
+          <ul className={styles.otherZone}>
+            {others.map((e) => (
+              <WeekTaskItem
+                key={e.task.id}
+                taskId={e.task.id}
+                date={date}
+                title={e.task.title}
+                done={e.task.status === "done"}
+              />
+            ))}
+          </ul>
           {primary.length === 0 && <div className={styles.empty}>—</div>}
         </div>
       </Link>
