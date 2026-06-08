@@ -8,7 +8,6 @@ import {
   restoreTask,
   setDailyPriority,
   setAdhoc,
-  promoteToDay,
   setMonthlyPriority,
   addMonthTask,
   addBacklogTask,
@@ -249,19 +248,6 @@ function mk(id: string, cf: Record<string, unknown>) {
     custom_fields: cf,
   };
 }
-
-describe("promoteToDay", () => {
-  it("appends the date to scheduled_dates", () => {
-    const tasks = [mk("a", { scheduled_months: ["2026-05"] })];
-    const out = promoteToDay(tasks, "a", "2026-05-22");
-    expect(out[0].custom_fields.scheduled_dates).toEqual(["2026-05-22"]);
-  });
-  it("is a no-op when date is already the last entry", () => {
-    const tasks = [mk("a", { scheduled_dates: ["2026-05-21", "2026-05-22"] })];
-    const out = promoteToDay(tasks, "a", "2026-05-22");
-    expect(out[0].custom_fields.scheduled_dates).toEqual(["2026-05-21", "2026-05-22"]);
-  });
-});
 
 describe("setMonthlyPriority", () => {
   it("sets priority and evicts the collider within the same month", () => {

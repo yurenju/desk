@@ -101,16 +101,6 @@ export function setAdhoc(tasks: Task[], id: string, isAdhoc: boolean): Task[] {
   );
 }
 
-export function promoteToDay(tasks: Task[], id: string, date: string): Task[] {
-  if (!tasks.some((t) => t.id === id)) return tasks;
-  return tasks.map((t) => {
-    if (t.id !== id) return t;
-    const arr = t.custom_fields.scheduled_dates ?? [];
-    if (arr[arr.length - 1] === date) return t; // already there
-    return patch(t, { scheduled_dates: [...arr, date] });
-  });
-}
-
 export function setMonthlyPriority(
   tasks: Task[],
   id: string,

@@ -10,7 +10,6 @@ import {
   planScheduleDay as planScheduleDayOp,
   deleteTask,
   editTitle,
-  promoteToDay as promoteToDayOp,
   restoreTask as restoreTaskOp,
   setAdhoc as setAdhocOp,
   setDailyPriority,
@@ -41,7 +40,6 @@ interface TasksState {
   restoreTask: () => Promise<void>;
   setDailyPriority: (id: string, n: Priority | null, date: string) => Promise<void>;
   setAdhoc: (id: string, isAdhoc: boolean) => Promise<void>;
-  promoteToDay: (id: string, date: string) => Promise<void>;
   setMonthlyPriority: (id: string, n: Priority | null, month: string) => Promise<void>;
   addMonthTask: (title: string, month: string) => Promise<void>;
   addBacklogTask: (title: string) => Promise<void>;
@@ -183,19 +181,6 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     set({ tasks: setAdhocOp(prev, id, isAdhoc), error: null });
     try {
       await enqueuePatch(id, { is_adhoc: isAdhoc ? "true" : "false" });
-    } catch {
-      set({ tasks: prev, error: "save_failed" });
-    }
-  },
-
-  async promoteToDay(id, date) {
-    const prev = get().tasks;
-    const next = promoteToDayOp(prev, id, date);
-    if (next === prev) return;
-    set({ tasks: next, error: null });
-    const updated = next.find((t) => t.id === id);
-    try {
-      await enqueuePatch(id, { scheduled_dates: updated!.custom_fields.scheduled_dates });
     } catch {
       set({ tasks: prev, error: "save_failed" });
     }
