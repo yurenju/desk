@@ -5,6 +5,7 @@ import { tasksOnDate } from "@/lib/tasks";
 import { weekOf, shortWeekday, dayOfMonth, isoWeek, addDays } from "@/lib/date";
 import { useDroppableZone } from "@/features/plan-view/useDroppableZone";
 import { useDraggableRow } from "@/features/plan-view/useDraggableRow";
+import { useWeekDropHint } from "@/features/plan-view/dragContext";
 import styles from "./WeekColumn.module.css";
 
 export interface WeekColumnProps {
@@ -65,6 +66,12 @@ function WeekDayCell({ date, allTasks, selectedDate }: WeekDayCellProps) {
   const others = primary.filter((e) => !top3.includes(e));
   const isSelected = date === selectedDate;
 
+  // Live drop hint: which half of THIS cell the pointer is over mid-drag.
+  const hint = useWeekDropHint();
+  const overCell = hint?.date === date;
+  const overTop3 = overCell && hint.zone === "top3";
+  const overOther = overCell && hint.zone === "other";
+
   return (
     <li className={styles.dayItem}>
       <Link
@@ -78,15 +85,39 @@ function WeekDayCell({ date, allTasks, selectedDate }: WeekDayCellProps) {
           <div className={styles.dayNum}>{dayOfMonth(date)}</div>
           <div className={styles.dayWk}>{shortWeekday(date).toUpperCase()}</div>
         </div>
-        {/* Single droppable for the whole cell. Content stays identical while
-            dragging over (only the outline changes) so the layout never shifts
-            mid-drag — a shift would move the zones out from under the pointer. */}
+        {/* Single droppable for the whole cell. The drop hint badges/highlights
+            below are absolutely positioned, so showing them mid-drag does NOT
+            shift the cell layout (a shift would move the zone out from under the
+            pointer and break the drop). */}
         <div
           ref={cellDrop.ref}
           data-testid={`week-cell-${date}`}
           className={[styles.cellBody, cellDrop.isOver && styles.isOver].filter(Boolean).join(" ")}
         >
-          <ol data-testid={`week-top3-${date}`} className={styles.tasks}>
+          {overCell && (
+            <>
+              <span
+                className={[styles.dropTag, styles.dropTagTop, overTop3 && styles.dropTagActive]
+                  .filter(Boolean)
+                  .join(" ")}
+                aria-hidden
+              >
+                ↑ 三件事
+              </span>
+              <span
+                className={[styles.dropTag, styles.dropTagBottom, overOther && styles.dropTagActive]
+                  .filter(Boolean)
+                  .join(" ")}
+                aria-hidden
+              >
+                ↓ 其他
+              </span>
+            </>
+          )}
+          <ol
+            data-testid={`week-top3-${date}`}
+            className={[styles.tasks, overTop3 && styles.halfActive].filter(Boolean).join(" ")}
+          >
             {top3.map((e, i) => (
               <WeekTaskItem
                 key={e.task.id}
@@ -98,7 +129,9 @@ function WeekDayCell({ date, allTasks, selectedDate }: WeekDayCellProps) {
               />
             ))}
           </ol>
-          <ul className={styles.otherZone}>
+          <ul
+            className={[styles.otherZone, overOther && styles.halfActive].filter(Boolean).join(" ")}
+          >
             {others.map((e) => (
               <WeekTaskItem
                 key={e.task.id}

@@ -156,6 +156,7 @@
 }
 
 .cellBody {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -167,6 +168,45 @@
 .cellBody.isOver {
   outline: 2px dashed var(--color-accent);
   outline-offset: -2px;
+}
+
+/* The half (top-3 ol / other ul) the pointer is currently over during a drag. */
+.halfActive {
+  background: var(--color-accent-soft, rgba(120, 120, 120, 0.14));
+  border-radius: var(--radius-sm);
+}
+
+/* Drop-target labels — absolutely positioned so they don't shift cell layout. */
+.dropTag {
+  position: absolute;
+  right: 2px;
+  z-index: 1;
+  pointer-events: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.02em;
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  background: var(--color-paper);
+  color: var(--color-ink-faint);
+  border: 1px solid var(--color-rule);
+  opacity: 0.65;
+}
+
+.dropTagTop {
+  top: 0;
+}
+
+.dropTagBottom {
+  bottom: 0;
+}
+
+.dropTagActive {
+  opacity: 1;
+  background: var(--color-accent);
+  color: var(--color-paper);
+  border-color: var(--color-accent);
+  font-weight: 600;
 }
 
 .otherZone {

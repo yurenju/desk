@@ -6,7 +6,9 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragMoveEvent,
   type DragStartEvent,
+  type Over,
 } from "@dnd-kit/core";
 import type { Task } from "@/lib/types";
 import { CarryoverBanner } from "@/features/carryover/CarryoverBanner";
@@ -18,11 +20,17 @@ import { MOCK_CARRYOVER_MONTH } from "@/mock/data";
 import { useTasksStore } from "@/store/tasks";
 import { nextFreeDailySlot } from "@/lib/tasks";
 import { useHoverCapable } from "@/lib/useHoverCapable";
-import { DragEnabledProvider } from "./dragContext";
+import { DragEnabledProvider, WeekDropHintProvider, type WeekDropHint } from "./dragContext";
 import { parseDropId } from "./dnd";
 import styles from "./PlanLayout.module.css";
 
 const ACTIVATION = { distance: 8 };
+
+/** Top-3 (upper half) vs other (lower half) of a week cell from the drop point. */
+function weekCellZone(over: Over, activatorEvent: Event, deltaY: number): "top3" | "other" {
+  const pointerY = activatorEvent instanceof PointerEvent ? activatorEvent.clientY + deltaY : Infinity;
+  return pointerY < over.rect.top + over.rect.height / 2 ? "top3" : "other";
+}
 
 export interface PlanLayoutProps {
   allTasks: Task[];
@@ -35,6 +43,7 @@ type MobileTab = "month" | "week" | "day";
 export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
   const [tab, setTab] = useState<MobileTab>("month");
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [weekHint, setWeekHint] = useState<WeekDropHint | null>(null);
   const dragEnabled = useHoverCapable();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: ACTIVATION }));
 
@@ -64,8 +73,25 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
     setActiveId(resolveTaskId(rawId));
   }
 
+  // Live "which half am I over" hint for week cells. Only updates state when the
+  // (date, zone) actually changes, so React bails out of re-renders while the
+  // pointer moves within the same half.
+  function handleDragMove(e: DragMoveEvent) {
+    const over = e.over;
+    const target = over ? parseDropId(String(over.id)) : null;
+    if (!over || target?.kind !== "weekday") {
+      setWeekHint((prev) => (prev === null ? prev : null));
+      return;
+    }
+    const zone = weekCellZone(over, e.activatorEvent, e.delta.y);
+    setWeekHint((prev) =>
+      prev && prev.date === target.date && prev.zone === zone ? prev : { date: target.date, zone },
+    );
+  }
+
   function handleDragEnd(e: DragEndEvent) {
     setActiveId(null);
+    setWeekHint(null);
     if (!e.over) return;
     const target = parseDropId(String(e.over.id));
     if (!target) return;
@@ -79,20 +105,8 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
     // the drop id; week cells are a single droppable, so derive top-3 vs other
     // from where in the cell the pointer released (upper half = top-3).
     const date = target.date;
-    let zone: "top3" | "other";
-    if (target.kind === "weekday") {
-      const rect = e.over.rect;
-      // Final pointer Y = where the drag activated + total movement. Guard the
-      // sensor type instead of casting: a non-pointer activator (only possible
-      // if a keyboard/touch sensor is added later) leaves pointerY as Infinity,
-      // which safely defaults the drop to "other" rather than computing NaN.
-      const activator = e.activatorEvent;
-      const pointerY =
-        activator instanceof PointerEvent ? activator.clientY + e.delta.y : Infinity;
-      zone = pointerY < rect.top + rect.height / 2 ? "top3" : "other";
-    } else {
-      zone = target.zone;
-    }
+    const zone =
+      target.kind === "weekday" ? weekCellZone(e.over, e.activatorEvent, e.delta.y) : target.zone;
     void (async () => {
       await store.planScheduleDay(id, date);
       const s = useTasksStore.getState();
@@ -112,10 +126,15 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
     <DndContext
       sensors={sensors}
       onDragStart={handleDragStart}
+      onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
-      onDragCancel={() => setActiveId(null)}
+      onDragCancel={() => {
+        setActiveId(null);
+        setWeekHint(null);
+      }}
     >
       <DragEnabledProvider value={dragEnabled}>
+        <WeekDropHintProvider value={weekHint}>
         <main className={styles.page}>
           <CarryoverBanner
             fromLabel="從上月延續"
@@ -164,6 +183,7 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
         <DragOverlay>
           {activeTask ? <div className={styles.dragGhost}>{activeTask.title}</div> : null}
         </DragOverlay>
+        </WeekDropHintProvider>
       </DragEnabledProvider>
     </DndContext>
   );
