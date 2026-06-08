@@ -137,10 +137,10 @@ test("drags a backlog task onto a non-focus week cell's top-3 zone (min-height r
   await page.mouse.move(tx, ty, { steps: 10 });
   await page.mouse.up();
 
-  // The task should now appear inside the week cell for 2026-06-12 as a top-3 item.
-  // The cell link is labelled "切到 2026-06-12"; within it the task title should be visible.
-  const weekCell = page.getByLabel("切到 2026-06-12");
-  await expect(weekCell.getByText("週欄拖曳迴歸測試")).toBeVisible();
+  // The task should now appear specifically inside the top-3 <ol> for 2026-06-12.
+  // Scoping to the top-3 zone (not just the whole cell) means a regression that drops
+  // the task into the "other" sub-zone would NOT match here — the test would fail.
+  await expect(top3Zone.getByText("週欄拖曳迴歸測試")).toBeVisible();
 });
 
 test("drags a backlog task onto the focus day's top-3 zone", async ({ page }) => {
