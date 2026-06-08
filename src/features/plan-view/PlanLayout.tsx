@@ -23,6 +23,8 @@ import { DragEnabledProvider } from "./dragContext";
 import { parseDropId } from "./dnd";
 import styles from "./PlanLayout.module.css";
 
+const ACTIVATION = { distance: 8 };
+
 export interface PlanLayoutProps {
   allTasks: Task[];
   selectedDate: string;
@@ -36,7 +38,7 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const dragEnabled = useHoverCapable();
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: ACTIVATION }),
     useSensor(KeyboardSensor),
   );
 
@@ -57,14 +59,19 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
       void store.promoteToMonth(id, month);
       return;
     }
-    void store.planScheduleDay(id, target.date).then(() => {
+    void (async () => {
+      await store.planScheduleDay(id, target.date);
       const s = useTasksStore.getState();
+      const task = s.tasks.find((t) => t.id === id);
+      // Only set priority if the schedule actually landed (guards the rollback-on-failure case)
+      const dates = task?.custom_fields.scheduled_dates ?? [];
+      if (dates[dates.length - 1] !== target.date) return;
       if (target.zone === "top3") {
         void s.setDailyPriority(id, nextFreeDailySlot(s.tasks, target.date), target.date);
       } else {
         void s.setDailyPriority(id, null, target.date);
       }
-    });
+    })();
   }
 
   return (
