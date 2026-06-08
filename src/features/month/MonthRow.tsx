@@ -27,7 +27,7 @@ export function MonthRow({ task, kind, month, selectedDate, interactive, showRin
   return (
     <div
       ref={draggable ? drag.ref : undefined}
-      className={[styles.row, isDone && styles.done, drag.isDragging && styles.dragging]
+      className={[styles.row, isDone && styles.done, draggable && drag.isDragging && styles.dragging]
         .filter(Boolean)
         .join(" ")}
       {...(draggable ? drag.handleProps : {})}

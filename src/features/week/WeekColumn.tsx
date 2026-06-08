@@ -65,7 +65,7 @@ function WeekDayCell({ date, allTasks, selectedDate }: WeekDayCellProps) {
                 <span className={styles.taskOrder}>{i + 1}.</span> {e.task.title}
               </li>
             ))}
-            {top3.length === 0 && <li className={styles.zoneHint}>三件事</li>}
+            {top3.length === 0 && top3Drop.isOver && <li className={styles.zoneHint}>三件事</li>}
           </ol>
           <div
             ref={otherDrop.ref}
@@ -76,7 +76,7 @@ function WeekDayCell({ date, allTasks, selectedDate }: WeekDayCellProps) {
             {otherCount > 0 ? (
               <span className={styles.more}>還有 {otherCount} 件其他任務</span>
             ) : (
-              <span className={styles.zoneHint}>其他</span>
+              otherDrop.isOver && <span className={styles.zoneHint}>其他</span>
             )}
           </div>
           {primary.length === 0 && <div className={styles.empty}>—</div>}

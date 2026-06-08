@@ -27,7 +27,7 @@ export function TaskRow({ task, kind, date, showAdhocChip, interactive, showRing
   return (
     <div
       ref={draggable ? drag.ref : undefined}
-      className={[styles.row, styles[`k_${kind}`], isDone && styles.done, drag.isDragging && styles.dragging]
+      className={[styles.row, styles[`k_${kind}`], isDone && styles.done, draggable && drag.isDragging && styles.dragging]
         .filter(Boolean)
         .join(" ")}
       {...(draggable ? drag.handleProps : {})}

@@ -3,7 +3,6 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
-  KeyboardSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -37,10 +36,7 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
   const [tab, setTab] = useState<MobileTab>("month");
   const [activeId, setActiveId] = useState<string | null>(null);
   const dragEnabled = useHoverCapable();
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: ACTIVATION }),
-    useSensor(KeyboardSensor),
-  );
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: ACTIVATION }));
 
   const activeTask = activeId ? allTasks.find((t) => t.id === activeId) : null;
 

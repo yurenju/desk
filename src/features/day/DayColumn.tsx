@@ -78,7 +78,7 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
             interactive={isInteractive}
           />
         ) : (
-          isInteractive && <div className={styles.dropHint}>拖到這裡 → 今天三件事</div>
+          isInteractive && top3Drop.isOver && <div className={styles.dropHint}>拖到這裡 → 今天三件事</div>
         )}
       </div>
 
@@ -123,7 +123,7 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
           </section>
         )}
 
-        {isInteractive && otherPlanned.length === 0 && adhoc.length === 0 && (
+        {isInteractive && otherPlanned.length === 0 && adhoc.length === 0 && otherDrop.isOver && (
           <div className={styles.dropHint}>拖到這裡 → 其他計劃內</div>
         )}
       </div>
