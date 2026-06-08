@@ -17,7 +17,7 @@ export interface MonthColumnProps {
 }
 
 export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps) {
-  const drop = useDroppableZone({ kind: "month" });
+  const { ref: dropRef, isOver } = useDroppableZone({ kind: "month" });
   const entries = useMemo(() => tasksOnMonth(allTasks, month), [allTasks, month]);
   const primary = entries.filter((e) => e.kind === "primary");
 
@@ -42,10 +42,7 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
     top3.length === 0 && otherPlanned.length === 0 && adhoc.length === 0 && trails.length === 0;
 
   return (
-    <div
-      ref={drop.ref}
-      className={[styles.col, drop.isOver && styles.isOver].filter(Boolean).join(" ")}
-    >
+    <div ref={dropRef} className={[styles.col, isOver && styles.isOver].filter(Boolean).join(" ")}>
       <header className={styles.head}>
         <div className={styles.eyebrow}>MONTH · 規劃</div>
         <div className={styles.titleRow}>
@@ -77,8 +74,15 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
         <section className={styles.section}>
           <header className={styles.sectionHead}>其他計劃內</header>
           {otherPlanned.map((e) => (
-            <MonthRow key={e.task.id} task={e.task} kind={e.kind}
-              month={month} selectedDate={selectedDate} interactive showRing />
+            <MonthRow
+              key={e.task.id}
+              task={e.task}
+              kind={e.kind}
+              month={month}
+              selectedDate={selectedDate}
+              interactive
+              showRing
+            />
           ))}
         </section>
       )}
@@ -87,8 +91,15 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
         <section className={styles.section}>
           <header className={[styles.sectionHead, styles.adhocHead].join(" ")}>計劃外</header>
           {adhoc.map((e) => (
-            <MonthRow key={e.task.id} task={e.task} kind={e.kind}
-              month={month} selectedDate={selectedDate} interactive showRing />
+            <MonthRow
+              key={e.task.id}
+              task={e.task}
+              kind={e.kind}
+              month={month}
+              selectedDate={selectedDate}
+              interactive
+              showRing
+            />
           ))}
         </section>
       )}
@@ -96,8 +107,13 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
       {trails.length > 0 && (
         <section className={styles.section}>
           {trails.map((e) => (
-            <MonthRow key={e.task.id} task={e.task} kind={e.kind}
-              month={month} selectedDate={selectedDate} />
+            <MonthRow
+              key={e.task.id}
+              task={e.task}
+              kind={e.kind}
+              month={month}
+              selectedDate={selectedDate}
+            />
           ))}
         </section>
       )}

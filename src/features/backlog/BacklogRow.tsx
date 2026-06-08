@@ -13,16 +13,16 @@ export interface BacklogRowProps {
 export function BacklogRow({ task, focusDate }: BacklogRowProps) {
   const isDone = task.status === "done";
   const row = useBacklogRow(task.id, { focusDate });
-  const drag = useDraggableRow(task.id);
+  const { ref: dragRef, isDragging, handleProps } = useDraggableRow(task.id);
   const day = focusDate.slice(8);
 
   return (
     <div
-      ref={drag.ref}
-      className={[styles.row, isDone && styles.done, drag.isDragging && styles.dragging]
+      ref={dragRef}
+      className={[styles.row, isDone && styles.done, isDragging && styles.dragging]
         .filter(Boolean)
         .join(" ")}
-      {...drag.handleProps}
+      {...handleProps}
     >
       <Checkbox
         checked={isDone}
@@ -50,7 +50,9 @@ export function BacklogRow({ task, focusDate }: BacklogRowProps) {
           <Menu
             ariaLabel="更多動作"
             trigger={
-              <button type="button" className={styles.iconBtn} aria-label="更多動作">⋯</button>
+              <button type="button" className={styles.iconBtn} aria-label="更多動作">
+                ⋯
+              </button>
             }
             items={[
               { key: "to-month", label: "→ 本月（其他計劃內）", onSelect: row.toMonth },

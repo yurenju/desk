@@ -26,18 +26,25 @@ export function MonthHeroCard({ top3, month, selectedDate }: MonthHeroCardProps)
   );
 }
 
-function MonthHeroItem({ task, month, selectedDate }:
-  { task: Task; month: string; selectedDate: string }) {
+function MonthHeroItem({
+  task,
+  month,
+  selectedDate,
+}: {
+  task: Task;
+  month: string;
+  selectedDate: string;
+}) {
   const row = useMonthRow(task.id, { month, selectedDate });
-  const drag = useDraggableRow(`month:${task.id}`);
+  const { ref: dragRef, isDragging, handleProps } = useDraggableRow(`month:${task.id}`);
   const isAdhoc = task.custom_fields.is_adhoc === "true";
   const pr = task.custom_fields.monthly_priority ?? null;
 
   return (
     <li
-      ref={drag.ref}
-      className={[styles.item, drag.isDragging && styles.dragging].filter(Boolean).join(" ")}
-      {...drag.handleProps}
+      ref={dragRef}
+      className={[styles.item, isDragging && styles.dragging].filter(Boolean).join(" ")}
+      {...handleProps}
     >
       <Checkbox
         checked={task.status === "done"}
@@ -78,13 +85,31 @@ function MonthHeroItem({ task, month, selectedDate }:
           <Menu
             ariaLabel="更多動作"
             trigger={
-              <button type="button" className={styles.iconBtn} aria-label="更多動作">⋯</button>
+              <button type="button" className={styles.iconBtn} aria-label="更多動作">
+                ⋯
+              </button>
             }
             items={[
-              { key: "promote-1", label: `→ ${selectedDate.slice(8)} 日 · ① 三件事`, onSelect: () => row.promote("1") },
-              { key: "promote-2", label: `→ ${selectedDate.slice(8)} 日 · ② 三件事`, onSelect: () => row.promote("2") },
-              { key: "promote-3", label: `→ ${selectedDate.slice(8)} 日 · ③ 三件事`, onSelect: () => row.promote("3") },
-              { key: "promote-other", label: `→ ${selectedDate.slice(8)} 日 · 其他`, onSelect: () => row.promote() },
+              {
+                key: "promote-1",
+                label: `→ ${selectedDate.slice(8)} 日 · ① 三件事`,
+                onSelect: () => row.promote("1"),
+              },
+              {
+                key: "promote-2",
+                label: `→ ${selectedDate.slice(8)} 日 · ② 三件事`,
+                onSelect: () => row.promote("2"),
+              },
+              {
+                key: "promote-3",
+                label: `→ ${selectedDate.slice(8)} 日 · ③ 三件事`,
+                onSelect: () => row.promote("3"),
+              },
+              {
+                key: "promote-other",
+                label: `→ ${selectedDate.slice(8)} 日 · 其他`,
+                onSelect: () => row.promote(),
+              },
               isAdhoc
                 ? { key: "to-planned", label: "↑ 移到計畫內", onSelect: row.toggleAdhoc }
                 : { key: "to-adhoc", label: "↓ 標為計畫外", onSelect: row.toggleAdhoc },

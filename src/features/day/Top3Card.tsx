@@ -40,7 +40,7 @@ function Top3Item({
   interactive?: boolean;
 }) {
   const row = useTaskRow(t.id, date);
-  const drag = useDraggableRow(`day:${t.id}`);
+  const { ref: dragRef, isDragging, handleProps } = useDraggableRow(`day:${t.id}`);
   const isAdhoc = t.custom_fields.is_adhoc === "true";
   const order = (t.custom_fields.daily_priority ?? t.custom_fields.monthly_priority) as
     | "1"
@@ -50,9 +50,9 @@ function Top3Item({
 
   return (
     <li
-      ref={drag.ref}
-      className={[styles.item, drag.isDragging && styles.dragging].filter(Boolean).join(" ")}
-      {...drag.handleProps}
+      ref={dragRef}
+      className={[styles.item, isDragging && styles.dragging].filter(Boolean).join(" ")}
+      {...handleProps}
     >
       <Checkbox
         variant={variant === "accent" ? "accent" : "primary"}

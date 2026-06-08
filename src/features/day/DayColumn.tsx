@@ -46,8 +46,16 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
     top3.length === 0 && otherPlanned.length === 0 && adhoc.length === 0 && trails.length === 0;
 
   const isInteractive = interactive ?? variant === "today-hero";
-  const top3Drop = useDroppableZone({ kind: "day", date: selectedDate, zone: "top3" });
-  const otherDrop = useDroppableZone({ kind: "day", date: selectedDate, zone: "other" });
+  const { ref: top3Ref, isOver: top3IsOver } = useDroppableZone({
+    kind: "day",
+    date: selectedDate,
+    zone: "top3",
+  });
+  const { ref: otherRef, isOver: otherIsOver } = useDroppableZone({
+    kind: "day",
+    date: selectedDate,
+    zone: "other",
+  });
   // "today" is the store's notion of today (set to the real local date at load),
   // the single source of truth — not a fresh todayISO() read, which would
   // disagree in tests and at a midnight rollover.
@@ -66,9 +74,9 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
       </div>
 
       <div
-        ref={top3Drop.ref}
+        ref={top3Ref}
         data-testid="top3-drop-zone"
-        className={[styles.dropZone, top3Drop.isOver && styles.isOver].filter(Boolean).join(" ")}
+        className={[styles.dropZone, top3IsOver && styles.isOver].filter(Boolean).join(" ")}
       >
         {top3.length > 0 ? (
           <Top3Card
@@ -79,13 +87,14 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
             interactive={isInteractive}
           />
         ) : (
-          isInteractive && top3Drop.isOver && <div className={styles.dropHint}>拖到這裡 → 今天三件事</div>
+          isInteractive &&
+          top3IsOver && <div className={styles.dropHint}>拖到這裡 → 今天三件事</div>
         )}
       </div>
 
       <div
-        ref={otherDrop.ref}
-        className={[styles.dropZone, otherDrop.isOver && styles.isOver].filter(Boolean).join(" ")}
+        ref={otherRef}
+        className={[styles.dropZone, otherIsOver && styles.isOver].filter(Boolean).join(" ")}
       >
         {otherPlanned.length > 0 && (
           <section className={styles.section}>
@@ -108,7 +117,8 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
         {adhoc.length > 0 && (
           <section className={styles.section}>
             <header className={[styles.sectionHead, styles.adhocHead].join(" ")}>
-              {isToday ? "今天臨時加的" : "臨時加的"} <span className={styles.count}>{adhoc.length}</span>
+              {isToday ? "今天臨時加的" : "臨時加的"}{" "}
+              <span className={styles.count}>{adhoc.length}</span>
             </header>
             {adhoc.map((e) => (
               <TaskRow
@@ -124,7 +134,7 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
           </section>
         )}
 
-        {isInteractive && otherPlanned.length === 0 && adhoc.length === 0 && otherDrop.isOver && (
+        {isInteractive && otherPlanned.length === 0 && adhoc.length === 0 && otherIsOver && (
           <div className={styles.dropHint}>拖到這裡 → 其他計劃內</div>
         )}
       </div>

@@ -23,11 +23,11 @@ interface WeekTaskItemProps {
 }
 
 function WeekTaskItem({ taskId, date, order, title, done }: WeekTaskItemProps) {
-  const draggable = useDraggableRow(`week:${date}:${taskId}`);
+  const { ref: dragRef, handleProps } = useDraggableRow(`week:${date}:${taskId}`);
   return (
     <li
-      ref={draggable.ref}
-      {...draggable.handleProps}
+      ref={dragRef}
+      {...handleProps}
       className={[styles.task, done && styles.done, order == null && styles.otherTask]
         .filter(Boolean)
         .join(" ")}
@@ -47,15 +47,14 @@ function WeekDayCell({ date, allTasks, selectedDate }: WeekDayCellProps) {
   // One droppable per cell. top-3 vs other is decided by the drop's vertical
   // position (upper half = top-3) in PlanLayout — two stacked sub-zones this
   // small are unreliable for dnd-kit collision when dragging within one cell.
-  const cellDrop = useDroppableZone({ kind: "weekday", date });
+  const { ref: cellRef, isOver: cellIsOver } = useDroppableZone({ kind: "weekday", date });
   const entries = tasksOnDate(allTasks, date);
   const primary = entries.filter((e) => e.kind === "primary");
   const top3 = primary
     .filter((e) => e.task.custom_fields.daily_priority)
     .sort(
       (a, b) =>
-        Number(a.task.custom_fields.daily_priority) -
-        Number(b.task.custom_fields.daily_priority),
+        Number(a.task.custom_fields.daily_priority) - Number(b.task.custom_fields.daily_priority),
     )
     .slice(0, 3);
   // Tasks scheduled on this day that aren't one of the top-3
@@ -90,9 +89,9 @@ function WeekDayCell({ date, allTasks, selectedDate }: WeekDayCellProps) {
             shift the cell layout (a shift would move the zone out from under the
             pointer and break the drop). */}
         <div
-          ref={cellDrop.ref}
+          ref={cellRef}
           data-testid={`week-cell-${date}`}
-          className={[styles.cellBody, cellDrop.isOver && styles.isOver].filter(Boolean).join(" ")}
+          className={[styles.cellBody, cellIsOver && styles.isOver].filter(Boolean).join(" ")}
         >
           {overCell && (
             <>

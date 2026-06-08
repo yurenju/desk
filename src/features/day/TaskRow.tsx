@@ -21,16 +21,21 @@ export function TaskRow({ task, kind, date, showAdhocChip, interactive, showRing
   const isAdhoc = task.custom_fields.is_adhoc === "true";
   const row = useTaskRow(task.id, date);
   const editable = Boolean(interactive) && kind === "primary";
-  const drag = useDraggableRow(`day:${task.id}`);
+  const { ref: dragRef, isDragging, handleProps } = useDraggableRow(`day:${task.id}`);
   const draggable = kind === "primary";
 
   return (
     <div
-      ref={draggable ? drag.ref : undefined}
-      className={[styles.row, styles[`k_${kind}`], isDone && styles.done, draggable && drag.isDragging && styles.dragging]
+      ref={draggable ? dragRef : undefined}
+      className={[
+        styles.row,
+        styles[`k_${kind}`],
+        isDone && styles.done,
+        draggable && isDragging && styles.dragging,
+      ]
         .filter(Boolean)
         .join(" ")}
-      {...(draggable ? drag.handleProps : {})}
+      {...(draggable ? handleProps : {})}
     >
       <Checkbox
         checked={isDone}
