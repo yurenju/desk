@@ -273,7 +273,8 @@
 **實作中的設計修正**:
 - **不掛 `KeyboardSensor`**:自由形式 drop zone 沒有客製 `coordinateGetter` 時鍵盤拖曳無效、又讓列變 focusable 誤導;鍵盤無障礙改走完全可鍵盤操作的 `⋯` menu。
 - **Week 日格改「單一 droppable + 垂直 Y-split」**:每格兩個 ~20px 貼鄰子區對 dnd-kit 碰撞極不可靠(同格短拖時 rectIntersection / pointerWithin / closestCenter 全部解析錯或解不到,導致「重要 → 其他」降級拖不動,手動驗收抓到)。改成每格一個大 droppable,top-3 / 其他由放下點落在 cellBody 上半 / 下半決定;拖曳中不增刪內容以免版面位移把放下區移走。
-- **Week 日格拖曳用複合 id `week:<date>:<taskId>`**:避免焦點日 top-3 任務同時在 Day 欄與 Week 格被註冊成同一 draggable id。
+- **所有欄位的 draggable id 命名空間化**(`month:` / `day:` / `week:<date>:`):同一焦點日任務會同時出現在 Day 欄、Month「其他計劃內」、Week 格,原本 Day / Month 都用 bare `task.id` → dnd-kit 撞 id、把焦點日任務的拖曳整個搞壞(甚至卡死渲染器)。`resolveTaskId` 還原真實 id。
+- **Week 日格的「其他」任務改渲染成可拖項目**(取代 Slice 3.5 的「還有 n 件其他任務」計數):否則無法在週格抓「其他」任務往上拖。現在週格內可雙向拖曳——其他 → 三件事(升級)、三件事 → 其他(降級)。
 - **`nextFreeDailySlot` 排除被拖任務**:重排已有名次的任務到別天時,不讓它把自己舊名次算進空位(否則落 ② 而非 ①)。
 
 **不做(留後續)**:日 → 月「降級 / 丟回月」(task 排到某天已補本月、仍在 Month 欄,真正的丟回月留 **Slice 6**);Focus 模式順延拖曳(**Slice 5 / 6**);手機 day↔day 重排(桌機拖曳限定);同欄拖曳排序(`position`,**Slice 7**)。
