@@ -3,6 +3,7 @@ import { Checkbox } from "@/ui/Checkbox";
 import { UnplannedChip } from "@/ui/Chip";
 import { Menu } from "@/ui/Menu";
 import { PriorityRing } from "@/ui/PriorityRing";
+import { useDraggableRow } from "@/features/plan-view/useDraggableRow";
 import { useTaskRow } from "./useTaskRow";
 import styles from "./Top3Card.module.css";
 
@@ -39,6 +40,7 @@ function Top3Item({
   interactive?: boolean;
 }) {
   const row = useTaskRow(t.id, date);
+  const drag = useDraggableRow(t.id);
   const isAdhoc = t.custom_fields.is_adhoc === "true";
   const order = (t.custom_fields.daily_priority ?? t.custom_fields.monthly_priority) as
     | "1"
@@ -47,7 +49,11 @@ function Top3Item({
     | undefined;
 
   return (
-    <li className={styles.item}>
+    <li
+      ref={drag.ref}
+      className={[styles.item, drag.isDragging && styles.dragging].filter(Boolean).join(" ")}
+      {...drag.handleProps}
+    >
       <Checkbox
         variant={variant === "accent" ? "accent" : "primary"}
         checked={t.status === "done"}

@@ -61,3 +61,7 @@
   background: var(--color-paper-alt);
   color: inherit;
 }
+
+.dragging {
+  opacity: 0.5;
+}

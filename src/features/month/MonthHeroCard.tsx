@@ -3,6 +3,7 @@ import { Checkbox } from "@/ui/Checkbox";
 import { UnplannedChip } from "@/ui/Chip";
 import { Menu } from "@/ui/Menu";
 import { PriorityRing } from "@/ui/PriorityRing";
+import { useDraggableRow } from "@/features/plan-view/useDraggableRow";
 import { useMonthRow } from "./useMonthRow";
 import styles from "./MonthHeroCard.module.css";
 
@@ -28,11 +29,16 @@ export function MonthHeroCard({ top3, month, selectedDate }: MonthHeroCardProps)
 function MonthHeroItem({ task, month, selectedDate }:
   { task: Task; month: string; selectedDate: string }) {
   const row = useMonthRow(task.id, { month, selectedDate });
+  const drag = useDraggableRow(task.id);
   const isAdhoc = task.custom_fields.is_adhoc === "true";
   const pr = task.custom_fields.monthly_priority ?? null;
 
   return (
-    <li className={styles.item}>
+    <li
+      ref={drag.ref}
+      className={[styles.item, drag.isDragging && styles.dragging].filter(Boolean).join(" ")}
+      {...drag.handleProps}
+    >
       <Checkbox
         checked={task.status === "done"}
         onCheckedChange={row.toggle}

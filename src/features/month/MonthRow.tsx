@@ -3,6 +3,7 @@ import { Checkbox } from "@/ui/Checkbox";
 import { UnplannedChip } from "@/ui/Chip";
 import { Menu } from "@/ui/Menu";
 import { PriorityRing } from "@/ui/PriorityRing";
+import { useDraggableRow } from "@/features/plan-view/useDraggableRow";
 import { useMonthRow } from "./useMonthRow";
 import styles from "./MonthRow.module.css";
 
@@ -20,9 +21,17 @@ export function MonthRow({ task, kind, month, selectedDate, interactive, showRin
   const isAdhoc = task.custom_fields.is_adhoc === "true";
   const row = useMonthRow(task.id, { month, selectedDate });
   const editable = Boolean(interactive) && kind === "primary";
+  const drag = useDraggableRow(task.id);
+  const draggable = kind === "primary";
 
   return (
-    <div className={[styles.row, isDone && styles.done].filter(Boolean).join(" ")}>
+    <div
+      ref={draggable ? drag.ref : undefined}
+      className={[styles.row, isDone && styles.done, drag.isDragging && styles.dragging]
+        .filter(Boolean)
+        .join(" ")}
+      {...(draggable ? drag.handleProps : {})}
+    >
       <Checkbox
         checked={isDone}
         disabled={!editable}
