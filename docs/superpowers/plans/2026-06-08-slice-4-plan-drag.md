@@ -1132,6 +1132,8 @@ git commit -m "feat(plan): dnd-kit infra — drop ids, drag context, draggable/d
 
 ## Task 11：`PlanLayout` 掛 `DndContext` + `onDragEnd`
 
+> **實作記錄**：`KeyboardSensor` 已在實作中移除。dnd-kit `KeyboardSensor` 在自由形式 drop zone 需要客製 `coordinateGetter`，沒有就會讓列獲得 focus 但操作無效。鍵盤無障礙改由 `⋯` menu 全程鍵盤可操作提供；下方程式碼範例仍保留原稿供參考，實際程式碼只掛 `PointerSensor`。
+
 **Files:**
 - Modify: `src/features/plan-view/PlanLayout.tsx`
 
@@ -1672,7 +1674,7 @@ Expected: 三者全綠
 - 拖到某日自動補本月、同時顯示在 Month 欄
 - drop 高亮、樂觀更新、失敗 toast
 - 窄視窗（手機）：backlog/月列只出 menu、不可拖
-- 鍵盤拖曳（dnd-kit KeyboardSensor）
+- ~~鍵盤拖曳（dnd-kit KeyboardSensor）~~ → **已改由 `⋯` menu 提供鍵盤無障礙**（KeyboardSensor 移除，理由見 Task 11 記錄）
 
 - [ ] **Step 3：更新 ROADMAP**
 

@@ -101,7 +101,7 @@ Week 日格視覺上本來就有「三件事（top-3 標題）」與「其他（
   - `→ 焦點日 · ① / ② / ③ 三件事` = `planScheduleDay(焦點日)` + `setDailyPriority(n, 焦點日)`
   - `→ 焦點日 · 其他` = `planScheduleDay(焦點日)`（清名次）
   - `編輯`、`刪除`
-- **`MonthRow` 的 `⋯`**：沿用既有 `→ N日 · ①②③ / 其他`，底層由 `promoteToDay` 改用 `planScheduleDay`（對月來源等於 append、無回歸）。
+- **`MonthRow` 的 `⋯`**：沿用既有 `→ N日 · ①②③ / 其他`，底層改用 `planScheduleDay`（對月來源等於 append、無回歸）。
 - **Day `TaskRow` 的 `⋯`**：不變（計畫內外切換 / 編輯 / 刪除）。day↔day 重排走拖曳，menu 不加。
 
 ## 元件與 op 清單
@@ -123,7 +123,7 @@ Week 日格視覺上本來就有「三件事（top-3 標題）」與「其他（
 ### 相依
 
 - 新增 `@dnd-kit/core`。安裝用 `npm install --legacy-peer-deps`（專案既有 peer 衝突慣例）。
-- 桌機掛 `PointerSensor`（含 activation distance 避免誤觸）+ `KeyboardSensor`（鍵盤可拖曳 = 無障礙 fallback）。手機那條路不掛 DnD。
+- 桌機掛 `PointerSensor`（含 activation distance 避免誤觸）。拖曳為純指標操作；**不掛 `KeyboardSensor`**（dnd-kit KeyboardSensor 在自由形式 drop zone 需要客製 `coordinateGetter`，沒有就會讓列獲得 focus 但操作無效，體驗更差）。手機那條路不掛 DnD。
 
 ## 資料層細節
 
@@ -180,5 +180,5 @@ Week 日格視覺上本來就有「三件事（top-3 標題）」與「其他（
 7. 拖到某日時 `monthOf(該日)` 自動補進 `scheduled_months`，該 task 同時顯示在 Month 欄。
 8. 拖曳中目標放下區有高亮；放開後樂觀更新立即反映，失敗回滾並出 toast。
 9. 手機（窄視窗）：backlog / 月列只出 `⋯` menu、無法拖曳；menu 的 `→ 本月` / `→ 焦點日 · 名次` 正常運作。
-10. 鍵盤可操作拖曳（dnd-kit KeyboardSensor）：focus 到可拖列、用鍵盤完成一次 promote。
+10. 鍵盤無障礙透過 `⋯` menu 提供：focus 到列、開 menu、選 promote 動作，全程純鍵盤可操作。拖曳是純指標增強，無鍵盤拖曳。
 11. `npm run build`、`npx vitest run`、`npm run test:e2e` 全綠。
