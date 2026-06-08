@@ -40,16 +40,21 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
 
   const activeTask = activeId ? allTasks.find((t) => t.id === activeId) : null;
 
-  // Recover the real task id from a composite week-cell drag id (`week:<date>:<taskId>`)
-  // or return the id as-is for plain task draggables.
-  // Format: "week:<YYYY-MM-DD>:<taskId>" — parts[0]="week", parts[1]="YYYY-MM-DD", parts[2+]="taskId"
-  // Task ids are uuid / "temp-<uuid>" style and contain no colons, so parts.slice(2) is always 1 element.
+  // The same task can render as a draggable in several columns at once (e.g. a
+  // focus-day task shows in the Day column, the Month "other" list, AND the Week
+  // cell). dnd-kit requires unique draggable ids, so each surface namespaces its
+  // id: "month:<taskId>", "day:<taskId>", "week:<date>:<taskId>". Recover the
+  // real task id by stripping the namespace prefix.
+  // Task ids are uuid / "temp-<uuid>" style; even if one ever held a colon the
+  // slicing below keeps every segment after the prefix.
   function resolveTaskId(activeId: string): string {
     if (activeId.startsWith("week:")) {
-      const parts = activeId.split(":");
-      // parts[0] = "week", parts[1] = "YYYY-MM-DD", parts[2...] = taskId segments
-      return parts.slice(2).join(":");
+      // week:<YYYY-MM-DD>:<taskId> — drop the first two segments.
+      const afterDate = activeId.indexOf(":", "week:".length);
+      return activeId.slice(afterDate + 1);
     }
+    if (activeId.startsWith("month:")) return activeId.slice("month:".length);
+    if (activeId.startsWith("day:")) return activeId.slice("day:".length);
     return activeId;
   }
 

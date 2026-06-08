@@ -190,3 +190,52 @@ test("drags a backlog task onto the focus day's top-3 zone", async ({ page }) =>
     .last();
   await expect(top3Card.getByText("拖曳測試任務")).toBeVisible();
 });
+
+test("demotes a focus-day top-3 task to other by dragging within its week cell", async ({
+  page,
+}) => {
+  // A focus-day task renders as a draggable in THREE places at once — the Day
+  // column, the Month "other" list, and the Week cell — which must use distinct
+  // dnd-kit ids or the drag breaks. This drags the week-cell copy from the
+  // top-3 area down to the cell's lower half to clear its priority (demote).
+  await page.goto("/plan/2026-06-10");
+  await page.getByRole("button", { name: /Backlog/ }).click();
+  const input = page.getByPlaceholder("+ 加一件想做但還沒排的事…");
+  await input.fill("焦點降級測試");
+  await input.press("Enter");
+
+  // Promote to the focus day (2026-06-10) as ① via the backlog row menu.
+  const row = page
+    .locator("div")
+    .filter({ has: page.getByText("焦點降級測試") })
+    .filter({ has: page.getByRole("button", { name: "更多動作" }) })
+    .last();
+  await row.getByRole("button", { name: "更多動作" }).click();
+  await page.getByRole("menuitem", { name: /· ① 三件事/ }).click();
+
+  // It now shows in the focus-day week cell's top-3 zone.
+  const top3 = page.getByTestId("week-top3-2026-06-10");
+  await expect(top3.getByText("焦點降級測試")).toBeVisible();
+
+  // Drag the week-cell item down into the lower (other) half of the cell.
+  const source = top3.getByText("焦點降級測試");
+  const cell = page.getByTestId("week-cell-2026-06-10");
+  await source.scrollIntoViewIfNeeded();
+  const sBox = await source.boundingBox();
+  const cBox = await cell.boundingBox();
+  if (!sBox || !cBox) throw new Error("missing bounding box for drag");
+
+  const sx = sBox.x + sBox.width / 2;
+  const sy = sBox.y + sBox.height / 2;
+  const tx = cBox.x + cBox.width / 2;
+  const ty = cBox.y + cBox.height * 0.85; // lower half → "other"
+
+  await page.mouse.move(sx, sy);
+  await page.mouse.down();
+  await page.mouse.move(sx + 12, sy + 12, { steps: 5 });
+  await page.mouse.move(tx, ty, { steps: 10 });
+  await page.mouse.up();
+
+  // Demoted: the task is no longer in the focus day's top-3 zone.
+  await expect(top3.getByText("焦點降級測試")).toBeHidden();
+});

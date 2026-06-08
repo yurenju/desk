@@ -21,7 +21,7 @@ export function TaskRow({ task, kind, date, showAdhocChip, interactive, showRing
   const isAdhoc = task.custom_fields.is_adhoc === "true";
   const row = useTaskRow(task.id, date);
   const editable = Boolean(interactive) && kind === "primary";
-  const drag = useDraggableRow(task.id);
+  const drag = useDraggableRow(`day:${task.id}`);
   const draggable = kind === "primary";
 
   return (

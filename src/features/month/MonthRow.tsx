@@ -21,7 +21,7 @@ export function MonthRow({ task, kind, month, selectedDate, interactive, showRin
   const isAdhoc = task.custom_fields.is_adhoc === "true";
   const row = useMonthRow(task.id, { month, selectedDate });
   const editable = Boolean(interactive) && kind === "primary";
-  const drag = useDraggableRow(task.id);
+  const drag = useDraggableRow(`month:${task.id}`);
   const draggable = kind === "primary";
 
   return (

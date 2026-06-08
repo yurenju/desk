@@ -40,7 +40,7 @@ function Top3Item({
   interactive?: boolean;
 }) {
   const row = useTaskRow(t.id, date);
-  const drag = useDraggableRow(t.id);
+  const drag = useDraggableRow(`day:${t.id}`);
   const isAdhoc = t.custom_fields.is_adhoc === "true";
   const order = (t.custom_fields.daily_priority ?? t.custom_fields.monthly_priority) as
     | "1"

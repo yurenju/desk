@@ -77,6 +77,7 @@ function WeekDayCell({ date, allTasks, selectedDate }: WeekDayCellProps) {
             mid-drag — a shift would move the zones out from under the pointer. */}
         <div
           ref={cellDrop.ref}
+          data-testid={`week-cell-${date}`}
           className={[styles.cellBody, cellDrop.isOver && styles.isOver].filter(Boolean).join(" ")}
         >
           <ol data-testid={`week-top3-${date}`} className={styles.tasks}>

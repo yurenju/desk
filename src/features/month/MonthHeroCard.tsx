@@ -29,7 +29,7 @@ export function MonthHeroCard({ top3, month, selectedDate }: MonthHeroCardProps)
 function MonthHeroItem({ task, month, selectedDate }:
   { task: Task; month: string; selectedDate: string }) {
   const row = useMonthRow(task.id, { month, selectedDate });
-  const drag = useDraggableRow(task.id);
+  const drag = useDraggableRow(`month:${task.id}`);
   const isAdhoc = task.custom_fields.is_adhoc === "true";
   const pr = task.custom_fields.monthly_priority ?? null;
 
