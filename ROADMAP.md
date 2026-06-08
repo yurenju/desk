@@ -272,7 +272,7 @@
 
 **實作中的設計修正**:
 - **不掛 `KeyboardSensor`**:自由形式 drop zone 沒有客製 `coordinateGetter` 時鍵盤拖曳無效、又讓列變 focusable 誤導;鍵盤無障礙改走完全可鍵盤操作的 `⋯` menu。
-- **Week 日格 top-3 子區補 `min-height`**:否則空日的 top-3 `<ol>` 塌成 0 高、拖過去只會落「其他」(手動驗收抓到)。
+- **Week 日格改「單一 droppable + 垂直 Y-split」**:每格兩個 ~20px 貼鄰子區對 dnd-kit 碰撞極不可靠(同格短拖時 rectIntersection / pointerWithin / closestCenter 全部解析錯或解不到,導致「重要 → 其他」降級拖不動,手動驗收抓到)。改成每格一個大 droppable,top-3 / 其他由放下點落在 cellBody 上半 / 下半決定;拖曳中不增刪內容以免版面位移把放下區移走。
 - **Week 日格拖曳用複合 id `week:<date>:<taskId>`**:避免焦點日 top-3 任務同時在 Day 欄與 Week 格被註冊成同一 draggable id。
 - **`nextFreeDailySlot` 排除被拖任務**:重排已有名次的任務到別天時,不讓它把自己舊名次算進空位(否則落 ② 而非 ①)。
 
