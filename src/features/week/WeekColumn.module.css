@@ -157,3 +157,29 @@
   color: var(--color-ink-faint);
   margin-top: 2px;
 }
+
+.cellBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+}
+
+.zone {
+  border-radius: var(--radius-sm);
+}
+
+.zone.isOver {
+  outline: 2px dashed var(--color-accent);
+  outline-offset: -2px;
+}
+
+.otherZone {
+  min-height: var(--space-5);
+}
+
+.zoneHint {
+  color: var(--color-ink-faint);
+  font-size: var(--text-2xs);
+}

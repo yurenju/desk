@@ -4,6 +4,7 @@ import type { Task } from "@/lib/types";
 import { tasksOnMonth } from "@/lib/tasks";
 import { formatMonth, addMonths } from "@/lib/date";
 import { BacklogSection } from "@/features/backlog/BacklogSection";
+import { useDroppableZone } from "@/features/plan-view/useDroppableZone";
 import { MonthHeroCard } from "./MonthHeroCard";
 import { MonthRow } from "./MonthRow";
 import { AddMonthTaskInput } from "./AddMonthTaskInput";
@@ -16,6 +17,7 @@ export interface MonthColumnProps {
 }
 
 export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps) {
+  const drop = useDroppableZone({ kind: "month" });
   const entries = useMemo(() => tasksOnMonth(allTasks, month), [allTasks, month]);
   const primary = entries.filter((e) => e.kind === "primary");
 
@@ -40,7 +42,10 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
     top3.length === 0 && otherPlanned.length === 0 && adhoc.length === 0 && trails.length === 0;
 
   return (
-    <div className={styles.col}>
+    <div
+      ref={drop.ref}
+      className={[styles.col, drop.isOver && styles.isOver].filter(Boolean).join(" ")}
+    >
       <header className={styles.head}>
         <div className={styles.eyebrow}>MONTH · 規劃</div>
         <div className={styles.titleRow}>

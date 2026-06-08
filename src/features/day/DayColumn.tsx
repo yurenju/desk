@@ -3,6 +3,7 @@ import type { Task } from "@/lib/types";
 import { tasksOnDate } from "@/lib/tasks";
 import { dayOfMonth, shortWeekday } from "@/lib/date";
 import { useTasksStore } from "@/store/tasks";
+import { useDroppableZone } from "@/features/plan-view/useDroppableZone";
 import { TaskRow } from "./TaskRow";
 import { Top3Card } from "./Top3Card";
 import { AddTaskInput } from "./AddTaskInput";
@@ -45,6 +46,8 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
     top3.length === 0 && otherPlanned.length === 0 && adhoc.length === 0 && trails.length === 0;
 
   const isInteractive = interactive ?? variant === "today-hero";
+  const top3Drop = useDroppableZone({ kind: "day", date: selectedDate, zone: "top3" });
+  const otherDrop = useDroppableZone({ kind: "day", date: selectedDate, zone: "other" });
   // "today" is the store's notion of today (set to the real local date at load),
   // the single source of truth — not a fresh todayISO() read, which would
   // disagree in tests and at a midnight rollover.
@@ -62,52 +65,68 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
         </h2>
       </div>
 
-      {top3.length > 0 && (
-        <Top3Card
-          tasks={top3}
-          title={isToday ? "今天最重要的三件事" : "最重要的三件事"}
-          variant="accent"
-          date={selectedDate}
-          interactive={isInteractive}
-        />
-      )}
+      <div
+        ref={top3Drop.ref}
+        className={[styles.dropZone, top3Drop.isOver && styles.isOver].filter(Boolean).join(" ")}
+      >
+        {top3.length > 0 ? (
+          <Top3Card
+            tasks={top3}
+            title={isToday ? "今天最重要的三件事" : "最重要的三件事"}
+            variant="accent"
+            date={selectedDate}
+            interactive={isInteractive}
+          />
+        ) : (
+          isInteractive && <div className={styles.dropHint}>拖到這裡 → 今天三件事</div>
+        )}
+      </div>
 
-      {otherPlanned.length > 0 && (
-        <section className={styles.section}>
-          <header className={styles.sectionHead}>
-            其他計劃內 <span className={styles.count}>{otherPlanned.length}</span>
-          </header>
-          {otherPlanned.map((e) => (
-            <TaskRow
-              key={e.task.id}
-              task={e.task}
-              kind={e.kind}
-              date={selectedDate}
-              interactive={isInteractive}
-              showRing={isInteractive}
-            />
-          ))}
-        </section>
-      )}
+      <div
+        ref={otherDrop.ref}
+        className={[styles.dropZone, otherDrop.isOver && styles.isOver].filter(Boolean).join(" ")}
+      >
+        {otherPlanned.length > 0 && (
+          <section className={styles.section}>
+            <header className={styles.sectionHead}>
+              其他計劃內 <span className={styles.count}>{otherPlanned.length}</span>
+            </header>
+            {otherPlanned.map((e) => (
+              <TaskRow
+                key={e.task.id}
+                task={e.task}
+                kind={e.kind}
+                date={selectedDate}
+                interactive={isInteractive}
+                showRing={isInteractive}
+              />
+            ))}
+          </section>
+        )}
 
-      {adhoc.length > 0 && (
-        <section className={styles.section}>
-          <header className={[styles.sectionHead, styles.adhocHead].join(" ")}>
-            {isToday ? "今天臨時加的" : "臨時加的"} <span className={styles.count}>{adhoc.length}</span>
-          </header>
-          {adhoc.map((e) => (
-            <TaskRow
-              key={e.task.id}
-              task={e.task}
-              kind={e.kind}
-              date={selectedDate}
-              showAdhocChip
-              interactive={isInteractive}
-              showRing={isInteractive}
-            />
-          ))}
-        </section>
-      )}
+        {adhoc.length > 0 && (
+          <section className={styles.section}>
+            <header className={[styles.sectionHead, styles.adhocHead].join(" ")}>
+              {isToday ? "今天臨時加的" : "臨時加的"} <span className={styles.count}>{adhoc.length}</span>
+            </header>
+            {adhoc.map((e) => (
+              <TaskRow
+                key={e.task.id}
+                task={e.task}
+                kind={e.kind}
+                date={selectedDate}
+                showAdhocChip
+                interactive={isInteractive}
+                showRing={isInteractive}
+              />
+            ))}
+          </section>
+        )}
+
+        {isInteractive && otherPlanned.length === 0 && adhoc.length === 0 && (
+          <div className={styles.dropHint}>拖到這裡 → 其他計劃內</div>
+        )}
+      </div>
 
       {trails.length > 0 && (
         <section className={styles.section}>

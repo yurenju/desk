@@ -77,3 +77,8 @@
   color: var(--color-ink-faint);
   padding: var(--space-3) 0;
 }
+
+.isOver {
+  outline: 2px dashed var(--color-accent);
+  outline-offset: -4px;
+}
