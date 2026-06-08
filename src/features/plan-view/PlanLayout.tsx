@@ -40,8 +40,23 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
 
   const activeTask = activeId ? allTasks.find((t) => t.id === activeId) : null;
 
+  // Recover the real task id from a composite week-cell drag id (`week:<date>:<taskId>`)
+  // or return the id as-is for plain task draggables.
+  // Format: "week:<YYYY-MM-DD>:<taskId>" — parts[0]="week", parts[1]="YYYY-MM-DD", parts[2+]="taskId"
+  // Task ids are uuid / "temp-<uuid>" style and contain no colons, so parts.slice(2) is always 1 element.
+  function resolveTaskId(activeId: string): string {
+    if (activeId.startsWith("week:")) {
+      const parts = activeId.split(":");
+      // parts[0] = "week", parts[1] = "YYYY-MM-DD", parts[2...] = taskId segments
+      return parts.slice(2).join(":");
+    }
+    return activeId;
+  }
+
   function handleDragStart(e: DragStartEvent) {
-    setActiveId(String(e.active.id));
+    const rawId = String(e.active.id);
+    // For week-sourced drags, track the real task id so the overlay shows the title.
+    setActiveId(resolveTaskId(rawId));
   }
 
   function handleDragEnd(e: DragEndEvent) {
@@ -49,7 +64,7 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
     if (!e.over) return;
     const target = parseDropId(String(e.over.id));
     if (!target) return;
-    const id = String(e.active.id);
+    const id = resolveTaskId(String(e.active.id));
     const store = useTasksStore.getState();
     if (target.kind === "month") {
       void store.promoteToMonth(id, month);

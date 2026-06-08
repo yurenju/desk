@@ -92,6 +92,57 @@ test("adds a backlog task and promotes it to the focus day via menu", async ({ p
   await expect(top3Card.getByText("backlog 測試任務")).toBeVisible();
 });
 
+test("drags a backlog task onto a non-focus week cell's top-3 zone (min-height regression)", async ({
+  page,
+}) => {
+  // Navigate to a known date so the week layout is stable. Pick 2026-06-10 (Tue)
+  // and drop onto the top-3 zone of 2026-06-12 (Thu) — a day with no pre-existing
+  // tasks, so the zone would collapse to ~0 height without the min-height fix.
+  await page.goto("/plan/2026-06-10");
+
+  // Add a backlog task to use as the drag source.
+  await page.getByRole("button", { name: /Backlog/ }).click();
+  const input = page.getByPlaceholder("+ 加一件想做但還沒排的事…");
+  await input.fill("週欄拖曳迴歸測試");
+  await input.press("Enter");
+  const source = page.getByText("週欄拖曳迴歸測試");
+  await expect(source).toBeVisible();
+
+  // Target: week cell top-3 zone for 2026-06-12 (non-focus day, should be empty →
+  // relies on min-height so the zone has a hittable bounding box).
+  const top3Zone = page.getByTestId("week-top3-2026-06-12");
+  await expect(top3Zone).toBeVisible();
+
+  // Scroll both source and target into the visible viewport before computing
+  // bounding boxes. Without this the week column may be partially off-screen
+  // and the drag endpoint coordinates would be outside the viewport, making
+  // dnd-kit see no droppable under the pointer.
+  await source.scrollIntoViewIfNeeded();
+  await top3Zone.scrollIntoViewIfNeeded();
+
+  const sBox = await source.boundingBox();
+  const tBox = await top3Zone.boundingBox();
+  if (!sBox || !tBox) throw new Error("missing bounding box for drag");
+
+  const sx = sBox.x + sBox.width / 2;
+  const sy = sBox.y + sBox.height / 2;
+  const tx = tBox.x + tBox.width / 2;
+  const ty = tBox.y + tBox.height / 2;
+
+  await page.mouse.move(sx, sy);
+  await page.mouse.down();
+  // First move must exceed the 8 px activation distance
+  await page.mouse.move(sx + 20, sy + 20, { steps: 5 });
+  // Then move to the drop target
+  await page.mouse.move(tx, ty, { steps: 10 });
+  await page.mouse.up();
+
+  // The task should now appear inside the week cell for 2026-06-12 as a top-3 item.
+  // The cell link is labelled "切到 2026-06-12"; within it the task title should be visible.
+  const weekCell = page.getByLabel("切到 2026-06-12");
+  await expect(weekCell.getByText("週欄拖曳迴歸測試")).toBeVisible();
+});
+
 test("drags a backlog task onto the focus day's top-3 zone", async ({ page }) => {
   // Navigate to today so the seeded top-3 tasks are present, making the
   // Top3Card (and its heading) a stable drop target that exists before the drag.

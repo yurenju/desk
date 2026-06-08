@@ -4,11 +4,33 @@ import type { Task } from "@/lib/types";
 import { tasksOnDate } from "@/lib/tasks";
 import { weekOf, shortWeekday, dayOfMonth, isoWeek, addDays } from "@/lib/date";
 import { useDroppableZone } from "@/features/plan-view/useDroppableZone";
+import { useDraggableRow } from "@/features/plan-view/useDraggableRow";
 import styles from "./WeekColumn.module.css";
 
 export interface WeekColumnProps {
   allTasks: Task[];
   selectedDate: string;
+}
+
+interface WeekTaskItemProps {
+  taskId: string;
+  date: string;
+  order: number;
+  title: string;
+  done: boolean;
+}
+
+function WeekTaskItem({ taskId, date, order, title, done }: WeekTaskItemProps) {
+  const draggable = useDraggableRow(`week:${date}:${taskId}`);
+  return (
+    <li
+      ref={draggable.ref}
+      {...draggable.handleProps}
+      className={[styles.task, done && styles.done].filter(Boolean).join(" ")}
+    >
+      <span className={styles.taskOrder}>{order}.</span> {title}
+    </li>
+  );
 }
 
 interface WeekDayCellProps {
@@ -51,19 +73,20 @@ function WeekDayCell({ date, allTasks, selectedDate }: WeekDayCellProps) {
         <div className={styles.cellBody}>
           <ol
             ref={top3Drop.ref}
+            data-testid={`week-top3-${date}`}
             className={[styles.tasks, styles.zone, top3Drop.isOver && styles.isOver]
               .filter(Boolean)
               .join(" ")}
           >
             {top3.map((e, i) => (
-              <li
+              <WeekTaskItem
                 key={e.task.id}
-                className={[styles.task, e.task.status === "done" && styles.done]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                <span className={styles.taskOrder}>{i + 1}.</span> {e.task.title}
-              </li>
+                taskId={e.task.id}
+                date={date}
+                order={i + 1}
+                title={e.task.title}
+                done={e.task.status === "done"}
+              />
             ))}
             {top3.length === 0 && top3Drop.isOver && <li className={styles.zoneHint}>三件事</li>}
           </ol>
