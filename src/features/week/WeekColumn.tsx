@@ -60,6 +60,8 @@ function WeekDayCell({ date, allTasks, selectedDate }: WeekDayCellProps) {
   // Tasks scheduled on this day that aren't one of the top-3
   // (planned-without-priority + adhoc). Rendered as draggable items too so the
   // user can drag one UP into the top-3 (promote) directly from the week cell.
+  // `top3` is filtered+sliced from `primary`, so its entries are the same object
+  // references — reference-equality exclusion is correct here.
   const others = primary.filter((e) => !top3.includes(e));
   const isSelected = date === selectedDate;
 
