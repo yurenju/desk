@@ -67,6 +67,7 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
 
       <div
         ref={top3Drop.ref}
+        data-testid="top3-drop-zone"
         className={[styles.dropZone, top3Drop.isOver && styles.isOver].filter(Boolean).join(" ")}
       >
         {top3.length > 0 ? (
