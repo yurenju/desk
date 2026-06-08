@@ -1,4 +1,14 @@
 import { useState } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
 import type { Task } from "@/lib/types";
 import { CarryoverBanner } from "@/features/carryover/CarryoverBanner";
 import { MonthColumn } from "@/features/month/MonthColumn";
@@ -6,6 +16,11 @@ import { WeekColumn } from "@/features/week/WeekColumn";
 import { DayColumn } from "@/features/day/DayColumn";
 import { SegmentedControl } from "@/ui/SegmentedControl";
 import { MOCK_CARRYOVER_MONTH } from "@/mock/data";
+import { useTasksStore } from "@/store/tasks";
+import { nextFreeDailySlot } from "@/lib/tasks";
+import { useHoverCapable } from "@/lib/useHoverCapable";
+import { DragEnabledProvider } from "./dragContext";
+import { parseDropId } from "./dnd";
 import styles from "./PlanLayout.module.css";
 
 export interface PlanLayoutProps {
@@ -18,48 +33,97 @@ type MobileTab = "month" | "week" | "day";
 
 export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
   const [tab, setTab] = useState<MobileTab>("month");
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const dragEnabled = useHoverCapable();
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  const activeTask = activeId ? allTasks.find((t) => t.id === activeId) : null;
+
+  function handleDragStart(e: DragStartEvent) {
+    setActiveId(String(e.active.id));
+  }
+
+  function handleDragEnd(e: DragEndEvent) {
+    setActiveId(null);
+    if (!e.over) return;
+    const target = parseDropId(String(e.over.id));
+    if (!target) return;
+    const id = String(e.active.id);
+    const store = useTasksStore.getState();
+    if (target.kind === "month") {
+      void store.promoteToMonth(id, month);
+      return;
+    }
+    void store.planScheduleDay(id, target.date).then(() => {
+      const s = useTasksStore.getState();
+      if (target.zone === "top3") {
+        void s.setDailyPriority(id, nextFreeDailySlot(s.tasks, target.date), target.date);
+      } else {
+        void s.setDailyPriority(id, null, target.date);
+      }
+    });
+  }
 
   return (
-    <main className={styles.page}>
-      <CarryoverBanner
-        fromLabel="從上月延續"
-        summary={`${MOCK_CARRYOVER_MONTH.fromMonth} 沒做完的任務`}
-        count={MOCK_CARRYOVER_MONTH.count}
-        actions={["→ 本月三件事", "→ 本月其他", "丟回 backlog"]}
-      />
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveId(null)}
+    >
+      <DragEnabledProvider value={dragEnabled}>
+        <main className={styles.page}>
+          <CarryoverBanner
+            fromLabel="從上月延續"
+            summary={`${MOCK_CARRYOVER_MONTH.fromMonth} 沒做完的任務`}
+            count={MOCK_CARRYOVER_MONTH.count}
+            actions={["→ 本月三件事", "→ 本月其他", "丟回 backlog"]}
+          />
 
-      <div className={styles.mobileTabs}>
-        <SegmentedControl<MobileTab>
-          value={tab}
-          onValueChange={setTab}
-          size="sm"
-          options={[
-            { value: "month", label: "Month" },
-            { value: "week", label: "Week" },
-            { value: "day", label: "Day" },
-          ]}
-        />
-      </div>
+          <div className={styles.mobileTabs}>
+            <SegmentedControl<MobileTab>
+              value={tab}
+              onValueChange={setTab}
+              size="sm"
+              options={[
+                { value: "month", label: "Month" },
+                { value: "week", label: "Week" },
+                { value: "day", label: "Day" },
+              ]}
+            />
+          </div>
 
-      <div className={styles.grid}>
-        <div
-          className={[styles.cell, tab !== "month" && styles.mobileHidden]
-            .filter(Boolean)
-            .join(" ")}
-        >
-          <MonthColumn allTasks={allTasks} month={month} selectedDate={selectedDate} />
-        </div>
-        <div
-          className={[styles.cell, tab !== "week" && styles.mobileHidden].filter(Boolean).join(" ")}
-        >
-          <WeekColumn allTasks={allTasks} selectedDate={selectedDate} />
-        </div>
-        <div
-          className={[styles.cell, tab !== "day" && styles.mobileHidden].filter(Boolean).join(" ")}
-        >
-          <DayColumn allTasks={allTasks} selectedDate={selectedDate} variant="plan-narrow" interactive />
-        </div>
-      </div>
-    </main>
+          <div className={styles.grid}>
+            <div
+              className={[styles.cell, tab !== "month" && styles.mobileHidden]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              <MonthColumn allTasks={allTasks} month={month} selectedDate={selectedDate} />
+            </div>
+            <div
+              className={[styles.cell, tab !== "week" && styles.mobileHidden]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              <WeekColumn allTasks={allTasks} selectedDate={selectedDate} />
+            </div>
+            <div
+              className={[styles.cell, tab !== "day" && styles.mobileHidden]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              <DayColumn allTasks={allTasks} selectedDate={selectedDate} variant="plan-narrow" interactive />
+            </div>
+          </div>
+        </main>
+        <DragOverlay>
+          {activeTask ? <div className={styles.dragGhost}>{activeTask.title}</div> : null}
+        </DragOverlay>
+      </DragEnabledProvider>
+    </DndContext>
   );
 }
