@@ -26,6 +26,7 @@ describe("BacklogRow", () => {
     const t = useTasksStore.getState().tasks.find((x) => x.id === "a")!;
     expect(t.custom_fields.scheduled_dates).toEqual(["2026-06-08"]);
     expect(t.custom_fields.daily_priority).toBe("1");
+    expect(t.custom_fields.scheduled_months).toEqual(["2026-06"]);
   });
 
   it("promotes to the month via the menu", async () => {
