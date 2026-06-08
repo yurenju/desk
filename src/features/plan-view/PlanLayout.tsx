@@ -78,7 +78,7 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
       const dates = task?.custom_fields.scheduled_dates ?? [];
       if (dates[dates.length - 1] !== target.date) return;
       if (target.zone === "top3") {
-        void s.setDailyPriority(id, nextFreeDailySlot(s.tasks, target.date), target.date);
+        void s.setDailyPriority(id, nextFreeDailySlot(s.tasks, target.date, id), target.date);
       } else {
         void s.setDailyPriority(id, null, target.date);
       }

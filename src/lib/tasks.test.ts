@@ -193,4 +193,20 @@ describe("nextFreeDailySlot", () => {
     };
     expect(nextFreeDailySlot([other], "2026-06-08")).toBe("1");
   });
+
+  it("excludes the specified task so a re-dragged top-3 task keeps slot 1", () => {
+    // Simulates: task "a" already has priority "1" on this date; when dragged
+    // onto another day it is moved first, then nextFreeDailySlot is called.
+    // Without excludeId the task would count itself and return "2".
+    const task = onDay("a", "1");
+    expect(nextFreeDailySlot([task], "2026-06-08", "a")).toBe("1");
+  });
+
+  it("excludeId does not affect other tasks — still respects their slots", () => {
+    // Two other tasks occupy slots 1 and 3; excludeId targets a third task.
+    // Slot 2 should be returned as the first free slot.
+    expect(
+      nextFreeDailySlot([onDay("a", "1"), onDay("b", "3"), onDay("c", "2")], "2026-06-08", "c"),
+    ).toBe("2");
+  });
 });
