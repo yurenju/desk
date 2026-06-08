@@ -176,8 +176,3 @@
 .otherZone {
   min-height: var(--space-5);
 }
-
-.zoneHint {
-  color: var(--color-ink-faint);
-  font-size: var(--text-2xs);
-}

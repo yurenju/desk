@@ -77,7 +77,13 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
     let zone: "top3" | "other";
     if (target.kind === "weekday") {
       const rect = e.over.rect;
-      const pointerY = (e.activatorEvent as PointerEvent).clientY + e.delta.y;
+      // Final pointer Y = where the drag activated + total movement. Guard the
+      // sensor type instead of casting: a non-pointer activator (only possible
+      // if a keyboard/touch sensor is added later) leaves pointerY as Infinity,
+      // which safely defaults the drop to "other" rather than computing NaN.
+      const activator = e.activatorEvent;
+      const pointerY =
+        activator instanceof PointerEvent ? activator.clientY + e.delta.y : Infinity;
       zone = pointerY < rect.top + rect.height / 2 ? "top3" : "other";
     } else {
       zone = target.zone;
