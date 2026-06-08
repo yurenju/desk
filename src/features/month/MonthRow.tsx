@@ -3,6 +3,7 @@ import { Checkbox } from "@/ui/Checkbox";
 import { UnplannedChip } from "@/ui/Chip";
 import { Menu } from "@/ui/Menu";
 import { PriorityRing } from "@/ui/PriorityRing";
+import { useDraggableRow } from "@/features/plan-view/useDraggableRow";
 import { useMonthRow } from "./useMonthRow";
 import styles from "./MonthRow.module.css";
 
@@ -15,14 +16,29 @@ export interface MonthRowProps {
   showRing?: boolean;
 }
 
-export function MonthRow({ task, kind, month, selectedDate, interactive, showRing }: MonthRowProps) {
+export function MonthRow({
+  task,
+  kind,
+  month,
+  selectedDate,
+  interactive,
+  showRing,
+}: MonthRowProps) {
   const isDone = task.status === "done";
   const isAdhoc = task.custom_fields.is_adhoc === "true";
   const row = useMonthRow(task.id, { month, selectedDate });
   const editable = Boolean(interactive) && kind === "primary";
+  const { ref: dragRef, isDragging, handleProps } = useDraggableRow(`month:${task.id}`);
+  const draggable = kind === "primary";
 
   return (
-    <div className={[styles.row, isDone && styles.done].filter(Boolean).join(" ")}>
+    <div
+      ref={draggable ? dragRef : undefined}
+      className={[styles.row, isDone && styles.done, draggable && isDragging && styles.dragging]
+        .filter(Boolean)
+        .join(" ")}
+      {...(draggable ? handleProps : {})}
+    >
       <Checkbox
         checked={isDone}
         disabled={!editable}
@@ -36,7 +52,11 @@ export function MonthRow({ task, kind, month, selectedDate, interactive, showRin
           trigger={
             <PriorityRing
               value={task.custom_fields.monthly_priority ?? null}
-              aria-label={task.custom_fields.monthly_priority ? `本月重點第 ${task.custom_fields.monthly_priority}` : "設為本月重點"}
+              aria-label={
+                task.custom_fields.monthly_priority
+                  ? `本月重點第 ${task.custom_fields.monthly_priority}`
+                  : "設為本月重點"
+              }
             />
           }
           items={[
@@ -70,13 +90,31 @@ export function MonthRow({ task, kind, month, selectedDate, interactive, showRin
           <Menu
             ariaLabel="更多動作"
             trigger={
-              <button type="button" className={styles.iconBtn} aria-label="更多動作">⋯</button>
+              <button type="button" className={styles.iconBtn} aria-label="更多動作">
+                ⋯
+              </button>
             }
             items={[
-              { key: "promote-1", label: `→ ${selectedDate.slice(8)} 日 · ① 三件事`, onSelect: () => row.promote("1") },
-              { key: "promote-2", label: `→ ${selectedDate.slice(8)} 日 · ② 三件事`, onSelect: () => row.promote("2") },
-              { key: "promote-3", label: `→ ${selectedDate.slice(8)} 日 · ③ 三件事`, onSelect: () => row.promote("3") },
-              { key: "promote-other", label: `→ ${selectedDate.slice(8)} 日 · 其他`, onSelect: () => row.promote() },
+              {
+                key: "promote-1",
+                label: `→ ${selectedDate.slice(8)} 日 · ① 三件事`,
+                onSelect: () => row.promote("1"),
+              },
+              {
+                key: "promote-2",
+                label: `→ ${selectedDate.slice(8)} 日 · ② 三件事`,
+                onSelect: () => row.promote("2"),
+              },
+              {
+                key: "promote-3",
+                label: `→ ${selectedDate.slice(8)} 日 · ③ 三件事`,
+                onSelect: () => row.promote("3"),
+              },
+              {
+                key: "promote-other",
+                label: `→ ${selectedDate.slice(8)} 日 · 其他`,
+                onSelect: () => row.promote(),
+              },
               isAdhoc
                 ? { key: "to-planned", label: "↑ 移到計畫內", onSelect: row.toggleAdhoc }
                 : { key: "to-adhoc", label: "↓ 標為計畫外", onSelect: row.toggleAdhoc },

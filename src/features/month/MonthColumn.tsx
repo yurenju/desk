@@ -4,6 +4,7 @@ import type { Task } from "@/lib/types";
 import { tasksOnMonth } from "@/lib/tasks";
 import { formatMonth, addMonths } from "@/lib/date";
 import { BacklogSection } from "@/features/backlog/BacklogSection";
+import { useDroppableZone } from "@/features/plan-view/useDroppableZone";
 import { MonthHeroCard } from "./MonthHeroCard";
 import { MonthRow } from "./MonthRow";
 import { AddMonthTaskInput } from "./AddMonthTaskInput";
@@ -16,6 +17,7 @@ export interface MonthColumnProps {
 }
 
 export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps) {
+  const { ref: dropRef, isOver } = useDroppableZone({ kind: "month" });
   const entries = useMemo(() => tasksOnMonth(allTasks, month), [allTasks, month]);
   const primary = entries.filter((e) => e.kind === "primary");
 
@@ -40,7 +42,7 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
     top3.length === 0 && otherPlanned.length === 0 && adhoc.length === 0 && trails.length === 0;
 
   return (
-    <div className={styles.col}>
+    <div ref={dropRef} className={[styles.col, isOver && styles.isOver].filter(Boolean).join(" ")}>
       <header className={styles.head}>
         <div className={styles.eyebrow}>MONTH · 規劃</div>
         <div className={styles.titleRow}>
@@ -64,7 +66,7 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
         </div>
       </header>
 
-      <BacklogSection allTasks={allTasks} />
+      <BacklogSection allTasks={allTasks} focusDate={selectedDate} />
 
       {top3.length > 0 && <MonthHeroCard top3={top3} month={month} selectedDate={selectedDate} />}
 
@@ -72,8 +74,15 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
         <section className={styles.section}>
           <header className={styles.sectionHead}>其他計劃內</header>
           {otherPlanned.map((e) => (
-            <MonthRow key={e.task.id} task={e.task} kind={e.kind}
-              month={month} selectedDate={selectedDate} interactive showRing />
+            <MonthRow
+              key={e.task.id}
+              task={e.task}
+              kind={e.kind}
+              month={month}
+              selectedDate={selectedDate}
+              interactive
+              showRing
+            />
           ))}
         </section>
       )}
@@ -82,8 +91,15 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
         <section className={styles.section}>
           <header className={[styles.sectionHead, styles.adhocHead].join(" ")}>計劃外</header>
           {adhoc.map((e) => (
-            <MonthRow key={e.task.id} task={e.task} kind={e.kind}
-              month={month} selectedDate={selectedDate} interactive showRing />
+            <MonthRow
+              key={e.task.id}
+              task={e.task}
+              kind={e.kind}
+              month={month}
+              selectedDate={selectedDate}
+              interactive
+              showRing
+            />
           ))}
         </section>
       )}
@@ -91,8 +107,13 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
       {trails.length > 0 && (
         <section className={styles.section}>
           {trails.map((e) => (
-            <MonthRow key={e.task.id} task={e.task} kind={e.kind}
-              month={month} selectedDate={selectedDate} />
+            <MonthRow
+              key={e.task.id}
+              task={e.task}
+              kind={e.kind}
+              month={month}
+              selectedDate={selectedDate}
+            />
           ))}
         </section>
       )}

@@ -5,9 +5,11 @@ import { enqueuePatch } from "@/lib/api/todoQueue";
 import {
   addTodayTask,
   addMonthTask as addMonthTaskOp,
+  addBacklogTask as addBacklogTaskOp,
+  promoteToMonth as promoteToMonthOp,
+  planScheduleDay as planScheduleDayOp,
   deleteTask,
   editTitle,
-  promoteToDay as promoteToDayOp,
   restoreTask as restoreTaskOp,
   setAdhoc as setAdhocOp,
   setDailyPriority,
@@ -38,9 +40,11 @@ interface TasksState {
   restoreTask: () => Promise<void>;
   setDailyPriority: (id: string, n: Priority | null, date: string) => Promise<void>;
   setAdhoc: (id: string, isAdhoc: boolean) => Promise<void>;
-  promoteToDay: (id: string, date: string) => Promise<void>;
   setMonthlyPriority: (id: string, n: Priority | null, month: string) => Promise<void>;
   addMonthTask: (title: string, month: string) => Promise<void>;
+  addBacklogTask: (title: string) => Promise<void>;
+  promoteToMonth: (id: string, month: string) => Promise<void>;
+  planScheduleDay: (id: string, date: string) => Promise<void>;
   clearTasks: () => void;
   clearRecentlyDeleted: () => void;
   clearError: () => void;
@@ -182,19 +186,6 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     }
   },
 
-  async promoteToDay(id, date) {
-    const prev = get().tasks;
-    const next = promoteToDayOp(prev, id, date);
-    if (next === prev) return;
-    set({ tasks: next, error: null });
-    const updated = next.find((t) => t.id === id);
-    try {
-      await enqueuePatch(id, { scheduled_dates: updated!.custom_fields.scheduled_dates });
-    } catch {
-      set({ tasks: prev, error: "save_failed" });
-    }
-  },
-
   async setMonthlyPriority(id, n, month) {
     const prev = get().tasks;
     const next = setMonthlyPriorityOp(prev, id, n, month);
@@ -231,6 +222,49 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
         is_adhoc: "false",
       });
       set({ tasks: get().tasks.map((t) => (t.id === tempId ? created : t)) });
+    } catch {
+      set({ tasks: prev, error: "save_failed" });
+    }
+  },
+
+  async addBacklogTask(title) {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    const prev = get().tasks;
+    const tempId = `temp-${crypto.randomUUID()}`;
+    set({ tasks: addBacklogTaskOp(prev, trimmed, tempId, now()), error: null });
+    try {
+      const created = await postTodo({ title: trimmed, is_adhoc: "false" });
+      set({ tasks: get().tasks.map((t) => (t.id === tempId ? created : t)) });
+    } catch {
+      set({ tasks: prev, error: "save_failed" });
+    }
+  },
+
+  async promoteToMonth(id, month) {
+    const prev = get().tasks;
+    const next = promoteToMonthOp(prev, id, month);
+    if (next === prev) return;
+    set({ tasks: next, error: null });
+    const updated = next.find((t) => t.id === id)!;
+    try {
+      await enqueuePatch(id, { scheduled_months: updated.custom_fields.scheduled_months });
+    } catch {
+      set({ tasks: prev, error: "save_failed" });
+    }
+  },
+
+  async planScheduleDay(id, date) {
+    const prev = get().tasks;
+    const next = planScheduleDayOp(prev, id, date);
+    if (next === prev) return;
+    set({ tasks: next, error: null });
+    const updated = next.find((t) => t.id === id)!;
+    try {
+      await enqueuePatch(id, {
+        scheduled_dates: updated.custom_fields.scheduled_dates,
+        scheduled_months: updated.custom_fields.scheduled_months,
+      });
     } catch {
       set({ tasks: prev, error: "save_failed" });
     }

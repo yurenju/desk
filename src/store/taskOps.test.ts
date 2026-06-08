@@ -8,9 +8,11 @@ import {
   restoreTask,
   setDailyPriority,
   setAdhoc,
-  promoteToDay,
   setMonthlyPriority,
   addMonthTask,
+  addBacklogTask,
+  promoteToMonth,
+  planScheduleDay,
 } from "./taskOps";
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
@@ -247,19 +249,6 @@ function mk(id: string, cf: Record<string, unknown>) {
   };
 }
 
-describe("promoteToDay", () => {
-  it("appends the date to scheduled_dates", () => {
-    const tasks = [mk("a", { scheduled_months: ["2026-05"] })];
-    const out = promoteToDay(tasks, "a", "2026-05-22");
-    expect(out[0].custom_fields.scheduled_dates).toEqual(["2026-05-22"]);
-  });
-  it("is a no-op when date is already the last entry", () => {
-    const tasks = [mk("a", { scheduled_dates: ["2026-05-21", "2026-05-22"] })];
-    const out = promoteToDay(tasks, "a", "2026-05-22");
-    expect(out[0].custom_fields.scheduled_dates).toEqual(["2026-05-21", "2026-05-22"]);
-  });
-});
-
 describe("setMonthlyPriority", () => {
   it("sets priority and evicts the collider within the same month", () => {
     const tasks = [
@@ -290,5 +279,82 @@ describe("addMonthTask", () => {
     const out = addMonthTask([], "計畫", "2026-05", "tmp-1", "2026-05-01T00:00:00Z");
     expect(out[0].custom_fields.scheduled_months).toEqual(["2026-05"]);
     expect(out[0].custom_fields.is_adhoc).toBe("false");
+  });
+});
+
+describe("addBacklogTask", () => {
+  it("appends a backlog task with empty scheduled_* and is_adhoc false", () => {
+    const next = addBacklogTask([], "讀一本書", "tmp", NOW);
+    expect(next).toHaveLength(1);
+    expect(next[0].custom_fields.scheduled_months).toEqual([]);
+    expect(next[0].custom_fields.scheduled_dates).toEqual([]);
+    expect(next[0].custom_fields.is_adhoc).toBe("false");
+  });
+
+  it("ignores blank titles", () => {
+    expect(addBacklogTask([], "   ", "tmp", NOW)).toEqual([]);
+  });
+});
+
+describe("promoteToMonth", () => {
+  it("appends the month to scheduled_months", () => {
+    const tasks = [makeTask({ id: "a", custom_fields: { scheduled_months: [] } })];
+    const next = promoteToMonth(tasks, "a", "2026-06");
+    expect(next[0].custom_fields.scheduled_months).toEqual(["2026-06"]);
+  });
+
+  it("is a no-op (same ref) when the month is already the last entry", () => {
+    const tasks = [makeTask({ id: "a", custom_fields: { scheduled_months: ["2026-06"] } })];
+    expect(promoteToMonth(tasks, "a", "2026-06")).toBe(tasks);
+  });
+});
+
+describe("planScheduleDay", () => {
+  it("appends the date when the task has no primary date (first placement)", () => {
+    const tasks = [makeTask({ id: "a", custom_fields: { scheduled_months: ["2026-06"] } })];
+    const next = planScheduleDay(tasks, "a", "2026-06-08");
+    expect(next[0].custom_fields.scheduled_dates).toEqual(["2026-06-08"]);
+  });
+
+  it("backfills the month when scheduling a backlog task to a day", () => {
+    const tasks = [makeTask({ id: "a", custom_fields: {} })];
+    const next = planScheduleDay(tasks, "a", "2026-06-08");
+    expect(next[0].custom_fields.scheduled_dates).toEqual(["2026-06-08"]);
+    expect(next[0].custom_fields.scheduled_months).toEqual(["2026-06"]);
+  });
+
+  it("replaces the last date when re-planning a task already on a day", () => {
+    const tasks = [
+      makeTask({
+        id: "a",
+        custom_fields: { scheduled_months: ["2026-06"], scheduled_dates: ["2026-06-08"] },
+      }),
+    ];
+    const next = planScheduleDay(tasks, "a", "2026-06-10");
+    expect(next[0].custom_fields.scheduled_dates).toEqual(["2026-06-10"]);
+  });
+
+  it("preserves earlier trail entries when re-planning the current placement", () => {
+    const tasks = [
+      makeTask({
+        id: "a",
+        custom_fields: {
+          scheduled_months: ["2026-06"],
+          scheduled_dates: ["2026-06-01", "2026-06-08"],
+        },
+      }),
+    ];
+    const next = planScheduleDay(tasks, "a", "2026-06-10");
+    expect(next[0].custom_fields.scheduled_dates).toEqual(["2026-06-01", "2026-06-10"]);
+  });
+
+  it("is a no-op (same ref) when re-planning to the date already last", () => {
+    const tasks = [
+      makeTask({
+        id: "a",
+        custom_fields: { scheduled_months: ["2026-06"], scheduled_dates: ["2026-06-08"] },
+      }),
+    ];
+    expect(planScheduleDay(tasks, "a", "2026-06-08")).toBe(tasks);
   });
 });

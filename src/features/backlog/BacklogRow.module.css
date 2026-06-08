@@ -10,6 +10,7 @@
 .title {
   flex: 1;
   color: var(--color-ink);
+  cursor: grab;
 }
 
 .done .title {
@@ -17,12 +18,8 @@
   text-decoration: line-through;
 }
 
-.trail {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  color: var(--color-ink-faint);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.dragging {
+  opacity: 0.5;
 }
 
 .actions {
@@ -31,6 +28,7 @@
   opacity: 1;
   transition: opacity 0.12s ease;
 }
+
 @media (hover: hover) and (pointer: fine) {
   .actions {
     opacity: 0;
@@ -39,6 +37,7 @@
     opacity: 1;
   }
 }
+
 .iconBtn {
   border: none;
   background: transparent;
@@ -49,9 +48,11 @@
   font-size: 13px;
   color: var(--color-ink-faint);
 }
+
 .iconBtn:hover {
   background: var(--color-paper-alt);
 }
+
 .editInput {
   width: 100%;
   font: inherit;
@@ -60,8 +61,4 @@
   padding: 4px 8px;
   background: var(--color-paper-alt);
   color: inherit;
-}
-
-.dragging {
-  opacity: 0.5;
 }

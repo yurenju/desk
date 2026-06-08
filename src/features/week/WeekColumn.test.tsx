@@ -29,27 +29,26 @@ beforeEach(() => {
   vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
 });
 
-it("shows '還有 n 件其他任務' for the day's non-priority tasks", async () => {
+it("renders the day's non-priority tasks as items (alongside the top-3)", async () => {
   renderWithTasks([
     task("p1", { scheduled_dates: [FOCUS], daily_priority: "1" }),
     task("o1", { scheduled_dates: [FOCUS], is_adhoc: "false" }),
     task("o2", { scheduled_dates: [FOCUS], is_adhoc: "true" }),
   ]);
   const cell = await focusCell();
-  await waitFor(() =>
-    expect(within(cell).getByText("還有 2 件其他任務")).toBeInTheDocument(),
-  );
+  await waitFor(() => expect(within(cell).getByText("o1")).toBeInTheDocument());
+  expect(within(cell).getByText("o2")).toBeInTheDocument();
+  expect(within(cell).getByText("p1")).toBeInTheDocument();
 });
 
-it("suppresses the '—' placeholder when a day has only other tasks", async () => {
+it("shows other tasks (and no '—' placeholder) when a day has only other tasks", async () => {
   renderWithTasks([
     task("o1", { scheduled_dates: [FOCUS], is_adhoc: "false" }),
     task("o2", { scheduled_dates: [FOCUS], is_adhoc: "false" }),
   ]);
   const cell = await focusCell();
-  await waitFor(() =>
-    expect(within(cell).getByText("還有 2 件其他任務")).toBeInTheDocument(),
-  );
+  await waitFor(() => expect(within(cell).getByText("o1")).toBeInTheDocument());
+  expect(within(cell).getByText("o2")).toBeInTheDocument();
   expect(within(cell).queryByText("—")).not.toBeInTheDocument();
 });
 

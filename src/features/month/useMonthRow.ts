@@ -9,7 +9,7 @@ export function useMonthRow(id: string, opts: { month: string; selectedDate: str
   const setMonthlyPriority = useTasksStore((s) => s.setMonthlyPriority);
   const setDailyPriority = useTasksStore((s) => s.setDailyPriority);
   const setAdhoc = useTasksStore((s) => s.setAdhoc);
-  const promoteToDay = useTasksStore((s) => s.promoteToDay);
+  const planScheduleDay = useTasksStore((s) => s.planScheduleDay);
   const current = useTasksStore((s) => s.tasks.find((t) => t.id === id));
 
   const [isEditing, setIsEditing] = useState(false);
@@ -25,7 +25,7 @@ export function useMonthRow(id: string, opts: { month: string; selectedDate: str
     // that day's top-3 (setDailyPriority evicts the slot's prior occupant, just
     // like the day ring); without one it stays in the day's other-planned.
     promote: (priority: Priority | null = null) => {
-      promoteToDay(id, opts.selectedDate);
+      planScheduleDay(id, opts.selectedDate);
       if (priority) setDailyPriority(id, priority, opts.selectedDate);
     },
     toggleAdhoc: () => {

@@ -70,6 +70,25 @@
   text-align: center;
   padding: 28px 12px 12px;
 }
+
+.dropZone {
+  min-height: var(--space-6);
+  border-radius: var(--radius-sm);
+}
+
+.dropZone.isOver {
+  outline: 2px dashed var(--color-accent);
+  outline-offset: -4px;
+  background: var(--color-accent-soft, transparent);
+}
+
+.dropHint {
+  color: var(--color-ink-faint);
+  font-size: var(--text-sm);
+  padding: var(--space-2);
+  text-align: center;
+}
+
 .emptyBig {
   font-size: 15px;
   color: var(--color-ink, #2c2a25);

@@ -3,11 +3,149 @@ import { Link } from "@tanstack/react-router";
 import type { Task } from "@/lib/types";
 import { tasksOnDate } from "@/lib/tasks";
 import { weekOf, shortWeekday, dayOfMonth, isoWeek, addDays } from "@/lib/date";
+import { useDroppableZone } from "@/features/plan-view/useDroppableZone";
+import { useDraggableRow } from "@/features/plan-view/useDraggableRow";
+import { useWeekDropHint } from "@/features/plan-view/dragContext";
 import styles from "./WeekColumn.module.css";
 
 export interface WeekColumnProps {
   allTasks: Task[];
   selectedDate: string;
+}
+
+interface WeekTaskItemProps {
+  taskId: string;
+  date: string;
+  // 1/2/3 for the day's top-3; omitted for "other" tasks (rendered with a bullet).
+  order?: number;
+  title: string;
+  done: boolean;
+}
+
+function WeekTaskItem({ taskId, date, order, title, done }: WeekTaskItemProps) {
+  const { ref: dragRef, handleProps } = useDraggableRow(`week:${date}:${taskId}`);
+  return (
+    <li
+      ref={dragRef}
+      {...handleProps}
+      className={[styles.task, done && styles.done, order == null && styles.otherTask]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <span className={styles.taskOrder}>{order == null ? "·" : `${order}.`}</span> {title}
+    </li>
+  );
+}
+
+interface WeekDayCellProps {
+  date: string;
+  allTasks: Task[];
+  selectedDate: string;
+}
+
+function WeekDayCell({ date, allTasks, selectedDate }: WeekDayCellProps) {
+  // One droppable per cell. top-3 vs other is decided by the drop's vertical
+  // position (upper half = top-3) in PlanLayout — two stacked sub-zones this
+  // small are unreliable for dnd-kit collision when dragging within one cell.
+  const { ref: cellRef, isOver: cellIsOver } = useDroppableZone({ kind: "weekday", date });
+  const entries = tasksOnDate(allTasks, date);
+  const primary = entries.filter((e) => e.kind === "primary");
+  const top3 = primary
+    .filter((e) => e.task.custom_fields.daily_priority)
+    .sort(
+      (a, b) =>
+        Number(a.task.custom_fields.daily_priority) - Number(b.task.custom_fields.daily_priority),
+    )
+    .slice(0, 3);
+  // Tasks scheduled on this day that aren't one of the top-3
+  // (planned-without-priority + adhoc). Rendered as draggable items too so the
+  // user can drag one UP into the top-3 (promote) directly from the week cell.
+  // `top3` is filtered+sliced from `primary`, so its entries are the same object
+  // references — reference-equality exclusion is correct here.
+  const others = primary.filter((e) => !top3.includes(e));
+  const isSelected = date === selectedDate;
+
+  // Live drop hint: which half of THIS cell the pointer is over mid-drag.
+  const hint = useWeekDropHint();
+  const overCell = hint?.date === date;
+  const overTop3 = overCell && hint.zone === "top3";
+  const overOther = overCell && hint.zone === "other";
+
+  return (
+    <li className={styles.dayItem}>
+      <Link
+        to="/plan/$date"
+        params={{ date }}
+        className={[styles.day, isSelected && styles.selected].filter(Boolean).join(" ")}
+        aria-label={`切到 ${date}`}
+        aria-current={isSelected ? "date" : undefined}
+      >
+        <div className={styles.dayBox}>
+          <div className={styles.dayNum}>{dayOfMonth(date)}</div>
+          <div className={styles.dayWk}>{shortWeekday(date).toUpperCase()}</div>
+        </div>
+        {/* Single droppable for the whole cell. The drop hint badges/highlights
+            below are absolutely positioned, so showing them mid-drag does NOT
+            shift the cell layout (a shift would move the zone out from under the
+            pointer and break the drop). */}
+        <div
+          ref={cellRef}
+          data-testid={`week-cell-${date}`}
+          className={[styles.cellBody, cellIsOver && styles.isOver].filter(Boolean).join(" ")}
+        >
+          {overCell && (
+            <>
+              <span
+                className={[styles.dropTag, styles.dropTagTop, overTop3 && styles.dropTagActive]
+                  .filter(Boolean)
+                  .join(" ")}
+                aria-hidden
+              >
+                ↑ 三件事
+              </span>
+              <span
+                className={[styles.dropTag, styles.dropTagBottom, overOther && styles.dropTagActive]
+                  .filter(Boolean)
+                  .join(" ")}
+                aria-hidden
+              >
+                ↓ 其他
+              </span>
+            </>
+          )}
+          <ol
+            data-testid={`week-top3-${date}`}
+            className={[styles.tasks, overTop3 && styles.halfActive].filter(Boolean).join(" ")}
+          >
+            {top3.map((e, i) => (
+              <WeekTaskItem
+                key={e.task.id}
+                taskId={e.task.id}
+                date={date}
+                order={i + 1}
+                title={e.task.title}
+                done={e.task.status === "done"}
+              />
+            ))}
+          </ol>
+          <ul
+            className={[styles.otherZone, overOther && styles.halfActive].filter(Boolean).join(" ")}
+          >
+            {others.map((e) => (
+              <WeekTaskItem
+                key={e.task.id}
+                taskId={e.task.id}
+                date={date}
+                title={e.task.title}
+                done={e.task.status === "done"}
+              />
+            ))}
+          </ul>
+          {primary.length === 0 && <div className={styles.empty}>—</div>}
+        </div>
+      </Link>
+    </li>
+  );
 }
 
 export function WeekColumn({ allTasks, selectedDate }: WeekColumnProps) {
@@ -43,54 +181,9 @@ export function WeekColumn({ allTasks, selectedDate }: WeekColumnProps) {
       </header>
 
       <ul className={styles.list}>
-        {week.map((date) => {
-          const entries = tasksOnDate(allTasks, date);
-          const primary = entries.filter((e) => e.kind === "primary");
-          const top3 = primary
-            .filter((e) => e.task.custom_fields.daily_priority)
-            .sort(
-              (a, b) =>
-                Number(a.task.custom_fields.daily_priority) -
-                Number(b.task.custom_fields.daily_priority),
-            )
-            .slice(0, 3);
-          // Tasks scheduled on this day that aren't shown as one of the top-3
-          // (planned-without-priority + adhoc). Surfaces work added to "其他".
-          const otherCount = primary.length - top3.length;
-          const isSelected = date === selectedDate;
-          return (
-            <li key={date} className={styles.dayItem}>
-              <Link
-                to="/plan/$date"
-                params={{ date }}
-                className={[styles.day, isSelected && styles.selected].filter(Boolean).join(" ")}
-                aria-label={`切到 ${date}`}
-                aria-current={isSelected ? "date" : undefined}
-              >
-                <div className={styles.dayBox}>
-                  <div className={styles.dayNum}>{dayOfMonth(date)}</div>
-                  <div className={styles.dayWk}>{shortWeekday(date).toUpperCase()}</div>
-                </div>
-                <ol className={styles.tasks}>
-                  {top3.map((e, i) => (
-                    <li
-                      key={e.task.id}
-                      className={[styles.task, e.task.status === "done" && styles.done]
-                        .filter(Boolean)
-                        .join(" ")}
-                    >
-                      <span className={styles.taskOrder}>{i + 1}.</span> {e.task.title}
-                    </li>
-                  ))}
-                  {otherCount > 0 && (
-                    <li className={styles.more}>還有 {otherCount} 件其他任務</li>
-                  )}
-                  {primary.length === 0 && <li className={styles.empty}>—</li>}
-                </ol>
-              </Link>
-            </li>
-          );
-        })}
+        {week.map((date) => (
+          <WeekDayCell key={date} date={date} allTasks={allTasks} selectedDate={selectedDate} />
+        ))}
       </ul>
     </div>
   );

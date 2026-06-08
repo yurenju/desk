@@ -1,4 +1,4 @@
-import type { Task, TaskWithTrail, Layer, TrailKind } from "./types";
+import type { Task, TaskWithTrail, Layer, TrailKind, Priority } from "./types";
 
 export function primaryMonth(t: Task): string | null {
   const arr = t.custom_fields.scheduled_months ?? [];
@@ -56,4 +56,24 @@ export function tasksInBacklog(all: Task[]): Task[] {
   return all.filter(
     (t) => layer(t) === "backlog" && t.status !== "done" && t.status !== "cancelled",
   );
+}
+
+/**
+ * The first free daily_priority slot (1→2→3) among tasks primary on `date`.
+ * Returns "3" when all three are taken, so the caller's setDailyPriority can
+ * evict slot 3's current occupant (same day ring eviction semantics).
+ *
+ * Pass `excludeId` to ignore a specific task when computing taken slots — useful
+ * when the task being placed has already been moved to `date` but still carries
+ * its old priority (e.g. during drag-and-drop re-scheduling).
+ */
+export function nextFreeDailySlot(all: Task[], date: string, excludeId?: string): Priority {
+  const taken = new Set(
+    all
+      .filter((t) => t.id !== excludeId && primaryDate(t) === date && t.custom_fields.daily_priority)
+      .map((t) => t.custom_fields.daily_priority),
+  );
+  if (!taken.has("1")) return "1";
+  if (!taken.has("2")) return "2";
+  return "3";
 }

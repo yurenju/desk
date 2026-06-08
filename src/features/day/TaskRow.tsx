@@ -3,6 +3,7 @@ import { Checkbox } from "@/ui/Checkbox";
 import { UnplannedChip } from "@/ui/Chip";
 import { Menu } from "@/ui/Menu";
 import { PriorityRing } from "@/ui/PriorityRing";
+import { useDraggableRow } from "@/features/plan-view/useDraggableRow";
 import { useTaskRow } from "./useTaskRow";
 import styles from "./TaskRow.module.css";
 
@@ -20,10 +21,21 @@ export function TaskRow({ task, kind, date, showAdhocChip, interactive, showRing
   const isAdhoc = task.custom_fields.is_adhoc === "true";
   const row = useTaskRow(task.id, date);
   const editable = Boolean(interactive) && kind === "primary";
+  const { ref: dragRef, isDragging, handleProps } = useDraggableRow(`day:${task.id}`);
+  const draggable = kind === "primary";
 
   return (
     <div
-      className={[styles.row, styles[`k_${kind}`], isDone && styles.done].filter(Boolean).join(" ")}
+      ref={draggable ? dragRef : undefined}
+      className={[
+        styles.row,
+        styles[`k_${kind}`],
+        isDone && styles.done,
+        draggable && isDragging && styles.dragging,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      {...(draggable ? handleProps : {})}
     >
       <Checkbox
         checked={isDone}

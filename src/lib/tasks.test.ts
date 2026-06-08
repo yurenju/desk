@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Task } from "./types";
-import { primaryDate, primaryMonth, layer, tasksOnDate, tasksOnMonth } from "./tasks";
+import { primaryDate, primaryMonth, layer, tasksOnDate, tasksOnMonth, nextFreeDailySlot } from "./tasks";
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
   return {
@@ -163,5 +163,50 @@ describe("tasksOnMonth", () => {
       },
     });
     expect(tasksOnMonth([t], "2026-05")).toEqual([{ task: t, kind: "dismissed" }]);
+  });
+});
+
+describe("nextFreeDailySlot", () => {
+  const onDay = (id: string, p?: "1" | "2" | "3"): Task => ({
+    id, title: id, status: "open", created_at: "x", updated_at: "x",
+    custom_fields: { scheduled_dates: ["2026-06-08"], ...(p ? { daily_priority: p } : {}) },
+  });
+
+  it("returns 1 when the day has no prioritised tasks", () => {
+    expect(nextFreeDailySlot([onDay("a")], "2026-06-08")).toBe("1");
+  });
+
+  it("returns the first free slot", () => {
+    expect(nextFreeDailySlot([onDay("a", "1"), onDay("b", "3")], "2026-06-08")).toBe("2");
+  });
+
+  it("returns 3 (evict) when all three slots are taken", () => {
+    expect(
+      nextFreeDailySlot([onDay("a", "1"), onDay("b", "2"), onDay("c", "3")], "2026-06-08"),
+    ).toBe("3");
+  });
+
+  it("ignores tasks not primary on that day", () => {
+    const other: Task = {
+      id: "x", title: "x", status: "open", created_at: "x", updated_at: "x",
+      custom_fields: { scheduled_dates: ["2026-06-09"], daily_priority: "1" },
+    };
+    expect(nextFreeDailySlot([other], "2026-06-08")).toBe("1");
+  });
+
+  it("excludes the specified task so a re-dragged top-3 task keeps slot 1", () => {
+    // Simulates: task "a" already has priority "1" on this date; when dragged
+    // onto another day it is moved first, then nextFreeDailySlot is called.
+    // Without excludeId the task would count itself and return "2".
+    const task = onDay("a", "1");
+    expect(nextFreeDailySlot([task], "2026-06-08", "a")).toBe("1");
+  });
+
+  it("excludeId does not affect other tasks — still respects their slots", () => {
+    // Two other tasks occupy slots 1 and 3; excludeId targets a third task.
+    // Slot 2 should be returned as the first free slot.
+    expect(
+      nextFreeDailySlot([onDay("a", "1"), onDay("b", "3"), onDay("c", "2")], "2026-06-08", "c"),
+    ).toBe("2");
   });
 });

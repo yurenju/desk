@@ -235,30 +235,6 @@ describe("server-backed tasks store", () => {
     expect(spy).toHaveBeenCalled(); // load-once guard no longer blocks after clear
   });
 
-  it("promoteToDay appends date and patches scheduled_dates", async () => {
-    useTasksStore.setState({
-      tasks: [{ id: "a", title: "A", status: "open",
-        created_at: "x", updated_at: "x", custom_fields: { scheduled_months: ["2026-05"] } }],
-      status: "ready", error: null,
-    });
-    const spy = vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
-    await useTasksStore.getState().promoteToDay("a", "2026-05-22");
-    expect(useTasksStore.getState().tasks[0].custom_fields.scheduled_dates).toEqual(["2026-05-22"]);
-    expect(spy).toHaveBeenCalledWith("a", { scheduled_dates: ["2026-05-22"] });
-  });
-
-  it("promoteToDay rolls back on failure", async () => {
-    useTasksStore.setState({
-      tasks: [{ id: "a", title: "A", status: "open",
-        created_at: "x", updated_at: "x", custom_fields: { scheduled_months: ["2026-05"] } }],
-      status: "ready", error: null,
-    });
-    vi.spyOn(api, "patchTodoApi").mockRejectedValue(new Error("boom"));
-    await useTasksStore.getState().promoteToDay("a", "2026-05-22");
-    expect(useTasksStore.getState().tasks[0].custom_fields.scheduled_dates).toBeUndefined();
-    expect(useTasksStore.getState().error).toBe("save_failed");
-  });
-
   it("setMonthlyPriority sets and evicts within month, patching both", async () => {
     useTasksStore.setState({
       tasks: [
@@ -310,5 +286,95 @@ describe("server-backed tasks store", () => {
     await useTasksStore.getState().setDailyPriority("d5", "1", useTasksStore.getState().today);
     expect(reload).toHaveBeenCalled();
     expect(useTasksStore.getState().tasks.map((t) => t.id)).toEqual(["reloaded"]);
+  });
+});
+
+describe("planScheduleDay action", () => {
+  it("optimistically schedules a backlog task to a day and backfills the month", async () => {
+    vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+    useTasksStore.setState({
+      tasks: [{
+        id: "a", title: "t", status: "open", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_months: [], scheduled_dates: [] },
+      }],
+      status: "ready", error: null,
+    });
+    await useTasksStore.getState().planScheduleDay("a", "2026-06-08");
+    const t = useTasksStore.getState().tasks.find((x) => x.id === "a")!;
+    expect(t.custom_fields.scheduled_dates).toEqual(["2026-06-08"]);
+    expect(t.custom_fields.scheduled_months).toEqual(["2026-06"]);
+  });
+});
+
+describe("promoteToMonth action", () => {
+  it("optimistically appends the month", async () => {
+    vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+    useTasksStore.setState({
+      tasks: [{
+        id: "a", title: "t", status: "open", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_months: [] },
+      }],
+      status: "ready", error: null,
+    });
+    await useTasksStore.getState().promoteToMonth("a", "2026-06");
+    expect(
+      useTasksStore.getState().tasks.find((x) => x.id === "a")!.custom_fields.scheduled_months,
+    ).toEqual(["2026-06"]);
+  });
+});
+
+describe("addBacklogTask action", () => {
+  it("creates a backlog task via postTodo", async () => {
+    vi.spyOn(api, "postTodo").mockResolvedValue({
+      id: "srv", title: "讀一本書", status: "open", created_at: "x", updated_at: "x",
+      custom_fields: { scheduled_months: [], scheduled_dates: [], is_adhoc: "false" },
+    });
+    useTasksStore.setState({ tasks: [], status: "ready", error: null });
+    await useTasksStore.getState().addBacklogTask("讀一本書");
+    expect(useTasksStore.getState().tasks.some((t) => t.id === "srv")).toBe(true);
+  });
+
+  it("rolls back the optimistic task and sets error when postTodo fails", async () => {
+    vi.spyOn(api, "postTodo").mockRejectedValue(new Error("x"));
+    useTasksStore.setState({ tasks: [], status: "ready", error: null });
+    await useTasksStore.getState().addBacklogTask("foo");
+    expect(useTasksStore.getState().tasks).toHaveLength(0);
+    expect(useTasksStore.getState().error).toBe("save_failed");
+  });
+});
+
+describe("promoteToMonth rollback", () => {
+  it("rolls back scheduled_months and sets error when patch fails", async () => {
+    vi.spyOn(api, "patchTodoApi").mockRejectedValue(new Error("x"));
+    useTasksStore.setState({
+      tasks: [{
+        id: "a", title: "t", status: "open", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_months: [] },
+      }],
+      status: "ready", error: null,
+    });
+    await useTasksStore.getState().promoteToMonth("a", "2026-06");
+    expect(
+      useTasksStore.getState().tasks.find((t) => t.id === "a")!.custom_fields.scheduled_months,
+    ).toEqual([]);
+    expect(useTasksStore.getState().error).toBe("save_failed");
+  });
+});
+
+describe("planScheduleDay rollback", () => {
+  it("rolls back scheduled_dates and scheduled_months and sets error when patch fails", async () => {
+    vi.spyOn(api, "patchTodoApi").mockRejectedValue(new Error("x"));
+    useTasksStore.setState({
+      tasks: [{
+        id: "a", title: "t", status: "open", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_dates: [], scheduled_months: [] },
+      }],
+      status: "ready", error: null,
+    });
+    await useTasksStore.getState().planScheduleDay("a", "2026-06-08");
+    const task = useTasksStore.getState().tasks.find((t) => t.id === "a")!;
+    expect(task.custom_fields.scheduled_dates).toEqual([]);
+    expect(task.custom_fields.scheduled_months).toEqual([]);
+    expect(useTasksStore.getState().error).toBe("save_failed");
   });
 });
