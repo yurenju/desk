@@ -27,7 +27,8 @@
 | Slice 2c — UI 打磨（登入流程 + Today 互動） | ✅ 完成 | — |
 | Slice 3 — Monthly 互動 + promote | ✅ 完成 | — |
 | Slice 3.5 — Plan 週導覽 + Day 欄可規劃 | ✅ 完成 | [#16](https://github.com/yurenju/desk/pull/16) |
-| Slice 4+ | ⏳ 規劃中 | — |
+| Slice 4 — Plan 模式完整拖曳 + Backlog 互動 | ✅ 完成 | — |
+| Slice 5+ | ⏳ 規劃中 | — |
 
 **Slice 0 比原規劃多做的部分**(因為「中高保真度」視覺要做到位,自然把後面 slice 的純視覺工作也帶進來了):
 
@@ -254,19 +255,28 @@
 
 **不做**:跨月遠期日的特別處理——遠期留月層,該週到了再排日,符合「日層排程是近期」的節奏。
 
-### Slice 4 — Backlog 互動 + 三層漏斗完整 ⏳
+### Slice 4 — Plan 模式完整拖曳 + Backlog 互動 ✅
 
-**目標**:完整漏斗,但仍是「只進不退」。
+**完成**:Backlog 從唯讀變可寫,並把 Plan 模式做成**完整的拖曳重排**(範圍比原規劃大 —— 原本只做 backlog、真實拖曳延到 Slice 7,brainstorm 後決定一次做完)。
 
-> Backlog 摺疊區的 UI + 展開互動已在 Slice 0 完成,Backlog 內容也已渲染。這片補寫入互動。
+> 設計:[2026-06-08-slice-4-plan-drag-design.md](docs/superpowers/specs/2026-06-08-slice-4-plan-drag-design.md)・計畫:[2026-06-08-slice-4-plan-drag.md](docs/superpowers/plans/2026-06-08-slice-4-plan-drag.md)(subagent-driven 執行,每組兩段 review;手動 preview 對真實 WSPC 逐項驗收)。
 
-- [ ] Backlog +:寫入空 `scheduled_*`(完全沒有時間排定)
-- [ ] 拖曳:Backlog → Monthly(append 本月到 `scheduled_months`)
-- [ ] 拖曳:Backlog → Today/Selected Day(append today/該日到 `scheduled_dates`,必要時補本月)
-- [ ] Backlog 內 task 完成 / 編輯 / 刪除
-- [ ] 加入點 `is_adhoc` 預設值表(見「加入點預設值」表格)
+**核心決策 —— Plan / Focus 語意分流**:把「拖到別天」依模式分成兩套語意。**Plan(規劃)= 乾淨重排**(決定哪天做,改主意不留軌跡);**Focus(專注)= 順延**(沒做完 → append + 留軌跡),Focus 那套留給 Slice 5 / 6。
 
-**不做**:軌跡、略過、unschedule、carryover。
+- [x] Backlog 寫入:新增(空 `scheduled_*`、`is_adhoc:"false"`)、完成、編輯、刪除(`BacklogRow` + `AddBacklogTaskInput`,取代 Slice 0 誤用 day `TaskRow` 的唯讀渲染)。
+- [x] `planScheduleDay`(Plan「排到某天」單一真實來源):已有 primaryDate → **替換 `scheduled_dates` 最後一筆**(重排,保留較早真實軌跡);否則 append;兩者都**補本月**(`monthOf(date)` 進 `scheduled_months`)。
+- [x] 桌機拖曳(`@dnd-kit/core`):來源 = Backlog / 月列 / Day 欄列 / **Week 日格 top-3 任務**;放下區 = Month 區、Day 欄(三件事 / 其他子區)、Week 每個日格(三件事 / 其他子區)。drop 高亮、`DragOverlay` ghost、樂觀更新 + 失敗回滾。
+- [x] 裝置分流:桌機拖曳 + `⋯` menu;手機(Plan tab 化)只 menu(`useHoverCapable` 對 `(hover: hover)` 偵測)。
+- [x] `⋯` menu promote(手機 + 桌機 fallback):backlog →本月 / →焦點日·①②③/其他;月列沿用 →N日·名次。
+- [x] `is_adhoc` 預設依「加入點預設值」表(backlog+ → `false`,promote 不動)。
+
+**實作中的設計修正**:
+- **不掛 `KeyboardSensor`**:自由形式 drop zone 沒有客製 `coordinateGetter` 時鍵盤拖曳無效、又讓列變 focusable 誤導;鍵盤無障礙改走完全可鍵盤操作的 `⋯` menu。
+- **Week 日格 top-3 子區補 `min-height`**:否則空日的 top-3 `<ol>` 塌成 0 高、拖過去只會落「其他」(手動驗收抓到)。
+- **Week 日格拖曳用複合 id `week:<date>:<taskId>`**:避免焦點日 top-3 任務同時在 Day 欄與 Week 格被註冊成同一 draggable id。
+- **`nextFreeDailySlot` 排除被拖任務**:重排已有名次的任務到別天時,不讓它把自己舊名次算進空位(否則落 ② 而非 ①)。
+
+**不做(留後續)**:日 → 月「降級 / 丟回月」(task 排到某天已補本月、仍在 Month 欄,真正的丟回月留 **Slice 6**);Focus 模式順延拖曳(**Slice 5 / 6**);手機 day↔day 重排(桌機拖曳限定);同欄拖曳排序(`position`,**Slice 7**)。
 
 ### Slice 5 — Dismiss / Unschedule(實寫入)⏳
 
