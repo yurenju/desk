@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { TopNav } from "@/features/shell/TopNav";
 import { useAuthStore } from "@/store/auth";
+import { TaskDetailModal } from "@/features/task-detail/TaskDetailModal";
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -16,6 +17,7 @@ function RootComponent() {
     <>
       <TopNav />
       <Outlet />
+      <TaskDetailModal />
     </>
   );
 }
