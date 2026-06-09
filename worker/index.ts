@@ -1,6 +1,6 @@
 import { handleLogin, handleStatus, handleLogout } from "./routes/auth";
 import { handleMe } from "./routes/me";
-import { handleListTodo, handleCreateTodo, handlePatchTodo } from "./routes/todo";
+import { handleListTodo, handleCreateTodo, handlePatchTodo, handleListSubtasks, handleCreateSubtask } from "./routes/todo";
 import { handleTestLogin } from "./routes/test-login";
 import { handleDevLogin } from "./routes/dev-login";
 import { setWspcBase } from "./wspc";
@@ -66,6 +66,21 @@ export default {
     if (path === "/api/todo" && method === "POST") {
       return handleCreateTodo(request, env);
     }
+    const subtaskMatch = path.match(/^\/api\/todo\/([^/]+)\/subtasks$/);
+    if (subtaskMatch) {
+      let parentId: string;
+      try {
+        parentId = decodeURIComponent(subtaskMatch[1]);
+      } catch {
+        return new Response(JSON.stringify({ error: "bad_todo_id" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (method === "GET") return handleListSubtasks(request, env, parentId);
+      if (method === "POST") return handleCreateSubtask(request, env, parentId);
+    }
+
     const todoIdMatch = path.match(/^\/api\/todo\/([^/]+)$/);
     if (todoIdMatch && method === "PATCH") {
       let todoId: string;

@@ -1,7 +1,7 @@
 import { withSession } from "../middleware/session";
 import { ensureBootstrap } from "../bootstrap";
-import { listTodos, createTodo, patchTodo } from "../wspc";
-import { mapTodoToTask } from "../todo-mapper";
+import { listTodos, createTodo, patchTodo, listChildren } from "../wspc";
+import { mapTodoToTask, mapTodoToSubtask } from "../todo-mapper";
 
 interface Env {
   DESK_KV: KVNamespace;
@@ -61,6 +61,7 @@ export async function handlePatchTodo(
       done_on?: string | null;
       is_adhoc?: "true" | "false";
       title?: string;
+      description?: string;
       scheduled_dates?: string[];
       scheduled_months?: string[];
     };
@@ -72,6 +73,7 @@ export async function handlePatchTodo(
         done_on?: string | null;
         is_adhoc?: "true" | "false";
         title?: string;
+        description?: string;
         scheduled_dates?: string[];
         scheduled_months?: string[];
       };
@@ -89,7 +91,46 @@ export async function handlePatchTodo(
       status: body.status,
       customFields: Object.keys(customFields).length ? customFields : undefined,
       title: body.title,
+      description: body.description,
     });
     return json({ task: mapTodoToTask(todo) });
+  });
+}
+
+export async function handleListSubtasks(
+  request: Request,
+  env: Env,
+  parentId: string,
+): Promise<Response> {
+  return withSession(request, env, async ({ accessToken, userId }) => {
+    const { projectId, typeId } = await ensureBootstrap(env.DESK_KV, accessToken, userId);
+    const children = await listChildren(accessToken, { projectId, typeId, parentId });
+    return json({ subtasks: children.map(mapTodoToSubtask) });
+  });
+}
+
+export async function handleCreateSubtask(
+  request: Request,
+  env: Env,
+  parentId: string,
+): Promise<Response> {
+  return withSession(request, env, async ({ accessToken, userId }) => {
+    let body: { title?: string };
+    try {
+      body = (await request.json()) as typeof body;
+    } catch {
+      return json({ error: "invalid_json" }, 400);
+    }
+    const title = body.title?.trim();
+    if (!title) return json({ error: "title_required" }, 400);
+    const { projectId, typeId } = await ensureBootstrap(env.DESK_KV, accessToken, userId);
+    const todo = await createTodo(accessToken, {
+      title,
+      projectId,
+      typeId,
+      customFields: {},
+      parentId,
+    });
+    return json({ subtask: mapTodoToSubtask(todo) }, 201);
   });
 }
