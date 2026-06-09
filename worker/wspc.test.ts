@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { registerClient, requestDeviceAuthorization, exchangeDeviceCode, refreshAccessToken, getWhoami, listTodos, createTodo, patchTodo, listChildren } from "./wspc";
 
+function mockFetchOnce(body: unknown, status = 200) {
+  return vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response(JSON.stringify(body), { status }),
+  );
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -481,12 +487,6 @@ describe("patchTodo", () => {
   });
 });
 
-function mockFetchOnce(body: unknown, ok = true, status = 200) {
-  return vi.spyOn(globalThis, "fetch").mockResolvedValue(
-    new Response(JSON.stringify(body), { status: ok ? status : status }),
-  );
-}
-
 describe("listChildren", () => {
   it("requests children of a parent scoped to project+type, non-cancelled", async () => {
     const spy = mockFetchOnce({ todos: [{ id: "c1", status: "open", title: "step", created_at: 0, updated_at: 0 }] });
@@ -497,6 +497,11 @@ describe("listChildren", () => {
     expect(url).toContain("project_id=p1");
     expect(url).toContain("type_id=t1");
     expect(url).toContain("status=open");
+  });
+
+  it("throws when WSPC responds non-2xx", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("nope", { status: 500 }));
+    await expect(listChildren("at", { projectId: "p1", typeId: "t1", parentId: "tod_1" })).rejects.toThrow();
   });
 });
 
