@@ -36,6 +36,8 @@ interface TasksState {
   toggleDone: (id: string) => Promise<void>;
   addTodayTask: (title: string, date: string) => Promise<void>;
   editTitle: (id: string, title: string) => Promise<void>;
+  editDescription: (id: string, description: string) => Promise<void>;
+  bumpSubtaskCount: (id: string, delta: number) => void;
   deleteTask: (id: string) => Promise<void>;
   restoreTask: () => Promise<void>;
   setDailyPriority: (id: string, n: Priority | null, date: string) => Promise<void>;
@@ -121,6 +123,27 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     } catch {
       set({ tasks: prev, error: "save_failed" });
     }
+  },
+
+  async editDescription(id, description) {
+    const prev = get().tasks;
+    set({
+      tasks: prev.map((t) => (t.id === id ? { ...t, description: description || undefined } : t)),
+      error: null,
+    });
+    try {
+      await enqueuePatch(id, { description });
+    } catch {
+      set({ tasks: prev, error: "save_failed" });
+    }
+  },
+
+  bumpSubtaskCount(id, delta) {
+    set({
+      tasks: get().tasks.map((t) =>
+        t.id === id ? { ...t, subtask_count: Math.max(0, (t.subtask_count ?? 0) + delta) } : t,
+      ),
+    });
   },
 
   async deleteTask(id) {

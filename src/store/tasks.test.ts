@@ -3,6 +3,8 @@ import { useTasksStore } from "./tasks";
 import { allTasks, MOCK_TODAY } from "@/mock/data";
 import * as api from "@/lib/api/todo";
 import { resetTodoQueue } from "@/lib/api/todoQueue";
+import * as queue from "@/lib/api/todoQueue";
+import type { Task } from "@/lib/types";
 import { todayISO } from "@/lib/date";
 
 // Silence unhandled floating-promise warnings from fire-and-forget store actions
@@ -376,5 +378,37 @@ describe("planScheduleDay rollback", () => {
     expect(task.custom_fields.scheduled_dates).toEqual([]);
     expect(task.custom_fields.scheduled_months).toEqual([]);
     expect(useTasksStore.getState().error).toBe("save_failed");
+  });
+});
+
+function task(id: string, over: Partial<Task> = {}): Task {
+  return { id, title: id, status: "open", created_at: "", updated_at: "", custom_fields: {}, ...over };
+}
+
+describe("editDescription", () => {
+  it("optimistically sets description and patches", async () => {
+    const spy = vi.spyOn(queue, "enqueuePatch").mockResolvedValue(task("t1"));
+    useTasksStore.setState({ tasks: [task("t1")] });
+    await useTasksStore.getState().editDescription("t1", "**hi**");
+    expect(useTasksStore.getState().tasks[0].description).toBe("**hi**");
+    expect(spy.mock.calls[0]).toEqual(["t1", { description: "**hi**" }]);
+  });
+
+  it("rolls back on failure", async () => {
+    vi.spyOn(queue, "enqueuePatch").mockRejectedValue(new Error("x"));
+    useTasksStore.setState({ tasks: [task("t1", { description: "old" })] });
+    await useTasksStore.getState().editDescription("t1", "new");
+    expect(useTasksStore.getState().tasks[0].description).toBe("old");
+    expect(useTasksStore.getState().error).toBe("save_failed");
+  });
+});
+
+describe("bumpSubtaskCount", () => {
+  it("adjusts subtask_count by delta, floored at 0", () => {
+    useTasksStore.setState({ tasks: [task("t1", { subtask_count: 1 })] });
+    useTasksStore.getState().bumpSubtaskCount("t1", 1);
+    expect(useTasksStore.getState().tasks[0].subtask_count).toBe(2);
+    useTasksStore.getState().bumpSubtaskCount("t1", -5);
+    expect(useTasksStore.getState().tasks[0].subtask_count).toBe(0);
   });
 });
