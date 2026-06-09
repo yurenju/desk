@@ -53,3 +53,16 @@ test("edits description and persists across reopen", async ({ page }) => {
   await row.getByLabel("開啟詳情").click();
   await expect(dialog.locator("strong", { hasText: "report" })).toBeVisible();
 });
+
+test("closing the modal removes the blocking backdrop", async ({ page }) => {
+  const row = taskContainer(page, "完成 desk.yurenju.me todo MVP demo");
+  await row.hover();
+  await row.getByLabel("開啟詳情").click();
+  const dialog = page.getByRole("dialog", { name: "任務詳情" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel("關閉").click();
+  // With the closed-state hidden, the dialog is no longer visible and its
+  // backdrop no longer intercepts pointer events. toBeHidden fails if the
+  // closed popup/backdrop linger in the layout.
+  await expect(dialog).toBeHidden();
+});
