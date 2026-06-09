@@ -7,10 +7,22 @@
 寫設計文件（`docs/superpowers/specs/**`）的「測試策略」時，除了自動化測試（vitest / Testing Library / e2e），**一律加入「手動測試（preview + AI agent）」一項**：
 
 - 由 AI agent 透過 `preview_start` 開預覽，實際操作畫面驗證視覺與互動 —— 那些難用單元測試涵蓋的觀感、過場、觸控目標、響應式排版等。
-- **先直接啟動 preview 探測登入狀態**：開預覽後看畫面是否已登入（header 顯示帳號、能進 Today/Plan 操作）。**已登入就直接開始**手動驗收，不要每次都先問使用者；**只有在需要登入才能驗時**（畫面停在 `/login`、或要驗的流程需要真實 WSPC 資料而目前未登入）**才告知使用者、請其協助**完成 device flow（WSPC 端按 Approve）後再續跑。
+- **先直接啟動 preview 探測登入狀態**：開預覽後看畫面是否已登入（header 顯示帳號、能進 Today/Plan 操作）。**已登入就直接開始**手動驗收。**未登入時先自助登入**：`POST /api/dev-login`（見下節）能重接持久 session，多數情況免使用者介入；**只有 dev-login 也失敗時**（種子過期、或這台機器 / worktree 第一次設定）**才告知使用者、請其協助**完成 device flow（WSPC 端按 Approve）後再續跑。
 - 對照該 spec 的「驗收標準」逐項手動驗收。
 
-理由：這個專案大量是視覺 / 互動打磨，單元測試抓不到觀感與真實資料流；手動 preview 驗收是必要補充，且涉及 WSPC 登入時必須有使用者在場。
+理由：這個專案大量是視覺 / 互動打磨，單元測試抓不到觀感與真實資料流；手動 preview 驗收是必要補充。
+
+## 本機 preview 登入（dev-login + 新 worktree）
+
+手動驗收要登入真實 WSPC。為了不用每次都跑 device flow，有 dev-only 的 `POST /api/dev-login`（`DEV_LOGIN=true` gated、永不進 production）：一次 device flow 後，它把 cookie 重接回持久化的 real-WSPC session，之後免登入。
+
+**設定流程**：
+
+- **每個新 worktree 開工先跑一次 `npm run setup:dev`** —— 把機器層級的 `~/.desk-dev/.dev.vars` 複製進這個 worktree 的 `.dev.vars`（wrangler / vite-plugin 只從專案根讀 `.dev.vars`，且它 gitignored、不跨 worktree）。canonical 檔放 home 目錄、不在 worktree 裡，所以 worktree 被刪也不影響。
+- **這台機器第一次**（`~/.desk-dev/.dev.vars` 還沒種子）：`setup:dev` 會先建只含 `DEV_LOGIN=true` 的 canonical 檔。開 preview 走一次 device flow（**用測試帳號**）→ `POST /api/dev-login` 回傳 `refreshToken` + `userId` → 把這兩行填回 `~/.desk-dev/.dev.vars`（`DEV_REFRESH_SEED=` / `DEV_USER_ID=`）→ 之後所有 worktree 都能自助登入。
+- **種子會因 WSPC refresh-token rotation 偶發失效**：若 dev-login 報 `seed_refresh_failed`，重跑一次 device flow capture、更新 canonical 檔即可。
+
+> ⚠️ canonical `.dev.vars` 是明文存測試帳號的 refresh token，**只用丟棄式測試帳號，絕不放個人帳號**。
 
 ## 改動 UI 互動後要跑 e2e
 

@@ -13,6 +13,7 @@
     "test:e2e": "playwright test",
     "lint": "eslint src worker",
     "format": "prettier --write src worker",
+    "setup:dev": "node scripts/setup-dev-worktree.mjs",
     "cf-typegen": "wrangler types",
     "wspc:sync": "tsx scripts/sync-wspc-spec.ts",
     "wspc:generate": "openapi-typescript spec/wspc-openapi.json -o worker/wspc-types.ts",
