@@ -15,7 +15,11 @@
     "format": "prettier --write src worker",
     "cf-typegen": "wrangler types",
     "wspc:sync": "tsx scripts/sync-wspc-spec.ts",
-    "wspc:generate": "openapi-typescript spec/wspc-openapi.json -o worker/wspc-types.ts"
+    "wspc:generate": "openapi-typescript spec/wspc-openapi.json -o worker/wspc-types.ts",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "{src,worker}/**/*.{ts,tsx,js,jsx}": "eslint --no-warn-ignored"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
@@ -47,7 +51,9 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "husky": "^9.1.7",
     "jsdom": "^29.1.1",
+    "lint-staged": "^17.0.7",
     "openapi-typescript": "^7.13.0",
     "prettier": "^3.8.3",
     "tsx": "^4.22.3",
