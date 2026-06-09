@@ -36,4 +36,27 @@ describe("SubtaskList", () => {
     await userEvent.click(screen.getAllByLabelText("刪除子任務")[0]);
     expect(onRemove).toHaveBeenCalledWith("c1");
   });
+
+  it("renames a subtask on Enter", async () => {
+    const onRename = vi.fn();
+    render(<SubtaskList subtasks={subs} onToggle={() => {}} onRename={onRename} onRemove={() => {}} onAdd={() => {}} />);
+    await userEvent.click(screen.getByText("open one"));
+    const inputs = screen.getAllByRole("textbox");
+    const input = inputs.find((el) => (el as HTMLInputElement).value === "open one")!;
+    await userEvent.clear(input);
+    await userEvent.type(input, "renamed{Enter}");
+    expect(onRename).toHaveBeenCalledWith("c2", "renamed");
+    expect(onRename).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancels rename on Escape without calling onRename", async () => {
+    const onRename = vi.fn();
+    render(<SubtaskList subtasks={subs} onToggle={() => {}} onRename={onRename} onRemove={() => {}} onAdd={() => {}} />);
+    await userEvent.click(screen.getByText("open one"));
+    const inputs = screen.getAllByRole("textbox");
+    const input = inputs.find((el) => (el as HTMLInputElement).value === "open one")!;
+    await userEvent.clear(input);
+    await userEvent.type(input, "should not save{Escape}");
+    expect(onRename).not.toHaveBeenCalled();
+  });
 });

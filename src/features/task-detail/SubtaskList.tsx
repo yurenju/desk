@@ -1,7 +1,40 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Subtask } from "@/lib/types";
 import { Checkbox } from "@/ui/Checkbox";
 import styles from "./SubtaskList.module.css";
+
+function InlineTitleEditor({
+  initial,
+  onCommit,
+  onCancel,
+}: {
+  initial: string;
+  onCommit: (title: string) => void;
+  onCancel: () => void;
+}) {
+  const [draft, setDraft] = useState(initial);
+  const done = useRef(false);
+  function finish(commit: boolean) {
+    if (done.current) return; // single commit path: blur after Enter/Escape is a no-op
+    done.current = true;
+    const t = draft.trim();
+    if (commit && t) onCommit(t);
+    else onCancel();
+  }
+  return (
+    <input
+      className={styles.editInput}
+      autoFocus
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => finish(true)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && !e.nativeEvent.isComposing) e.currentTarget.blur();
+        if (e.key === "Escape") finish(false);
+      }}
+    />
+  );
+}
 
 export interface SubtaskListProps {
   subtasks: Subtask[];
@@ -14,7 +47,6 @@ export interface SubtaskListProps {
 export function SubtaskList({ subtasks, onToggle, onRename, onRemove, onAdd }: SubtaskListProps) {
   const [draft, setDraft] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState("");
   const total = subtasks.length;
   const done = subtasks.filter((s) => s.status === "done").length;
 
@@ -23,11 +55,6 @@ export function SubtaskList({ subtasks, onToggle, onRename, onRemove, onAdd }: S
     if (!t) return;
     onAdd(t);
     setDraft("");
-  }
-
-  function commitRename(id: string) {
-    setEditingId(null);
-    if (editDraft.trim()) onRename(id, editDraft);
   }
 
   return (
@@ -44,22 +71,16 @@ export function SubtaskList({ subtasks, onToggle, onRename, onRemove, onAdd }: S
         <div key={s.id} className={[styles.row, s.status === "done" && styles.done].filter(Boolean).join(" ")}>
           <Checkbox checked={s.status === "done"} onCheckedChange={() => onToggle(s.id)} aria-label={s.title} />
           {editingId === s.id ? (
-            <input
-              className={styles.editInput}
-              autoFocus
-              value={editDraft}
-              onChange={(e) => setEditDraft(e.target.value)}
-              onBlur={() => commitRename(s.id)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.nativeEvent.isComposing) commitRename(s.id);
-                if (e.key === "Escape") setEditingId(null);
-              }}
+            <InlineTitleEditor
+              initial={s.title}
+              onCommit={(t) => { onRename(s.id, t); setEditingId(null); }}
+              onCancel={() => setEditingId(null)}
             />
           ) : (
             <button
               type="button"
               className={styles.title}
-              onClick={() => { setEditingId(s.id); setEditDraft(s.title); }}
+              onClick={() => setEditingId(s.id)}
             >
               {s.title}
             </button>
