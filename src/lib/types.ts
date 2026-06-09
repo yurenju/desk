@@ -18,10 +18,17 @@ export interface TaskCustomFields {
   position?: string;
 }
 
+export interface Subtask {
+  id: string;
+  title: string;
+  status: TaskStatus;
+}
+
 export interface Task {
   id: string;
   title: string;
   description?: string;
+  subtask_count?: number;
   status: TaskStatus;
   created_at: string;
   updated_at: string;

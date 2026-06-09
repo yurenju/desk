@@ -1,0 +1,15 @@
+# Local dev vars for `npm run dev` (wrangler / @cloudflare/vite-plugin loads
+# `.dev.vars` automatically). Copy to `.dev.vars` (gitignored) to enable.
+
+# Enable POST /api/dev-login, which re-attaches a browser cookie to a persisted
+# real-WSPC session so local manual testing skips the device flow on every
+# restart. NEVER set this in production — the route is gated on it.
+DEV_LOGIN=true
+
+# Optional cold-start seed, captured once from a real device-flow login
+# (POST /api/dev-login returns the refreshToken + userId to paste here). Used
+# only when local KV has been fully wiped, so even then dev-login can mint a
+# session without a new device flow. Best-effort: may be single-use under WSPC
+# refresh-token rotation. Use a throwaway TEST account, never a personal one.
+# DEV_REFRESH_SEED=<refresh-token-from-capture>
+# DEV_USER_ID=<usr_...>

@@ -4,6 +4,7 @@ import { UnplannedChip } from "@/ui/Chip";
 import { Menu } from "@/ui/Menu";
 import { PriorityRing } from "@/ui/PriorityRing";
 import { useDraggableRow } from "@/features/plan-view/useDraggableRow";
+import { TaskDetailTrigger } from "@/features/task-detail/TaskDetailTrigger";
 import { useMonthRow } from "./useMonthRow";
 import styles from "./MonthRow.module.css";
 
@@ -85,6 +86,7 @@ export function MonthRow({
       {kind === "forwarded" && <span className={styles.trail}>↪</span>}
       {kind === "dismissed" && <span className={styles.trail}>·略過</span>}
       {isAdhoc && <UnplannedChip />}
+      {!row.isEditing && <TaskDetailTrigger task={task} />}
       {editable && !row.isEditing && (
         <div className={styles.actions}>
           <Menu

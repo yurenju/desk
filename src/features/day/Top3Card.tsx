@@ -4,6 +4,7 @@ import { UnplannedChip } from "@/ui/Chip";
 import { Menu } from "@/ui/Menu";
 import { PriorityRing } from "@/ui/PriorityRing";
 import { useDraggableRow } from "@/features/plan-view/useDraggableRow";
+import { TaskDetailTrigger } from "@/features/task-detail/TaskDetailTrigger";
 import { useTaskRow } from "./useTaskRow";
 import styles from "./Top3Card.module.css";
 
@@ -94,6 +95,7 @@ function Top3Item({
         )}
       </div>
       {isAdhoc && <UnplannedChip />}
+      <TaskDetailTrigger task={t} />
       {interactive && !row.isEditing && (
         <div className={styles.actions}>
           <Menu

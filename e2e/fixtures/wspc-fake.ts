@@ -27,6 +27,8 @@ interface Todo {
   created_at: number;
   updated_at: number;
   custom_fields: Record<string, string | string[]>;
+  description?: string;
+  parent_id?: string;
 }
 
 let todos: Todo[] = [];
@@ -80,6 +82,21 @@ function seed(): void {
     // 今天臨時加的
     mk("d6", "回覆 Acme 客戶整合詢問", "open", { is_adhoc: "true" }),
   ];
+
+  // Give d1 a description and one subtask
+  const d1 = todos.find((t) => t.id === "d1");
+  if (d1) d1.description = "**MVP** demo checklist";
+  todos.push({
+    id: "d1-sub1",
+    project_id: PROJECT_ID,
+    type_id: TYPE_ID,
+    status: "open",
+    title: "first subtask",
+    created_at: base,
+    updated_at: base,
+    parent_id: "d1",
+    custom_fields: {},
+  });
 
   // Month-scoped todos for the Plan/Monthly column
   const month = today.slice(0, 7);
@@ -151,12 +168,18 @@ const server = createServer(async (req, res) => {
   if (path === "/todo/items" && method === "GET") {
     const projectId = url.searchParams.get("project_id");
     const statuses = url.searchParams.getAll("status");
+    const parentId = url.searchParams.get("parent_id");
     const result = todos.filter((t) => {
       if (projectId && t.project_id !== projectId) return false;
       if (statuses.length && !statuses.includes(t.status)) return false;
-      return true;
+      if (parentId) return t.parent_id === parentId;
+      return !t.parent_id;
     });
-    return send(res, 200, { todos: result });
+    const withCounts = result.map((t) => ({
+      ...t,
+      child_count: todos.filter((c) => c.parent_id === t.id && c.status !== "cancelled").length,
+    }));
+    return send(res, 200, { todos: withCounts });
   }
 
   if (path === "/todo/items" && method === "POST") {
@@ -171,6 +194,8 @@ const server = createServer(async (req, res) => {
       created_at: now,
       updated_at: now,
       custom_fields: (body.custom_fields as Record<string, string | string[]>) ?? {},
+      parent_id: typeof body.parent_id === "string" ? body.parent_id : undefined,
+      description: typeof body.description === "string" ? body.description : undefined,
     };
     todos.push(todo);
     return send(res, 201, todo);
@@ -183,6 +208,7 @@ const server = createServer(async (req, res) => {
     if (!todo) return send(res, 404, { error: { code: "NOT_FOUND" } });
     const body = await readJson(req);
     if (typeof body.title === "string") todo.title = body.title;
+    if (typeof body.description === "string") todo.description = body.description;
     if (typeof body.status === "string") todo.status = body.status as Status;
     if (body.custom_fields && typeof body.custom_fields === "object") {
       for (const [k, v] of Object.entries(body.custom_fields as Record<string, unknown>)) {

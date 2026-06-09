@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { registerClient, requestDeviceAuthorization, exchangeDeviceCode, refreshAccessToken, getWhoami, listTodos, createTodo, patchTodo } from "./wspc";
+import { registerClient, requestDeviceAuthorization, exchangeDeviceCode, refreshAccessToken, getWhoami, listTodos, createTodo, patchTodo, listChildren } from "./wspc";
+
+function mockFetchOnce(body: unknown, status = 200) {
+  return vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response(JSON.stringify(body), { status }),
+  );
+}
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -478,5 +484,41 @@ describe("patchTodo", () => {
     const init = fetchSpy.mock.calls[0][1]!;
     expect(JSON.parse(init.body as string)).toEqual({ title: "New" });
     expect(init.method).toBe("PATCH");
+  });
+});
+
+describe("listChildren", () => {
+  it("requests children of a parent scoped to project+type, non-cancelled", async () => {
+    const spy = mockFetchOnce({ todos: [{ id: "c1", status: "open", title: "step", created_at: 0, updated_at: 0 }] });
+    const out = await listChildren("at", { projectId: "p1", typeId: "t1", parentId: "tod_1" });
+    expect(out).toHaveLength(1);
+    const url = (spy.mock.calls[0][0] as string);
+    expect(url).toContain("parent_id=tod_1");
+    expect(url).toContain("project_id=p1");
+    expect(url).toContain("type_id=t1");
+    expect(url).toContain("status=open");
+  });
+
+  it("throws when WSPC responds non-2xx", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("nope", { status: 500 }));
+    await expect(listChildren("at", { projectId: "p1", typeId: "t1", parentId: "tod_1" })).rejects.toThrow();
+  });
+});
+
+describe("createTodo with parentId", () => {
+  it("sends parent_id in the body when given", async () => {
+    const spy = mockFetchOnce({ id: "c2", status: "open", title: "sub", created_at: 0, updated_at: 0 });
+    await createTodo("at", { title: "sub", projectId: "p1", typeId: "t1", customFields: {}, parentId: "tod_1" });
+    const init = spy.mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(init.body as string)).toMatchObject({ parent_id: "tod_1", title: "sub" });
+  });
+});
+
+describe("patchTodo with description", () => {
+  it("sends description in the payload when given", async () => {
+    const spy = mockFetchOnce({ id: "tod_1", status: "open", title: "x", created_at: 0, updated_at: 0 });
+    await patchTodo("at", "tod_1", { description: "**hi**" });
+    const init = spy.mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(init.body as string)).toEqual({ description: "**hi**" });
   });
 });

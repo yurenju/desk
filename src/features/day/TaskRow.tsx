@@ -4,6 +4,7 @@ import { UnplannedChip } from "@/ui/Chip";
 import { Menu } from "@/ui/Menu";
 import { PriorityRing } from "@/ui/PriorityRing";
 import { useDraggableRow } from "@/features/plan-view/useDraggableRow";
+import { TaskDetailTrigger } from "@/features/task-detail/TaskDetailTrigger";
 import { useTaskRow } from "./useTaskRow";
 import styles from "./TaskRow.module.css";
 
@@ -79,6 +80,7 @@ export function TaskRow({ task, kind, date, showAdhocChip, interactive, showRing
         {task.description && <div className={styles.desc}>{task.description}</div>}
       </div>
       {showAdhocChip && isAdhoc && <UnplannedChip />}
+      <TaskDetailTrigger task={task} />
       {editable && !row.isEditing && (
         <div className={styles.actions}>
           <Menu

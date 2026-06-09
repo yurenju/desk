@@ -2,6 +2,7 @@ import type { Task } from "@/lib/types";
 import { Checkbox } from "@/ui/Checkbox";
 import { Menu } from "@/ui/Menu";
 import { useDraggableRow } from "@/features/plan-view/useDraggableRow";
+import { TaskDetailTrigger } from "@/features/task-detail/TaskDetailTrigger";
 import { useBacklogRow } from "./useBacklogRow";
 import styles from "./BacklogRow.module.css";
 
@@ -45,6 +46,7 @@ export function BacklogRow({ task, focusDate }: BacklogRowProps) {
       ) : (
         <span className={styles.title}>{task.title}</span>
       )}
+      {!row.isEditing && <TaskDetailTrigger task={task} />}
       {!row.isEditing && (
         <div className={styles.actions}>
           <Menu
