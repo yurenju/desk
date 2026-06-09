@@ -19,7 +19,7 @@
 **設定流程**：
 
 - **每個新 worktree 開工先跑一次 `npm run setup:dev`** —— 把機器層級的 `~/.desk-dev/.dev.vars` 複製進這個 worktree 的 `.dev.vars`（wrangler / vite-plugin 只從專案根讀 `.dev.vars`，且它 gitignored、不跨 worktree）。canonical 檔放 home 目錄、不在 worktree 裡，所以 worktree 被刪也不影響。
-- **這台機器第一次**（`~/.desk-dev/.dev.vars` 還沒種子）：`setup:dev` 會先建只含 `DEV_LOGIN=true` 的 canonical 檔。開 preview 走一次 device flow（**用測試帳號**）→ `POST /api/dev-login` 回傳 `refreshToken` + `userId` → 把這兩行填回 `~/.desk-dev/.dev.vars`（`DEV_REFRESH_SEED=` / `DEV_USER_ID=`）→ 之後所有 worktree 都能自助登入。
+- **這台機器第一次**（`~/.desk-dev/.dev.vars` 還沒種子）：`setup:dev` 會先建只含 `DEV_LOGIN=true` 的 canonical 檔。開 preview 走一次 device flow（**用測試帳號**）→ `POST /api/dev-login` 回傳 `refreshToken` + `userId` + `clientId` → 把這三行填回 `~/.desk-dev/.dev.vars`（`DEV_REFRESH_SEED=` / `DEV_USER_ID=` / `DEV_CLIENT_ID=`）→ 之後所有 worktree 都能自助登入。`clientId` 不可省：refresh token 綁定發給它的 OAuth client，fresh worktree 的空 KV 沒有它就 refresh 不了。
 - **種子會因 WSPC refresh-token rotation 偶發失效**：若 dev-login 報 `seed_refresh_failed`，重跑一次 device flow capture、更新 canonical 檔即可。
 
 > ⚠️ canonical `.dev.vars` 是明文存測試帳號的 refresh token，**只用丟棄式測試帳號，絕不放個人帳號**。

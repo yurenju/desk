@@ -6,10 +6,12 @@
 # restart. NEVER set this in production — the route is gated on it.
 DEV_LOGIN=true
 
-# Optional cold-start seed, captured once from a real device-flow login
-# (POST /api/dev-login returns the refreshToken + userId to paste here). Used
-# only when local KV has been fully wiped, so even then dev-login can mint a
-# session without a new device flow. Best-effort: may be single-use under WSPC
-# refresh-token rotation. Use a throwaway TEST account, never a personal one.
+# Optional cold-start seed, captured once from a real device-flow login (POST
+# /api/dev-login returns refreshToken + userId + clientId to paste here). Lets a
+# fresh worktree with an empty KV mint a session without a new device flow.
+# clientId is required: the refresh token only works under the OAuth client it
+# was issued for, and an empty KV has no registered client. Best-effort: may be
+# single-use under WSPC refresh-token rotation. Use a throwaway TEST account.
 # DEV_REFRESH_SEED=<refresh-token-from-capture>
 # DEV_USER_ID=<usr_...>
+# DEV_CLIENT_ID=<client-id-from-capture>

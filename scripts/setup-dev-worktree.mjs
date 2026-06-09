@@ -40,10 +40,11 @@ if (firstTime) {
   console.log(`[setup:dev] No cold-start seed yet — ${canonical} only enables DEV_LOGIN.`);
   console.log("[setup:dev] First-time login (once per machine):");
   console.log("[setup:dev]   1. Start the preview and complete the WSPC device flow once (TEST account).");
-  console.log("[setup:dev]   2. POST /api/dev-login — it returns refreshToken + userId.");
-  console.log(`[setup:dev]   3. Append them to ${canonical} so future worktrees auto-login:`);
+  console.log("[setup:dev]   2. POST /api/dev-login — it returns refreshToken + userId + clientId.");
+  console.log(`[setup:dev]   3. Append all three to ${canonical} so future worktrees auto-login:`);
   console.log("[setup:dev]        DEV_REFRESH_SEED=<refreshToken>");
   console.log("[setup:dev]        DEV_USER_ID=<userId>");
+  console.log("[setup:dev]        DEV_CLIENT_ID=<clientId>");
   console.log("[setup:dev]   4. Re-run `npm run setup:dev` in this worktree to pick up the seed,");
   console.log("[setup:dev]      or just paste the same two lines into this worktree's .dev.vars.");
 }

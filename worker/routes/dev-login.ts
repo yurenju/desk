@@ -16,8 +16,12 @@ interface Env {
   // Cold-start seed (gitignored .dev.vars) used only when local KV has been
   // fully wiped, so even then we can mint a session without a new device flow.
   // Best-effort: subject to WSPC refresh-token rotation, so it may be single-use.
+  // DEV_CLIENT_ID is the OAuth client the refresh token was issued under; a
+  // refresh only works with that exact client, and a fresh worktree's empty KV
+  // has no registered client — so it must travel alongside the seed.
   DEV_REFRESH_SEED?: string;
   DEV_USER_ID?: string;
+  DEV_CLIENT_ID?: string;
 }
 
 function json(
@@ -66,9 +70,11 @@ export async function handleDevLogin(
           mode: "capture",
           sessionId: existingId,
           userId: session.userId,
-          // Returned so the agent can stash it in .dev.vars as a durable seed
-          // that survives even a full local KV wipe.
+          // Returned so the agent can stash these in .dev.vars as a durable seed
+          // that survives even a full local KV wipe. clientId is required because
+          // the refresh token only works under the client it was issued for.
           refreshToken: session.refreshToken,
+          clientId: await getClientId(env.DESK_KV),
         },
         200,
       );
@@ -92,7 +98,10 @@ export async function handleDevLogin(
       ? { refreshToken: env.DEV_REFRESH_SEED, userId: env.DEV_USER_ID }
       : null);
   if (seed) {
-    const clientId = await getClientId(env.DESK_KV);
+    // The refresh token is bound to a specific OAuth client. Prefer the client
+    // registered in KV; on a fully-wiped worktree KV, fall back to the client id
+    // captured alongside the cold-start seed in .dev.vars.
+    const clientId = (await getClientId(env.DESK_KV)) ?? env.DEV_CLIENT_ID;
     if (!clientId) {
       return json({ ok: false, error: "client_missing" }, 409);
     }
