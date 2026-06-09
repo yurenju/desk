@@ -21,6 +21,7 @@ beforeEach(() => vi.restoreAllMocks());
 describe("POST /api/dev-login", () => {
   it("captures a live session carried by the cookie", async () => {
     const env = makeEnv();
+    await env.DESK_KV.put("wspc:client_id", "cli_1");
     await putSession(env.DESK_KV, "real-sid", {
       accessToken: "at",
       refreshToken: "rt-1",
@@ -34,9 +35,15 @@ describe("POST /api/dev-login", () => {
 
     const res = await handleDevLogin(req, env);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { mode: string; refreshToken: string };
+    const body = (await res.json()) as {
+      mode: string;
+      refreshToken: string;
+      clientId: string;
+    };
     expect(body.mode).toBe("capture");
     expect(body.refreshToken).toBe("rt-1");
+    // clientId is returned so it can be stashed alongside the seed.
+    expect(body.clientId).toBe("cli_1");
     // Persists the canonical id + a wipe-recovery seed.
     expect(await getDevSessionId(env.DESK_KV)).toBe("real-sid");
     expect(await getDevRefreshSeed(env.DESK_KV)).toEqual({
@@ -102,17 +109,19 @@ describe("POST /api/dev-login", () => {
     });
   });
 
-  it("mints from the .dev.vars cold-start seed when KV holds nothing", async () => {
+  it("mints from the .dev.vars cold-start seed + client id when KV is empty", async () => {
+    // A truly fresh worktree: KV has neither a session nor a registered client.
     const env = {
       DESK_KV: makeKvStub(),
       DEV_REFRESH_SEED: "rt-coldstart",
       DEV_USER_ID: "usr_real",
+      DEV_CLIENT_ID: "cli_env",
     } as unknown as {
       DESK_KV: KVNamespace;
       DEV_REFRESH_SEED: string;
       DEV_USER_ID: string;
+      DEV_CLIENT_ID: string;
     };
-    await env.DESK_KV.put("wspc:client_id", "cli_1");
     const spy = vi.spyOn(wspc, "refreshAccessToken").mockResolvedValue({
       accessToken: "at-new",
       refreshToken: "rt-rotated",
@@ -126,6 +135,26 @@ describe("POST /api/dev-login", () => {
     expect(res.status).toBe(200);
     expect((await res.json() as { mode: string }).mode).toBe("mint");
     expect(spy.mock.calls[0][0].refreshToken).toBe("rt-coldstart");
+    // The refresh used the client id carried in .dev.vars, not a KV one.
+    expect(spy.mock.calls[0][0].clientId).toBe("cli_env");
+  });
+
+  it("409s on the cold-start seed when no client id is available anywhere", async () => {
+    const env = {
+      DESK_KV: makeKvStub(),
+      DEV_REFRESH_SEED: "rt-coldstart",
+      DEV_USER_ID: "usr_real",
+    } as unknown as {
+      DESK_KV: KVNamespace;
+      DEV_REFRESH_SEED: string;
+      DEV_USER_ID: string;
+    };
+    const res = await handleDevLogin(
+      new Request("https://d/api/dev-login", { method: "POST" }),
+      env,
+    );
+    expect(res.status).toBe(409);
+    expect((await res.json() as { error: string }).error).toBe("client_missing");
   });
 
   it("401s when there is no cookie, no saved session, and no seed", async () => {

@@ -22,6 +22,9 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test-setup.ts"],
-    exclude: [...configDefaults.exclude, "e2e/**"],
+    // `.claude/**` keeps vitest from descending into sibling git worktrees
+    // (`.claude/worktrees/*`) when run from the main checkout — each is a full
+    // repo copy whose tests would otherwise be collected and run.
+    exclude: [...configDefaults.exclude, "e2e/**", ".claude/**"],
   },
 });
