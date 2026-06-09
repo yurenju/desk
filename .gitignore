@@ -90,3 +90,10 @@ dist-ssr/
 # Playwright
 test-results/
 playwright-report/
+
+# playwright-cli scratch + installed skill (machine-local, per worktree)
+.playwright-cli/
+.claude/skills/playwright-cli/
+
+# Acceptance reports (gitignored md + screenshots; review then delete)
+docs/acceptance-reports/

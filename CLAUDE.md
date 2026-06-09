@@ -12,6 +12,12 @@
 
 理由：這個專案大量是視覺 / 互動打磨，單元測試抓不到觀感與真實資料流；手動 preview 驗收是必要補充。
 
+## 寫 plan 時：最後一個 task 產生驗收報告
+
+寫 implementation plan（`docs/superpowers/plans/**`）時，**最後一個 task 一律是「手動驗收 + 產生驗收報告」**：執行該 task 時，全程用 `playwright-cli` 驗收並把報告寫到 gitignored 的 `docs/acceptance-reports/<plan-slug>/`（截圖在底下 `assets/`）。報告格式、playwright-cli 截圖落地流程、範本，見 [.claude/rules/acceptance-report.md](.claude/rules/acceptance-report.md)（path-scoped 到 plans，讀 plan 時自動載入）。
+
+理由：`preview_screenshot` 是 inline JPEG、不落地，報告引不到；`playwright-cli screenshot --filename` 才能把截圖寫進報告目錄。machine 一次性前置：`npm i -g @playwright/cli@latest` + `playwright-cli install --skills`。
+
 ## 本機 preview 登入（dev-login + 新 worktree）
 
 手動驗收要登入真實 WSPC。為了不用每次都跑 device flow，有 dev-only 的 `POST /api/dev-login`（`DEV_LOGIN=true` gated、永不進 production）：一次 device flow 後，它把 cookie 重接回持久化的 real-WSPC session，之後免登入。
