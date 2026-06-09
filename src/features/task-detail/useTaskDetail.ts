@@ -12,7 +12,11 @@ export function useTaskDetail(parentId: string | null) {
   const bumpSubtaskCount = useTasksStore((s) => s.bumpSubtaskCount);
 
   useEffect(() => {
-    if (!parentId) return;
+    if (!parentId) {
+      setStatus("ready");
+      setSubtasks([]);
+      return;
+    }
     let alive = true;
     setStatus("loading");
     fetchSubtasks(parentId).then(
@@ -22,6 +26,9 @@ export function useTaskDetail(parentId: string | null) {
     return () => { alive = false; };
   }, [parentId]);
 
+  // add is intentionally non-optimistic: the new subtask is appended only after
+  // the server assigns its id. A failed add fails silently (no global status
+  // flip) so one bad add never wipes the loaded list.
   async function add(title: string) {
     const trimmed = title.trim();
     if (!trimmed || !parentId) return;
@@ -30,7 +37,7 @@ export function useTaskDetail(parentId: string | null) {
       setSubtasks((prev) => [...prev, created]);
       bumpSubtaskCount(parentId, 1);
     } catch {
-      setStatus("error");
+      /* keep current state; surfacing add errors is a later polish */
     }
   }
 

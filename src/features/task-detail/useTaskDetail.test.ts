@@ -51,4 +51,14 @@ describe("useTaskDetail", () => {
     expect(result.current.subtasks).toHaveLength(0);
     expect(useTasksStore.getState().tasks[0].subtask_count).toBe(0);
   });
+
+  it("renames a subtask via the patch queue", async () => {
+    vi.spyOn(api, "fetchSubtasks").mockResolvedValue([{ id: "c1", title: "s", status: "open" }]);
+    const spy = vi.spyOn(queue, "enqueuePatch").mockResolvedValue({} as never);
+    const { result } = renderHook(() => useTaskDetail("t1"));
+    await waitFor(() => expect(result.current.subtasks).toHaveLength(1));
+    await act(async () => { await result.current.rename("c1", "renamed"); });
+    expect(result.current.subtasks[0].title).toBe("renamed");
+    expect(spy.mock.calls[0]).toEqual(["c1", { title: "renamed" }]);
+  });
 });
