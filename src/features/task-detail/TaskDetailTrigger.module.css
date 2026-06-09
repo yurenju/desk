@@ -1,11 +1,10 @@
 .wrap { display: inline-flex; align-items: center; gap: 6px; }
 .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--color-text-muted, #8a8268); }
+.count { display: inline-flex; align-items: center; gap: 2px; }
+.descDot { white-space: nowrap; }
 .expand {
   width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center;
   background: none; border: none; cursor: pointer; border-radius: 6px;
-  color: var(--color-text-muted, #6a6453);
+  color: var(--color-text-muted, #6a6453); opacity: 0.7;
 }
-.expand:hover { background: rgba(0,0,0,0.05); }
-@media (hover: hover) {
-  .expand { opacity: 0.7; }
-}
+.expand:hover { background: rgba(0,0,0,0.05); opacity: 1; }

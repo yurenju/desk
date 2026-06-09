@@ -86,7 +86,7 @@ export function MonthRow({
       {kind === "forwarded" && <span className={styles.trail}>↪</span>}
       {kind === "dismissed" && <span className={styles.trail}>·略過</span>}
       {isAdhoc && <UnplannedChip />}
-      <TaskDetailTrigger task={task} />
+      {!row.isEditing && <TaskDetailTrigger task={task} />}
       {editable && !row.isEditing && (
         <div className={styles.actions}>
           <Menu

@@ -16,8 +16,13 @@ export function TaskDetailTrigger({ task }: TaskDetailTriggerProps) {
       {(count > 0 || hasDesc) && (
         <span className={styles.badge}>
           {count > 0 && (
-            <span data-testid="subtask-badge" className={styles.count}>
-              ◔ <span>{count}</span>
+            <span
+              data-testid="subtask-badge"
+              className={styles.count}
+              aria-label={`${count} 個子任務`}
+            >
+              <span aria-hidden="true">◔</span>
+              <span>{count}</span>
             </span>
           )}
           {hasDesc && (
