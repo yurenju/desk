@@ -8,20 +8,21 @@ type Status = "loading" | "ready" | "error";
 
 export function useTaskDetail(parentId: string | null) {
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
-  const [status, setStatus] = useState<Status>("loading");
+  // `loadedFor` records which parent the current `subtasks` were fetched for, and
+  // `errored` whether that fetch failed. Loading is DERIVED from these (below)
+  // rather than set imperatively, so the effect never calls setState in its body
+  // — every setState here lives in a `.then` callback (react-hooks/set-state-in-effect).
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const [errored, setErrored] = useState(false);
   const bumpSubtaskCount = useTasksStore((s) => s.bumpSubtaskCount);
 
   useEffect(() => {
-    if (!parentId) {
-      setStatus("ready");
-      setSubtasks([]);
-      return;
-    }
+    // No parent (modal closed): skip the fetch; the closed case is derived below.
+    if (!parentId) return;
     let alive = true;
-    setStatus("loading");
     fetchSubtasks(parentId).then(
-      (list) => { if (alive) { setSubtasks(list); setStatus("ready"); } },
-      () => { if (alive) setStatus("error"); },
+      (list) => { if (alive) { setSubtasks(list); setLoadedFor(parentId); setErrored(false); } },
+      () => { if (alive) { setErrored(true); setLoadedFor(parentId); } },
     );
     return () => { alive = false; };
   }, [parentId]);
@@ -78,8 +79,29 @@ export function useTaskDetail(parentId: string | null) {
     }
   }
 
-  const total = subtasks.length;
-  const done = subtasks.filter((s) => s.status === "done").length;
+  // Derive everything for the current parent during render. No parent → empty +
+  // ready (modal closed). Subtasks not yet loaded for this parent → loading +
+  // empty (also masks a stale list while switching tasks). Loaded → ready/error.
+  const loaded = Boolean(parentId) && loadedFor === parentId;
+  const status: Status = !parentId
+    ? "ready"
+    : !loaded
+      ? "loading"
+      : errored
+        ? "error"
+        : "ready";
+  const visibleSubtasks = loaded ? subtasks : [];
+  const total = visibleSubtasks.length;
+  const done = visibleSubtasks.filter((s) => s.status === "done").length;
 
-  return { subtasks, status, total, done, add, toggle, rename, remove };
+  return {
+    subtasks: visibleSubtasks,
+    status,
+    total,
+    done,
+    add,
+    toggle,
+    rename,
+    remove,
+  };
 }
