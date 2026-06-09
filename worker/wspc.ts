@@ -297,6 +297,8 @@ export interface Todo {
   title: string;
   created_at: number;
   updated_at: number;
+  description?: string;
+  child_count?: number;
   custom_fields?: Record<string, string | string[]>;
 }
 
@@ -322,6 +324,28 @@ export async function listTodos(
   return data.todos ?? [];
 }
 
+// Direct children of one parent todo (subtask checklist). WSPC scopes children
+// by parent_id; root listTodos never returns these, so they stay out of the
+// month/day funnel views.
+export async function listChildren(
+  accessToken: string,
+  opts: { projectId: string; typeId: string; parentId: string },
+): Promise<Todo[]> {
+  const params = new URLSearchParams();
+  params.set("project_id", opts.projectId);
+  params.set("type_id", opts.typeId);
+  params.set("parent_id", opts.parentId);
+  for (const s of ["open", "in_progress", "done"]) params.append("status", s);
+  const res = await fetch(`${WSPC_BASE}/todo/items?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    throw new Error(`WSPC listChildren failed: ${res.status} ${await res.text()}`);
+  }
+  const data = (await res.json()) as { todos?: Todo[] };
+  return data.todos ?? [];
+}
+
 export async function createTodo(
   accessToken: string,
   body: {
@@ -329,6 +353,7 @@ export async function createTodo(
     projectId: string;
     typeId: string;
     customFields: Record<string, string | string[]>;
+    parentId?: string;
   },
 ): Promise<Todo> {
   const res = await fetch(`${WSPC_BASE}/todo/items`, {
@@ -342,6 +367,7 @@ export async function createTodo(
       project_id: body.projectId,
       type_id: body.typeId,
       custom_fields: body.customFields,
+      ...(body.parentId ? { parent_id: body.parentId } : {}),
     }),
   });
   if (!res.ok) {
@@ -357,11 +383,13 @@ export async function patchTodo(
     status?: Todo["status"];
     customFields?: Record<string, string | string[] | null>;
     title?: string;
+    description?: string;
   },
 ): Promise<Todo> {
   const payload: Record<string, unknown> = {};
   if (body.title !== undefined) payload.title = body.title;
   if (body.status !== undefined) payload.status = body.status;
+  if (body.description !== undefined) payload.description = body.description;
   if (body.customFields) payload.custom_fields = body.customFields;
   const res = await fetch(`${WSPC_BASE}/todo/items/${id}`, {
     method: "PATCH",
