@@ -291,7 +291,8 @@ test("recurring occurrence lands on its day with ↻ and stays out of backlog", 
 
   // It shows on today's day/week views, marked recurring.
   await expect(page.getByText("每日例行").first()).toBeVisible();
-  await expect(page.getByLabel("重複任務").first()).toBeVisible();
+  await expect(page.getByLabel("重複任務")).toHaveCount(1);
+  await expect(page.getByLabel("重複任務")).toBeVisible();
 
   // Backlog stays empty — the occurrence was scheduled, not dumped into backlog.
   await expect(page.getByRole("button", { name: /Backlog \(0\)/ })).toBeVisible();
