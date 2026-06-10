@@ -68,3 +68,19 @@ it("shows '—' and no count line for an empty day", async () => {
   await waitFor(() => expect(within(cell).getByText("—")).toBeInTheDocument());
   expect(within(cell).queryByText(/還有/)).not.toBeInTheDocument();
 });
+
+it("marks a recurring other-task with ↻ instead of a bullet", async () => {
+  const recurring: Task = {
+    id: "rec1",
+    title: "每日例行",
+    status: "open",
+    created_at: "x",
+    updated_at: "x",
+    custom_fields: { scheduled_dates: [FOCUS] },
+    recurring: true,
+  };
+  renderWithTasks([recurring]);
+  const cell = await focusCell();
+  await waitFor(() => expect(within(cell).getByText("每日例行")).toBeInTheDocument());
+  expect(within(cell).getByText("↻")).toBeInTheDocument();
+});

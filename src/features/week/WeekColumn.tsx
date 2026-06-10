@@ -20,10 +20,12 @@ interface WeekTaskItemProps {
   order?: number;
   title: string;
   done: boolean;
+  recurring?: boolean;
 }
 
-function WeekTaskItem({ taskId, date, order, title, done }: WeekTaskItemProps) {
+function WeekTaskItem({ taskId, date, order, title, done, recurring }: WeekTaskItemProps) {
   const { ref: dragRef, handleProps } = useDraggableRow(`week:${date}:${taskId}`);
+  const bullet = order == null ? (recurring ? "↻" : "·") : `${order}.`;
   return (
     <li
       ref={dragRef}
@@ -32,7 +34,7 @@ function WeekTaskItem({ taskId, date, order, title, done }: WeekTaskItemProps) {
         .filter(Boolean)
         .join(" ")}
     >
-      <span className={styles.taskOrder}>{order == null ? "·" : `${order}.`}</span> {title}
+      <span className={styles.taskOrder}>{bullet}</span> {title}
     </li>
   );
 }
@@ -138,6 +140,7 @@ function WeekDayCell({ date, allTasks, selectedDate }: WeekDayCellProps) {
                 date={date}
                 title={e.task.title}
                 done={e.task.status === "done"}
+                recurring={e.task.recurring}
               />
             ))}
           </ul>
