@@ -127,7 +127,10 @@ function seed(): void {
   );
 
   // A recurring occurrence as WSPC materializes it: native recurrence_occurrence_at
-  // + due_at, no scheduled_dates custom field. The BFF must schedule it onto `today`.
+  // + due_at, no scheduled_dates custom field. The BFF must schedule it onto that day.
+  // Use the last day of the visible week (2026-06-13) so this extra row never shifts
+  // the cells the drag tests target (2026-06-10 / 2026-06-12).
+  const recurrenceDate = "2026-06-13";
   todos.push({
     id: "rec1",
     project_id: PROJECT_ID,
@@ -138,8 +141,8 @@ function seed(): void {
     updated_at: base,
     custom_fields: {},
     recurring_template_id: "tpl-rec",
-    recurrence_occurrence_at: today,
-    due_at: today,
+    recurrence_occurrence_at: recurrenceDate,
+    due_at: recurrenceDate,
   });
 
   idCounter = 0;

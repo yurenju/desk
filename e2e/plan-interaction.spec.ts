@@ -285,9 +285,9 @@ test("promotes a focus-day other task to top-3 by dragging up within its week ce
 test("recurring occurrence lands on its day with ↻ and stays out of backlog", async ({
   page,
 }) => {
-  // Seed has a recurring occurrence ("每日例行") for today with no scheduled_dates;
-  // the BFF mapper must schedule it onto today (not backlog).
-  await page.goto("/plan");
+  // Seed has a recurring occurrence ("每日例行") for 2026-06-13 with no scheduled_dates;
+  // the BFF mapper must schedule it onto that day (not backlog).
+  await page.goto("/plan/2026-06-13");
 
   // It shows on today's day/week views, marked recurring.
   await expect(page.getByText("每日例行").first()).toBeVisible();
