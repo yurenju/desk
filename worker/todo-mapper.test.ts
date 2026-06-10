@@ -61,6 +61,51 @@ describe("mapTodoToTask detail fields", () => {
   });
 });
 
+describe("mapTodoToTask recurring occurrences", () => {
+  it("synthesizes scheduled_dates from recurrence_occurrence_at when none exist", () => {
+    const task = mapTodoToTask({
+      id: "tod_r1",
+      status: "open",
+      title: "每日例行",
+      created_at: 0,
+      updated_at: 0,
+      recurring_template_id: "tpl_1",
+      recurrence_occurrence_at: "2026-06-10",
+      due_at: "2026-06-10",
+    });
+    expect(task.custom_fields.scheduled_dates).toEqual(["2026-06-10"]);
+    expect(task.recurring).toBe(true);
+  });
+
+  it("does not override existing scheduled_dates (user already moved it)", () => {
+    const task = mapTodoToTask({
+      id: "tod_r2",
+      status: "open",
+      title: "每日例行",
+      created_at: 0,
+      updated_at: 0,
+      recurring_template_id: "tpl_1",
+      recurrence_occurrence_at: "2026-06-10",
+      custom_fields: { scheduled_dates: ["2026-06-12"] },
+    });
+    expect(task.custom_fields.scheduled_dates).toEqual(["2026-06-12"]);
+    expect(task.recurring).toBe(true);
+  });
+
+  it("leaves a plain due_at todo (no recurrence) in backlog", () => {
+    const task = mapTodoToTask({
+      id: "tod_d1",
+      status: "open",
+      title: "寫自己的 todo app",
+      created_at: 0,
+      updated_at: 0,
+      due_at: "2026-05-24",
+    });
+    expect(task.custom_fields.scheduled_dates).toBeUndefined();
+    expect(task.recurring).toBeFalsy();
+  });
+});
+
 describe("mapTodoToSubtask", () => {
   it("projects a child todo to a lean subtask", () => {
     const out = mapTodoToSubtask({
