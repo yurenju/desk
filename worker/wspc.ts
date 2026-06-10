@@ -300,6 +300,9 @@ export interface Todo {
   description?: string;
   child_count?: number;
   custom_fields?: Record<string, string | string[]>;
+  due_at?: string;
+  recurrence_occurrence_at?: string;
+  recurring_template_id?: string;
 }
 
 // Returns all non-cancelled tasks for the given type. Cancelled is excluded by

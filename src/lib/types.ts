@@ -33,6 +33,7 @@ export interface Task {
   created_at: string;
   updated_at: string;
   custom_fields: TaskCustomFields;
+  recurring?: boolean;
 }
 
 export interface TaskWithTrail {

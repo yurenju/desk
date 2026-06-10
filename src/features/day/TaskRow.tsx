@@ -73,6 +73,11 @@ export function TaskRow({ task, kind, date, showAdhocChip, interactive, showRing
         ) : (
           <div className={styles.titleRow}>
             <span className={styles.title}>{task.title}</span>
+            {task.recurring && (
+              <span className={styles.recurring} role="img" aria-label="重複任務" title="重複任務">
+                ↻
+              </span>
+            )}
             {kind === "forwarded" && <span className={styles.trail}>↪ 已順延</span>}
             {kind === "dismissed" && <span className={styles.trail}>· 已略過</span>}
           </div>

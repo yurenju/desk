@@ -282,6 +282,22 @@ test("promotes a focus-day other task to top-3 by dragging up within its week ce
   await expect(top3.getByText("焦點升級測試")).toBeVisible();
 });
 
+test("recurring occurrence lands on its day with ↻ and stays out of backlog", async ({
+  page,
+}) => {
+  // Seed has a recurring occurrence ("每日例行") for 2026-06-13 with no scheduled_dates;
+  // the BFF mapper must schedule it onto that day (not backlog).
+  await page.goto("/plan/2026-06-13");
+
+  // It shows on today's day/week views, marked recurring.
+  await expect(page.getByText("每日例行").first()).toBeVisible();
+  await expect(page.getByLabel("重複任務")).toHaveCount(1);
+  await expect(page.getByLabel("重複任務")).toBeVisible();
+
+  // Backlog stays empty — the occurrence was scheduled, not dumped into backlog.
+  await expect(page.getByRole("button", { name: /Backlog \(0\)/ })).toBeVisible();
+});
+
 test("shows a live top-3 / other hint while dragging over a week cell", async ({ page }) => {
   // A week cell is one droppable split by vertical position, so it must tell the
   // user mid-drag which half they're over. Drag, settle over the cell centre,

@@ -29,6 +29,9 @@ interface Todo {
   custom_fields: Record<string, string | string[]>;
   description?: string;
   parent_id?: string;
+  due_at?: string;
+  recurrence_occurrence_at?: string;
+  recurring_template_id?: string;
 }
 
 let todos: Todo[] = [];
@@ -122,6 +125,25 @@ function seed(): void {
       custom_fields: { scheduled_months: [month], is_adhoc: "false" },
     },
   );
+
+  // A recurring occurrence as WSPC materializes it: native recurrence_occurrence_at
+  // + due_at, no scheduled_dates custom field. The BFF must schedule it onto that day.
+  // Use the last day of the visible week (2026-06-13) so this extra row never shifts
+  // the cells the drag tests target (2026-06-10 / 2026-06-12).
+  const recurrenceDate = "2026-06-13";
+  todos.push({
+    id: "rec1",
+    project_id: PROJECT_ID,
+    type_id: TYPE_ID,
+    status: "open",
+    title: "每日例行",
+    created_at: base,
+    updated_at: base,
+    custom_fields: {},
+    recurring_template_id: "tpl-rec",
+    recurrence_occurrence_at: recurrenceDate,
+    due_at: recurrenceDate,
+  });
 
   idCounter = 0;
 }
