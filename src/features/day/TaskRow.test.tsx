@@ -5,6 +5,7 @@ import { TaskRow } from "./TaskRow";
 import { useTasksStore } from "@/store/tasks";
 import { allTasks, MOCK_TODAY } from "@/mock/data";
 import * as api from "@/lib/api/todo";
+import type { Task } from "@/lib/types";
 
 beforeEach(() => {
   vi.restoreAllMocks();
@@ -105,5 +106,29 @@ describe("TaskRow (interactive)", () => {
     expect(
       useTasksStore.getState().tasks.find((t) => t.id === "d5")!.custom_fields.daily_priority,
     ).toBe("1");
+  });
+});
+
+describe("TaskRow recurring marker", () => {
+  function recurringTask(): Task {
+    return {
+      id: "r1",
+      title: "每日例行",
+      status: "open",
+      created_at: "x",
+      updated_at: "x",
+      custom_fields: { scheduled_dates: ["2026-06-10"] },
+      recurring: true,
+    };
+  }
+
+  it("shows a ↻ marker for a recurring task", () => {
+    render(<TaskRow task={recurringTask()} kind="primary" date="2026-06-10" />);
+    expect(screen.getByLabelText("重複任務")).toBeInTheDocument();
+  });
+
+  it("shows no ↻ marker for a non-recurring task", () => {
+    render(rowFor("d5"));
+    expect(screen.queryByLabelText("重複任務")).not.toBeInTheDocument();
   });
 });
