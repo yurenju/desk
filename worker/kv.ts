@@ -93,47 +93,6 @@ export async function deleteDevice(kv: KVNamespace, pollingId: string): Promise<
   await kv.delete(`device:${pollingId}`);
 }
 
-// Dev-login (local manual testing only, gated by DEV_LOGIN=true at the router).
-// `dev:session_id` remembers the canonical real-WSPC session so a fresh browser
-// can re-attach its cookie without redoing the device flow. `dev:refresh_seed`
-// is a wipe-recovery backup used to mint a new session if KV loses the session.
-const DEV_SESSION_ID_KEY = "dev:session_id";
-const DEV_REFRESH_SEED_KEY = "dev:refresh_seed";
-
-export interface DevRefreshSeed {
-  refreshToken: string;
-  userId: string;
-}
-
-export async function getDevSessionId(kv: KVNamespace): Promise<string | null> {
-  return kv.get(DEV_SESSION_ID_KEY);
-}
-
-export async function putDevSessionId(kv: KVNamespace, id: string): Promise<void> {
-  await kv.put(DEV_SESSION_ID_KEY, id);
-}
-
-export async function getDevRefreshSeed(
-  kv: KVNamespace,
-): Promise<DevRefreshSeed | null> {
-  const raw = await kv.get(DEV_REFRESH_SEED_KEY);
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as DevRefreshSeed;
-    if (!parsed.refreshToken || !parsed.userId) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-export async function putDevRefreshSeed(
-  kv: KVNamespace,
-  seed: DevRefreshSeed,
-): Promise<void> {
-  await kv.put(DEV_REFRESH_SEED_KEY, JSON.stringify(seed));
-}
-
 export interface BootstrapData {
   projectId: string;
   typeId: string;

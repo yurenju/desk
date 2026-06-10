@@ -7,7 +7,7 @@
 寫設計文件（`docs/superpowers/specs/**`）的「測試策略」時，除了自動化測試（vitest / Testing Library / e2e），**一律加入「手動測試（preview + AI agent）」一項**：
 
 - 由 AI agent 透過 `preview_start` 開預覽，實際操作畫面驗證視覺與互動 —— 那些難用單元測試涵蓋的觀感、過場、觸控目標、響應式排版等。
-- **先直接啟動 preview 探測登入狀態**：開預覽後看畫面是否已登入（header 顯示帳號、能進 Today/Plan 操作）。**已登入就直接開始**手動驗收。**未登入時先自助登入**：`POST /api/dev-login`（見下節）能重接持久 session，多數情況免使用者介入；**只有 dev-login 也失敗時**（種子過期、或這台機器 / worktree 第一次設定）**才告知使用者、請其協助**完成 device flow（WSPC 端按 Approve）後再續跑。
+- **先直接啟動 preview 探測登入狀態**：用共用 profile 開（見下節），看畫面是否已登入（header 顯示帳號、能進 Today/Plan 操作）。**已登入就直接開始**手動驗收。**未登入時才告知使用者、請其協助**完成 device flow（WSPC 端按 Approve）後再續跑 —— 共用 KV + 共用 profile 下,一次登入可撐 30 天,通常不會需要使用者介入。
 - 對照該 spec 的「驗收標準」逐項手動驗收。
 
 理由：這個專案大量是視覺 / 互動打磨，單元測試抓不到觀感與真實資料流；手動 preview 驗收是必要補充。
@@ -18,17 +18,21 @@
 
 理由：`preview_screenshot` 是 inline JPEG、不落地，報告引不到；`playwright-cli screenshot --filename` 才能把截圖寫進報告目錄。machine 一次性前置：`npm i -g @playwright/cli@latest` + `playwright-cli install --skills`。
 
-## 本機 preview 登入（dev-login + 新 worktree）
+## 本機 preview 登入（共用 KV + 共用 playwright profile）
 
-手動驗收要登入真實 WSPC。為了不用每次都跑 device flow，有 dev-only 的 `POST /api/dev-login`（`DEV_LOGIN=true` gated、永不進 production）：一次 device flow 後，它把 cookie 重接回持久化的 real-WSPC session，之後免登入。
+手動驗收要登入真實 WSPC。登入狀態靠兩個「機器層級、跨 worktree 共用」的東西撐著，**一次 device flow 可撐約 30 天、所有 worktree 共用**：
 
-**設定流程**：
+- **共用 KV state**：`vite.config.ts` 把 dev worker 的 KV（auth session + bootstrap）persist 到 `~/.desk-dev/wrangler-state`，而非每個 worktree 自己的 `.wrangler/state`。session 寫進 KV 一次，所有 worktree 的 dev server 都讀得到，且 `putSession` 每次使用會把 30 天 TTL 往後推。
+- **共用 playwright profile**：AI agent 驗收一律用 `playwright-cli open --persistent --profile ~/.desk-dev/pw-profile <url>`（**不要用沒帶 `--profile` 的 `open`** —— 那是非持久、每次全新 context，cookie 會一直掉）。`__Host-Session` cookie 有 `Max-Age=30 天`，留在這個 profile 裡 → 跨呼叫、跨 worktree 都還在。
 
-- **每個新 worktree 開工先跑一次 `npm run setup:dev`** —— 把機器層級的 `~/.desk-dev/.dev.vars` 複製進這個 worktree 的 `.dev.vars`（wrangler / vite-plugin 只從專案根讀 `.dev.vars`，且它 gitignored、不跨 worktree）。canonical 檔放 home 目錄、不在 worktree 裡，所以 worktree 被刪也不影響。
-- **這台機器第一次**（`~/.desk-dev/.dev.vars` 還沒種子）：`setup:dev` 會先建只含 `DEV_LOGIN=true` 的 canonical 檔。開 preview 走一次 device flow（**用測試帳號**）→ `POST /api/dev-login` 回傳 `refreshToken` + `userId` + `clientId` → 把這三行填回 `~/.desk-dev/.dev.vars`（`DEV_REFRESH_SEED=` / `DEV_USER_ID=` / `DEV_CLIENT_ID=`）→ 之後所有 worktree 都能自助登入。`clientId` 不可省：refresh token 綁定發給它的 OAuth client，fresh worktree 的空 KV 沒有它就 refresh 不了。
-- **種子會因 WSPC refresh-token rotation 偶發失效**：若 dev-login 報 `seed_refresh_failed`，重跑一次 device flow capture、更新 canonical 檔即可。
+**流程**：
 
-> ⚠️ canonical `.dev.vars` 是明文存測試帳號的 refresh token，**只用丟棄式測試帳號，絕不放個人帳號**。
+- agent 用 `--persistent --profile ~/.desk-dev/pw-profile` 開 preview → cookie 在、KV session 在 → 直接是登入狀態,直接驗收。
+- **沒登入時**（這台機器第一次、或整整 30 天沒碰）：請使用者走一次 `/login` 的 device flow（**用丟棄式測試帳號**，WSPC 端按 Approve）。完成後 cookie 進共用 profile、session 進共用 KV，之後免再登入。
+
+> ⚠️ 一次只跑**一個** worktree 的 dev server。兩個同時跑會共用同一份 KV session，兩邊各自去 refresh access token 會把對方 rotate 掉而 401。
+>
+> ⚠️ `--persistent` 的 profile 目錄同一時間只能一個瀏覽器實例用，務必跟日常 Chrome 分開（專用 `~/.desk-dev/pw-profile`）。
 
 ## 改動 UI 互動後要跑 e2e
 
