@@ -38,8 +38,8 @@
 }
 
 .recurring {
-  color: #5a8a4a;
-  font-size: 0.85em;
+  color: var(--color-accent-text);
+  font-size: var(--text-sm);
   flex: none;
 }
 

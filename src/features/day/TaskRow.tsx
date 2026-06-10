@@ -74,7 +74,7 @@ export function TaskRow({ task, kind, date, showAdhocChip, interactive, showRing
           <div className={styles.titleRow}>
             <span className={styles.title}>{task.title}</span>
             {task.recurring && (
-              <span className={styles.recurring} role="img" aria-label="重複任務" title="每日重複">
+              <span className={styles.recurring} role="img" aria-label="重複任務" title="重複任務">
                 ↻
               </span>
             )}
