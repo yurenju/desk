@@ -9,20 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TodayRouteImport } from './routes/today'
 import { Route as PlanRouteImport } from './routes/plan'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as FocusRouteImport } from './routes/focus'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as TodayIndexRouteImport } from './routes/today.index'
 import { Route as PlanIndexRouteImport } from './routes/plan.index'
-import { Route as TodayDateRouteImport } from './routes/today.$date'
+import { Route as FocusIndexRouteImport } from './routes/focus.index'
 import { Route as PlanDateRouteImport } from './routes/plan.$date'
+import { Route as FocusDateRouteImport } from './routes/focus.$date'
 
-const TodayRoute = TodayRouteImport.update({
-  id: '/today',
-  path: '/today',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const PlanRoute = PlanRouteImport.update({
   id: '/plan',
   path: '/plan',
@@ -33,102 +28,100 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FocusRoute = FocusRouteImport.update({
+  id: '/focus',
+  path: '/focus',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
-} as any)
-const TodayIndexRoute = TodayIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => TodayRoute,
 } as any)
 const PlanIndexRoute = PlanIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => PlanRoute,
 } as any)
-const TodayDateRoute = TodayDateRouteImport.update({
-  id: '/$date',
-  path: '/$date',
-  getParentRoute: () => TodayRoute,
+const FocusIndexRoute = FocusIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => FocusRoute,
 } as any)
 const PlanDateRoute = PlanDateRouteImport.update({
   id: '/$date',
   path: '/$date',
   getParentRoute: () => PlanRoute,
 } as any)
+const FocusDateRoute = FocusDateRouteImport.update({
+  id: '/$date',
+  path: '/$date',
+  getParentRoute: () => FocusRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/focus': typeof FocusRouteWithChildren
   '/login': typeof LoginRoute
   '/plan': typeof PlanRouteWithChildren
-  '/today': typeof TodayRouteWithChildren
+  '/focus/$date': typeof FocusDateRoute
   '/plan/$date': typeof PlanDateRoute
-  '/today/$date': typeof TodayDateRoute
+  '/focus/': typeof FocusIndexRoute
   '/plan/': typeof PlanIndexRoute
-  '/today/': typeof TodayIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/focus/$date': typeof FocusDateRoute
   '/plan/$date': typeof PlanDateRoute
-  '/today/$date': typeof TodayDateRoute
+  '/focus': typeof FocusIndexRoute
   '/plan': typeof PlanIndexRoute
-  '/today': typeof TodayIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/focus': typeof FocusRouteWithChildren
   '/login': typeof LoginRoute
   '/plan': typeof PlanRouteWithChildren
-  '/today': typeof TodayRouteWithChildren
+  '/focus/$date': typeof FocusDateRoute
   '/plan/$date': typeof PlanDateRoute
-  '/today/$date': typeof TodayDateRoute
+  '/focus/': typeof FocusIndexRoute
   '/plan/': typeof PlanIndexRoute
-  '/today/': typeof TodayIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/focus'
     | '/login'
     | '/plan'
-    | '/today'
+    | '/focus/$date'
     | '/plan/$date'
-    | '/today/$date'
+    | '/focus/'
     | '/plan/'
-    | '/today/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/plan/$date' | '/today/$date' | '/plan' | '/today'
+  to: '/' | '/login' | '/focus/$date' | '/plan/$date' | '/focus' | '/plan'
   id:
     | '__root__'
     | '/'
+    | '/focus'
     | '/login'
     | '/plan'
-    | '/today'
+    | '/focus/$date'
     | '/plan/$date'
-    | '/today/$date'
+    | '/focus/'
     | '/plan/'
-    | '/today/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  FocusRoute: typeof FocusRouteWithChildren
   LoginRoute: typeof LoginRoute
   PlanRoute: typeof PlanRouteWithChildren
-  TodayRoute: typeof TodayRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/today': {
-      id: '/today'
-      path: '/today'
-      fullPath: '/today'
-      preLoaderRoute: typeof TodayRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/plan': {
       id: '/plan'
       path: '/plan'
@@ -143,19 +136,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/focus': {
+      id: '/focus'
+      path: '/focus'
+      fullPath: '/focus'
+      preLoaderRoute: typeof FocusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/today/': {
-      id: '/today/'
-      path: '/'
-      fullPath: '/today/'
-      preLoaderRoute: typeof TodayIndexRouteImport
-      parentRoute: typeof TodayRoute
     }
     '/plan/': {
       id: '/plan/'
@@ -164,12 +157,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlanIndexRouteImport
       parentRoute: typeof PlanRoute
     }
-    '/today/$date': {
-      id: '/today/$date'
-      path: '/$date'
-      fullPath: '/today/$date'
-      preLoaderRoute: typeof TodayDateRouteImport
-      parentRoute: typeof TodayRoute
+    '/focus/': {
+      id: '/focus/'
+      path: '/'
+      fullPath: '/focus/'
+      preLoaderRoute: typeof FocusIndexRouteImport
+      parentRoute: typeof FocusRoute
     }
     '/plan/$date': {
       id: '/plan/$date'
@@ -178,8 +171,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlanDateRouteImport
       parentRoute: typeof PlanRoute
     }
+    '/focus/$date': {
+      id: '/focus/$date'
+      path: '/$date'
+      fullPath: '/focus/$date'
+      preLoaderRoute: typeof FocusDateRouteImport
+      parentRoute: typeof FocusRoute
+    }
   }
 }
+
+interface FocusRouteChildren {
+  FocusDateRoute: typeof FocusDateRoute
+  FocusIndexRoute: typeof FocusIndexRoute
+}
+
+const FocusRouteChildren: FocusRouteChildren = {
+  FocusDateRoute: FocusDateRoute,
+  FocusIndexRoute: FocusIndexRoute,
+}
+
+const FocusRouteWithChildren = FocusRoute._addFileChildren(FocusRouteChildren)
 
 interface PlanRouteChildren {
   PlanDateRoute: typeof PlanDateRoute
@@ -193,23 +205,11 @@ const PlanRouteChildren: PlanRouteChildren = {
 
 const PlanRouteWithChildren = PlanRoute._addFileChildren(PlanRouteChildren)
 
-interface TodayRouteChildren {
-  TodayDateRoute: typeof TodayDateRoute
-  TodayIndexRoute: typeof TodayIndexRoute
-}
-
-const TodayRouteChildren: TodayRouteChildren = {
-  TodayDateRoute: TodayDateRoute,
-  TodayIndexRoute: TodayIndexRoute,
-}
-
-const TodayRouteWithChildren = TodayRoute._addFileChildren(TodayRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  FocusRoute: FocusRouteWithChildren,
   LoginRoute: LoginRoute,
   PlanRoute: PlanRouteWithChildren,
-  TodayRoute: TodayRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

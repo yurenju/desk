@@ -5,7 +5,7 @@
   "configurations": [
     {
       // Vite dev server (HMR, fast iteration). Cloudflare plugin is active so
-      // /api/* routes go through the worker; SPA fallback serves /plan and /today.
+      // /api/* routes go through the worker; SPA fallback serves /plan and /focus.
       "name": "dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],

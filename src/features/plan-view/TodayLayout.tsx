@@ -4,7 +4,8 @@ import { WeekRail } from "@/features/week/WeekRail";
 import { DayColumn } from "@/features/day/DayColumn";
 import { MonthDigest } from "@/features/month/MonthDigest";
 import { DayChip } from "@/features/week/DayChip";
-import { weekOf } from "@/lib/date";
+import { Link } from "@tanstack/react-router";
+import { weekOf, addDays } from "@/lib/date";
 import { MOCK_CARRYOVER_DAY } from "@/mock/data";
 import { DeleteUndoToast } from "@/features/day/DeleteUndoToast";
 import styles from "./TodayLayout.module.css";
@@ -40,7 +41,15 @@ export function TodayLayout({ allTasks, selectedDate, today, month }: TodayLayou
         </aside>
       </div>
 
-      <div className={styles.mobileChips}>
+      <nav className={styles.mobileChips} aria-label="日期切換">
+        <Link
+          to="/focus/$date"
+          params={{ date: addDays(selectedDate, -7) }}
+          className={styles.chipStep}
+          aria-label="上一週"
+        >
+          ‹
+        </Link>
         {week.map((date) => (
           <DayChip
             key={date}
@@ -50,7 +59,15 @@ export function TodayLayout({ allTasks, selectedDate, today, month }: TodayLayou
             allTasks={allTasks}
           />
         ))}
-      </div>
+        <Link
+          to="/focus/$date"
+          params={{ date: addDays(selectedDate, 7) }}
+          className={styles.chipStep}
+          aria-label="下一週"
+        >
+          ›
+        </Link>
+      </nav>
 
       <DeleteUndoToast />
     </main>

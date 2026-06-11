@@ -60,13 +60,13 @@ export function TodayView({ date }: { date: string }) {
 
 // ─── Route ───────────────────────────────────────────────────────────────────
 
-// `/today` is a layout for both the bare `/today` (index) and `/today/$date`
+// `/focus` is a layout for both the bare `/focus` (index) and `/focus/$date`
 // child routes. It must render <Outlet/> so the matched child renders; the
-// concrete views live in today.index.tsx and today.$date.tsx.
+// concrete views live in focus.index.tsx and focus.$date.tsx.
 function TodayLayoutRoute() {
   return <Outlet />;
 }
 
-export const Route = createFileRoute("/today")({
+export const Route = createFileRoute("/focus")({
   component: TodayLayoutRoute,
 });
