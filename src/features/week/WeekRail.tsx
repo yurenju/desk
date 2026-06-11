@@ -67,15 +67,6 @@ export function WeekRail({ allTasks, selectedDate, today }: WeekRailProps) {
                 to="/focus/$date"
                 params={{ date }}
                 aria-label={`切到 ${date}`}
-                // The selected day is the active route, and TanStack Router hard-codes
-                // aria-current="page" on the active link (spread last, so neither an
-                // explicit prop nor activeProps can override it). Normalize it to
-                // aria-current="date" via a ref to match the WeekColumn convention.
-                ref={
-                  isSelected
-                    ? (el: HTMLAnchorElement | null) => el?.setAttribute("aria-current", "date")
-                    : undefined
-                }
                 className={[styles.day, isSelected && styles.selected, isToday && styles.today]
                   .filter(Boolean)
                   .join(" ")}

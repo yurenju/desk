@@ -32,11 +32,11 @@ it("links each day in the week to /focus/$date", async () => {
   );
 });
 
-it("marks the selected day with aria-current=date", async () => {
+it("marks the selected day as the current page", async () => {
   renderAt("/focus/2026-06-10");
   const r = await rail();
   expect(within(r).getByRole("link", { name: "切到 2026-06-10" }).getAttribute("aria-current")).toBe(
-    "date",
+    "page",
   );
 });
 
