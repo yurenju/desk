@@ -2,7 +2,7 @@ import { it, expect, vi, beforeEach } from "vitest";
 import { render, waitFor } from "@testing-library/react";
 import * as api from "@/lib/api/todo";
 import { useTasksStore } from "@/store/tasks";
-import { TodayView } from "./today";
+import { TodayView } from "./focus";
 
 beforeEach(() => {
   vi.restoreAllMocks();

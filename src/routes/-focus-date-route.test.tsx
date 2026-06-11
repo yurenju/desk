@@ -22,12 +22,12 @@ beforeEach(() => {
   });
 });
 
-// Regression guard: /today/$date is a child of /today in the generated route
-// tree. If the /today route renders its own view instead of <Outlet/>, the
+// Regression guard: /focus/$date is a child of /focus in the generated route
+// tree. If the /focus route renders its own view instead of <Outlet/>, the
 // child date route is shadowed and the $date param never reaches TodayView →
 // TodayLayout → DayColumn(selectedDate={date}), so tasks for that specific
 // date would not appear.
-it("renders the /today/$date child route — $date param reaches the view", async () => {
+it("renders the /focus/$date child route — $date param reaches the view", async () => {
   // A task scheduled exclusively on 2026-05-30 (not on any other date).
   // If the $date param is shadowed or ignored, DayColumn won't filter for
   // this date and the title won't be in the DOM.
@@ -43,7 +43,7 @@ it("renders the /today/$date child route — $date param reaches the view", asyn
 
   const router = createRouter({
     routeTree,
-    history: createMemoryHistory({ initialEntries: ["/today/2026-05-30"] }),
+    history: createMemoryHistory({ initialEntries: ["/focus/2026-05-30"] }),
   });
   render(<RouterProvider router={router} />);
 

@@ -14,7 +14,7 @@ function LoginRoute() {
     <LoginPage
       onAuthenticated={async () => {
         await fetchMe();
-        navigate({ to: "/today" });
+        navigate({ to: "/focus" });
       }}
     />
   );
