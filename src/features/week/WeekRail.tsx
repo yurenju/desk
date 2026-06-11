@@ -67,7 +67,7 @@ export function WeekRail({ allTasks, selectedDate, today }: WeekRailProps) {
                 to="/focus/$date"
                 params={{ date }}
                 aria-label={`切到 ${date}`}
-                className={[styles.day, isSelected && styles.selected, isToday && styles.today]
+                className={[styles.day, isSelected && styles.selected]
                   .filter(Boolean)
                   .join(" ")}
               >
