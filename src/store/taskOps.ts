@@ -34,6 +34,7 @@ export function addTodayTask(
   today: string,
   id: string,
   now: string,
+  isAdhoc = true,
 ): Task[] {
   const trimmed = title.trim();
   if (!trimmed) return tasks;
@@ -43,7 +44,7 @@ export function addTodayTask(
     status: "open",
     created_at: now,
     updated_at: now,
-    custom_fields: { scheduled_dates: [today], is_adhoc: "true" },
+    custom_fields: { scheduled_dates: [today], is_adhoc: isAdhoc ? "true" : "false" },
   };
   return [...tasks, task];
 }
@@ -124,6 +125,7 @@ export function addMonthTask(
   month: string,
   id: string,
   now: string,
+  isAdhoc = false,
 ): Task[] {
   const trimmed = title.trim();
   if (!trimmed) return tasks;
@@ -133,7 +135,7 @@ export function addMonthTask(
     status: "open",
     created_at: now,
     updated_at: now,
-    custom_fields: { scheduled_months: [month], is_adhoc: "false" },
+    custom_fields: { scheduled_months: [month], is_adhoc: isAdhoc ? "true" : "false" },
   };
   return [...tasks, task];
 }
