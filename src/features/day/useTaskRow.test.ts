@@ -72,4 +72,40 @@ describe("useTaskRow", () => {
       "讀 WSPC custom fields 文件",
     );
   });
+
+  it("moveToToday forwards the task to today via the store", async () => {
+    useTasksStore.setState({
+      tasks: [
+        {
+          id: "p1", title: "順延我", status: "open", created_at: "x", updated_at: "x",
+          custom_fields: { scheduled_dates: ["2026-05-20"] },
+        },
+      ],
+      today: MOCK_TODAY,
+      status: "ready",
+    });
+    const { result } = renderHook(() => useTaskRow("p1", "2026-05-20"));
+    await act(async () => result.current.moveToToday());
+    expect(
+      useTasksStore.getState().tasks.find((t) => t.id === "p1")!.custom_fields.scheduled_dates,
+    ).toEqual(["2026-05-20", MOCK_TODAY]);
+  });
+
+  it("demoteToMonth drops the task from the day via the store", async () => {
+    useTasksStore.setState({
+      tasks: [
+        {
+          id: "p2", title: "退回我", status: "open", created_at: "x", updated_at: "x",
+          custom_fields: { scheduled_dates: ["2026-05-21"] },
+        },
+      ],
+      today: MOCK_TODAY,
+      status: "ready",
+    });
+    const { result } = renderHook(() => useTaskRow("p2", "2026-05-21"));
+    await act(async () => result.current.demoteToMonth());
+    expect(
+      useTasksStore.getState().tasks.find((t) => t.id === "p2")!.custom_fields.unscheduled_at,
+    ).toBe("2026-05-21");
+  });
 });
