@@ -63,8 +63,8 @@ export function getEntryMode(): EntryMode;
 // React hook: returns [mode, setMode]; all subscribers re-render on change
 export function useEntryMode(): [EntryMode, (mode: EntryMode) => void];
 
-// map to the is_adhoc custom field value
-export function isAdhocOf(mode: EntryMode): "true" | "false";
+// map a mode to a boolean (callers convert to the "true"/"false" custom field)
+export function isAdhocOf(mode: EntryMode): boolean;
 ```
 
 內部:模組層級保存 current value + 一組 listener。`setMode` 寫 localStorage、更新 value、通知所有 listener。`useEntryMode` 用 `useSyncExternalStore(subscribe, getEntryMode)` 訂閱。
