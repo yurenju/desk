@@ -212,3 +212,24 @@ export function moveToToday(tasks: Task[], id: string, today: string): Task[] {
   );
 }
 
+export function demoteToMonth(tasks: Task[], id: string, currentMonth: string): Task[] {
+  const target = tasks.find((t) => t.id === id);
+  if (!target) return tasks;
+  const day = primaryDate(target);
+  if (day === null) return tasks; // not on a day, nothing to demote
+
+  const months = target.custom_fields.scheduled_months ?? [];
+  // Land in the current month (今天所在月), unless it's already the active month.
+  const nextMonths = primaryMonth(target) === currentMonth ? months : [...months, currentMonth];
+
+  return tasks.map((t) =>
+    t.id === id
+      ? patch(t, {
+          unscheduled_at: day, // leave the day layer; scheduled_dates trail is kept
+          scheduled_months: nextMonths,
+          daily_priority: undefined,
+        })
+      : t,
+  );
+}
+
