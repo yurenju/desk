@@ -24,6 +24,7 @@
 - `TaskRow` 的 `⋯` 選單,對「primary 且可互動」的列,加「移到今天」「丟回月度」兩個動作。
 - `taskOps` 兩個純函式 + `tasks` store 兩個 action + `useTaskRow` 兩個包裝。
 - 把「dismissed」軌跡列的文字由「· 已略過」改成「· 退回月度」(本版 `unscheduled_at` 只由「丟回月度」寫入,語意更準)。
+- **完成後更新 `ROADMAP.md`**:把本次做掉的部份(Focus 逐列「移到今天」順延 + 「丟回月度」)標記為已完成,並註明這是 Slice 5 / 6 的一個子集(略過、carryover banner、月底 review 等仍待做),之後接手才不會重做或忘記。
 
 **不做(留後續):**
 
@@ -133,6 +134,7 @@ store action `demoteToMonth(id)`:用 `currentMonthISO(new Date(get().today + "T0
 - `src/store/tasks.ts`:`TasksState` 介面 + 實作新增 `moveToToday(id)`、`demoteToMonth(id)` 兩個 action。
 - `src/features/day/useTaskRow.ts`:新增 `moveToToday`、`demoteToMonth` 包裝。
 - `src/features/day/TaskRow.tsx`:讀 `today`;`⋯` Menu 條件式加兩個 item;`dismissed` 軌跡文字改「· 退回月度」。
+- `ROADMAP.md`:更新進度,標記本次完成的子集(見「範圍」)。
 
 **測試(新增 / 修改):**
 
