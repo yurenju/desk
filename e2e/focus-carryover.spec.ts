@@ -8,17 +8,18 @@ const rowOf = (page: import("@playwright/test").Page, title: string) =>
 
 test("move-to-today forwards a past-day task into today", async ({ page }) => {
   await gotoTodaySeeded(page);
-  const rail = page.getByRole("navigation", { name: "週導覽" });
 
-  // Navigate to the first day-link in the rail that is NOT today (any past day in the week).
-  // This avoids hardcoding a date that may fall outside the visible week as real time advances.
-  const pastDayLinks = rail.getByRole("link", { name: /^切到 \d{4}-\d{2}-\d{2}$/ });
-  const firstPastLink = pastDayLinks.first();
-  const pastLabel = await firstPastLink.getAttribute("aria-label");
-  const pastDate = pastLabel!.replace("切到 ", "");
+  // Compute yesterday in local time (matches the app's todayISO()).
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const yesterday = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
 
-  await firstPastLink.click();
-  await expect(page).toHaveURL(new RegExp(`/focus/${pastDate}$`));
+  // Navigate straight to yesterday's focus view (avoids week-rail DOM-order /
+  // Sunday edge cases; the seed/session persists across this navigation).
+  await page.goto(`/focus/${yesterday}`);
+  await expect(page).toHaveURL(new RegExp(`/focus/${yesterday}$`));
 
   // add an open task on that past day
   const input = page.getByPlaceholder("+ 加一件這天的事…");
@@ -32,7 +33,9 @@ test("move-to-today forwards a past-day task into today", async ({ page }) => {
   await page.getByRole("menuitem", { name: /移到今天/ }).click();
 
   // back to today → it now lives here
-  await rail.getByRole("link", { name: "回今天" }).click();
+  await page.getByRole("navigation", { name: "週導覽" }).getByRole("link", { name: "回今天" }).click();
+  // The app may redirect to /focus or /focus/<today-iso> — accept either.
+  await expect(page).toHaveURL(/\/focus(\/\d{4}-\d{2}-\d{2})?$/);
   await expect(page.getByText("順延 e2e")).toBeVisible();
 });
 
