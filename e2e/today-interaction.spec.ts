@@ -38,3 +38,33 @@ test("deletes a task and undoes it", async ({ page }) => {
   await page.getByText("復原").click();
   await expect(page.getByText(title, { exact: true })).toBeVisible();
 });
+
+test("adds a planned task by default, and an adhoc one after toggling the chip", async ({
+  page,
+}) => {
+  const input = page.getByPlaceholder("+ 加一件這天的事…");
+
+  // Default mode is planned → lands in 其他計劃內.
+  await input.fill("計畫內的事");
+  await input.press("Enter");
+  const plannedSection = page
+    .getByText("其他計劃內")
+    .locator("xpath=ancestor::section[1]");
+  await expect(plannedSection.getByText("計畫內的事")).toBeVisible();
+
+  // Toggle the chip to 臨時, then add → lands in 今天臨時加的.
+  await page.getByRole("button", { name: /新增模式/ }).click();
+  await input.fill("臨時的事");
+  await input.press("Enter");
+  const adhocSection = page
+    .getByText("今天臨時加的")
+    .locator("xpath=ancestor::section[1]");
+  await expect(adhocSection.getByText("臨時的事")).toBeVisible();
+});
+
+test("the mode chip persists across reload", async ({ page }) => {
+  await page.getByRole("button", { name: /新增模式/ }).click();
+  await expect(page.getByRole("button", { name: /新增模式:臨時/ })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: /新增模式:臨時/ })).toBeVisible();
+});

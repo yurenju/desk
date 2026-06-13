@@ -35,7 +35,7 @@ describe("useTasksStore (local behaviour)", () => {
       updated_at: "x",
       custom_fields: { scheduled_dates: [MOCK_TODAY], is_adhoc: "true" },
     });
-    await useTasksStore.getState().addTodayTask("臨時一件", useTasksStore.getState().today);
+    await useTasksStore.getState().addTodayTask("臨時一件", useTasksStore.getState().today, true);
     const added = useTasksStore.getState().tasks.find((t) => t.id === "srv-1");
     expect(added?.custom_fields.scheduled_dates).toEqual([MOCK_TODAY]);
     expect(added?.custom_fields.is_adhoc).toBe("true");
@@ -261,9 +261,39 @@ describe("server-backed tasks store", () => {
       created_at: "x", updated_at: "x",
       custom_fields: { scheduled_months: ["2026-05"], is_adhoc: "false" },
     });
-    await useTasksStore.getState().addMonthTask("計畫", "2026-05");
+    await useTasksStore.getState().addMonthTask("計畫", "2026-05", false);
     const added = useTasksStore.getState().tasks.find((t) => t.id === "srv-m");
     expect(added?.custom_fields.scheduled_months).toEqual(["2026-05"]);
+  });
+
+  it("addMonthTask marks the task adhoc when requested", async () => {
+    useTasksStore.setState({ tasks: [], status: "ready", error: null });
+    vi.spyOn(api, "postTodo").mockResolvedValue({
+      id: "srv-ma",
+      title: "月中臨時",
+      status: "open",
+      created_at: "x",
+      updated_at: "x",
+      custom_fields: { scheduled_months: ["2026-05"], is_adhoc: "true" },
+    });
+    await useTasksStore.getState().addMonthTask("月中臨時", "2026-05", true);
+    const added = useTasksStore.getState().tasks.find((t) => t.id === "srv-ma");
+    expect(added?.custom_fields.is_adhoc).toBe("true");
+  });
+
+  it("addTodayTask marks the task planned when requested", async () => {
+    useTasksStore.setState({ tasks: [], status: "ready", error: null, today: MOCK_TODAY });
+    vi.spyOn(api, "postTodo").mockResolvedValue({
+      id: "srv-tp",
+      title: "計畫的事",
+      status: "open",
+      created_at: "x",
+      updated_at: "x",
+      custom_fields: { scheduled_dates: [MOCK_TODAY], is_adhoc: "false" },
+    });
+    await useTasksStore.getState().addTodayTask("計畫的事", MOCK_TODAY, false);
+    const added = useTasksStore.getState().tasks.find((t) => t.id === "srv-tp");
+    expect(added?.custom_fields.is_adhoc).toBe("false");
   });
 
   it("setDailyPriority reloads from server when a patch fails", async () => {

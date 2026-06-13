@@ -34,7 +34,7 @@ interface TasksState {
   loadTasks: () => Promise<void>;
   reload: () => Promise<void>;
   toggleDone: (id: string) => Promise<void>;
-  addTodayTask: (title: string, date: string) => Promise<void>;
+  addTodayTask: (title: string, date: string, isAdhoc: boolean) => Promise<void>;
   editTitle: (id: string, title: string) => Promise<void>;
   editDescription: (id: string, description: string) => Promise<void>;
   bumpSubtaskCount: (id: string, delta: number) => void;
@@ -43,7 +43,7 @@ interface TasksState {
   setDailyPriority: (id: string, n: Priority | null, date: string) => Promise<void>;
   setAdhoc: (id: string, isAdhoc: boolean) => Promise<void>;
   setMonthlyPriority: (id: string, n: Priority | null, month: string) => Promise<void>;
-  addMonthTask: (title: string, month: string) => Promise<void>;
+  addMonthTask: (title: string, month: string, isAdhoc: boolean) => Promise<void>;
   addBacklogTask: (title: string) => Promise<void>;
   promoteToMonth: (id: string, month: string) => Promise<void>;
   planScheduleDay: (id: string, date: string) => Promise<void>;
@@ -95,17 +95,17 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     }
   },
 
-  async addTodayTask(title, date) {
+  async addTodayTask(title, date, isAdhoc) {
     const trimmed = title.trim();
     if (!trimmed) return;
     const prev = get().tasks;
     const tempId = `temp-${crypto.randomUUID()}`;
-    set({ tasks: addTodayTask(prev, trimmed, date, tempId, now()), error: null });
+    set({ tasks: addTodayTask(prev, trimmed, date, tempId, now(), isAdhoc), error: null });
     try {
       const created = await postTodo({
         title: trimmed,
         scheduled_dates: [date],
-        is_adhoc: "true",
+        is_adhoc: isAdhoc ? "true" : "false",
       });
       set({ tasks: get().tasks.map((t) => (t.id === tempId ? created : t)) });
     } catch {
@@ -232,17 +232,17 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     }
   },
 
-  async addMonthTask(title, month) {
+  async addMonthTask(title, month, isAdhoc) {
     const trimmed = title.trim();
     if (!trimmed) return;
     const prev = get().tasks;
     const tempId = `temp-${crypto.randomUUID()}`;
-    set({ tasks: addMonthTaskOp(prev, trimmed, month, tempId, now()), error: null });
+    set({ tasks: addMonthTaskOp(prev, trimmed, month, tempId, now(), isAdhoc), error: null });
     try {
       const created = await postTodo({
         title: trimmed,
         scheduled_months: [month],
-        is_adhoc: "false",
+        is_adhoc: isAdhoc ? "true" : "false",
       });
       set({ tasks: get().tasks.map((t) => (t.id === tempId ? created : t)) });
     } catch {

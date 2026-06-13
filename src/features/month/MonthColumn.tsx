@@ -3,11 +3,13 @@ import { Link } from "@tanstack/react-router";
 import type { Task } from "@/lib/types";
 import { tasksOnMonth } from "@/lib/tasks";
 import { formatMonth, addMonths } from "@/lib/date";
+import { isAdhocOf } from "@/lib/entryMode";
+import { useTasksStore } from "@/store/tasks";
 import { BacklogSection } from "@/features/backlog/BacklogSection";
 import { useDroppableZone } from "@/features/plan-view/useDroppableZone";
 import { MonthHeroCard } from "./MonthHeroCard";
 import { MonthRow } from "./MonthRow";
-import { AddMonthTaskInput } from "./AddMonthTaskInput";
+import { AddTaskBar } from "@/ui/AddTaskBar";
 import styles from "./MonthColumn.module.css";
 
 export interface MonthColumnProps {
@@ -18,6 +20,7 @@ export interface MonthColumnProps {
 
 export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps) {
   const { ref: dropRef, isOver } = useDroppableZone({ kind: "month" });
+  const addMonthTask = useTasksStore((s) => s.addMonthTask);
   const entries = useMemo(() => tasksOnMonth(allTasks, month), [allTasks, month]);
   const primary = entries.filter((e) => e.kind === "primary");
 
@@ -120,7 +123,12 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
 
       {nothing && <div className={styles.empty}>這個月還沒有任務</div>}
 
-      <AddMonthTaskInput month={month} />
+      <AddTaskBar
+          placeholder="+ 加一件這個月要做的事…"
+          ariaLabel="新增本月任務"
+          withMode
+          onSubmit={(title, mode) => addMonthTask(title, month, isAdhocOf(mode))}
+        />
     </div>
   );
 }

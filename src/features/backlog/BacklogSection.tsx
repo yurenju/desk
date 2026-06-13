@@ -2,7 +2,8 @@ import { useState } from "react";
 import type { Task } from "@/lib/types";
 import { tasksInBacklog } from "@/lib/tasks";
 import { BacklogRow } from "./BacklogRow";
-import { AddBacklogTaskInput } from "./AddBacklogTaskInput";
+import { AddTaskBar } from "@/ui/AddTaskBar";
+import { useTasksStore } from "@/store/tasks";
 import styles from "./BacklogSection.module.css";
 
 export interface BacklogSectionProps {
@@ -13,6 +14,7 @@ export interface BacklogSectionProps {
 
 export function BacklogSection({ allTasks, focusDate, defaultOpen = false }: BacklogSectionProps) {
   const [open, setOpen] = useState(defaultOpen);
+  const addBacklogTask = useTasksStore((s) => s.addBacklogTask);
   const items = tasksInBacklog(allTasks);
 
   return (
@@ -34,7 +36,11 @@ export function BacklogSection({ allTasks, focusDate, defaultOpen = false }: Bac
             <BacklogRow key={t.id} task={t} focusDate={focusDate} />
           ))}
           {items.length === 0 && <div className={styles.empty}>Backlog 是空的</div>}
-          <AddBacklogTaskInput />
+          <AddTaskBar
+              placeholder="+ 加一件想做但還沒排的事…"
+              ariaLabel="新增 backlog 任務"
+              onSubmit={(title) => addBacklogTask(title)}
+            />
         </div>
       )}
     </section>
