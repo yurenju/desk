@@ -106,6 +106,18 @@ describe("Top3Card (interactive)", () => {
     ).toBe("true");
   });
 
+  it("demotes a top-3 task back to the month via the overflow menu", async () => {
+    const user = userEvent.setup();
+    render(<TestComponent />);
+
+    await user.click(screen.getByLabelText("更多動作"));
+    await user.click(await screen.findByRole("menuitem", { name: /丟回月度/ }));
+
+    const task = useTasksStore.getState().tasks.find((t) => t.id === "d1")!;
+    expect(task.custom_fields.daily_priority).toBeUndefined();
+    expect(task.custom_fields.unscheduled_at).toBe(MOCK_TODAY);
+  });
+
   it("hides 移到今天 for a top-3 task already on today", async () => {
     const user = userEvent.setup();
     render(<TestComponent />);
