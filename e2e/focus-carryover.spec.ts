@@ -92,3 +92,27 @@ test("demote-to-month turns a day task into a 退回月度 trail", async ({ page
   // it left the active list and now shows as a 退回月度 trail on this day
   await expect(page.getByText("· 退回月度")).toBeVisible();
 });
+
+test("demote-to-month works from the top-3 card too", async ({ page }) => {
+  await gotoTodaySeeded(page);
+
+  // add a task and promote it into the top-3 card
+  const input = page.getByPlaceholder("+ 加一件這天的事…");
+  await input.fill("三件事退回 e2e");
+  await input.press("Enter");
+
+  const taskRow = rowOf(page, "三件事退回 e2e");
+  await taskRow.hover();
+  await taskRow.getByRole("button", { name: /今日重點/ }).click();
+  await page.getByRole("menuitemradio", { name: /今日第一/ }).click();
+
+  // demote it from the top-3 card's overflow menu
+  const top3Item = page
+    .locator("li", { hasText: "三件事退回 e2e" })
+    .filter({ has: page.getByLabel("更多動作") });
+  await top3Item.hover();
+  await top3Item.getByLabel("更多動作").click();
+  await page.getByRole("menuitem", { name: /丟回月度/ }).click();
+
+  await expect(page.getByText("· 退回月度")).toBeVisible();
+});
