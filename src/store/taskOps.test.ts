@@ -13,6 +13,7 @@ import {
   addBacklogTask,
   promoteToMonth,
   planScheduleDay,
+  moveToToday,
 } from "./taskOps";
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
@@ -356,5 +357,59 @@ describe("planScheduleDay", () => {
       }),
     ];
     expect(planScheduleDay(tasks, "a", "2026-06-08")).toBe(tasks);
+  });
+});
+
+describe("moveToToday", () => {
+  const today = "2026-05-22";
+
+  it("appends today and keeps the earlier day as a trail", () => {
+    const tasks = [makeTask({ id: "a", custom_fields: { scheduled_dates: ["2026-05-20"] } })];
+    const next = moveToToday(tasks, "a", today);
+    expect(next[0].custom_fields.scheduled_dates).toEqual(["2026-05-20", today]);
+  });
+
+  it("keeps the task a priority, reassigning it to a free slot on today", () => {
+    const tasks = [
+      makeTask({ id: "a", custom_fields: { scheduled_dates: ["2026-05-20"], daily_priority: "2" } }),
+    ];
+    const next = moveToToday(tasks, "a", today);
+    expect(next[0].custom_fields.daily_priority).toBe("1");
+  });
+
+  it("drops to no priority when today's three-things is already full", () => {
+    const onToday = (id: string, p: "1" | "2" | "3") =>
+      makeTask({ id, custom_fields: { scheduled_dates: [today], daily_priority: p } });
+    const tasks = [
+      onToday("x", "1"),
+      onToday("y", "2"),
+      onToday("z", "3"),
+      makeTask({ id: "a", custom_fields: { scheduled_dates: ["2026-05-20"], daily_priority: "1" } }),
+    ];
+    const next = moveToToday(tasks, "a", today);
+    expect(next.find((t) => t.id === "a")!.custom_fields.daily_priority).toBeUndefined();
+  });
+
+  it("leaves a non-priority task without priority", () => {
+    const tasks = [makeTask({ id: "a", custom_fields: { scheduled_dates: ["2026-05-20"] } })];
+    const next = moveToToday(tasks, "a", today);
+    expect(next[0].custom_fields.daily_priority).toBeUndefined();
+  });
+
+  it("is a no-op (same ref) when already on today", () => {
+    const tasks = [makeTask({ id: "a", custom_fields: { scheduled_dates: [today] } })];
+    expect(moveToToday(tasks, "a", today)).toBe(tasks);
+  });
+
+  it("returns the same ref when id is not found", () => {
+    const tasks = [makeTask({ id: "a", custom_fields: { scheduled_dates: ["2026-05-20"] } })];
+    expect(moveToToday(tasks, "zz", today)).toBe(tasks);
+  });
+
+  it("does not mutate the input array", () => {
+    const tasks = [makeTask({ id: "a", custom_fields: { scheduled_dates: ["2026-05-20"] } })];
+    const json = JSON.stringify(tasks);
+    moveToToday(tasks, "a", today);
+    expect(JSON.stringify(tasks)).toBe(json);
   });
 });

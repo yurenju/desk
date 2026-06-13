@@ -1,5 +1,5 @@
 import type { Task, TaskCustomFields, Priority } from "@/lib/types";
-import { primaryDate, primaryMonth } from "@/lib/tasks";
+import { primaryDate, primaryMonth, nextFreeDailySlot } from "@/lib/tasks";
 import { monthOf } from "@/lib/date";
 
 function patch(t: Task, cf: Partial<TaskCustomFields>, now?: string): Task {
@@ -183,6 +183,32 @@ export function planScheduleDay(tasks: Task[], id: string, date: string): Task[]
 
   return tasks.map((t) =>
     t.id === id ? patch(t, { scheduled_dates: nextDates, scheduled_months: nextMonths }) : t,
+  );
+}
+
+export function moveToToday(tasks: Task[], id: string, today: string): Task[] {
+  const target = tasks.find((t) => t.id === id);
+  if (!target) return tasks;
+  const dates = target.custom_fields.scheduled_dates ?? [];
+  if (dates[dates.length - 1] === today) return tasks; // already on today
+
+  const nextDates = [...dates, today]; // append-only: origin day stays as a trail
+
+  // Preserve "is a priority", but the exact slot doesn't matter — reassign to a
+  // non-colliding slot on today. If today's three-things is already full, drop
+  // the priority (land in "其他計劃內") rather than evict a deliberate pick.
+  let nextPriority = target.custom_fields.daily_priority;
+  if (nextPriority) {
+    const takenByOthers = new Set(
+      tasks
+        .filter((t) => t.id !== id && primaryDate(t) === today && t.custom_fields.daily_priority)
+        .map((t) => t.custom_fields.daily_priority),
+    );
+    nextPriority = takenByOthers.size >= 3 ? undefined : nextFreeDailySlot(tasks, today, id);
+  }
+
+  return tasks.map((t) =>
+    t.id === id ? patch(t, { scheduled_dates: nextDates, daily_priority: nextPriority }) : t,
   );
 }
 
