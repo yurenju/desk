@@ -18,8 +18,11 @@ describe("EntryModeChip", () => {
   it("toggles to adhoc on click", async () => {
     const user = userEvent.setup();
     render(<EntryModeChip />);
-    await user.click(screen.getByRole("button"));
-    expect(screen.getByRole("button")).toHaveTextContent("臨時");
+    const button = screen.getByRole("button");
+    expect(button).toHaveAttribute("aria-pressed", "false");
+    await user.click(button);
+    expect(button).toHaveTextContent("臨時");
+    expect(button).toHaveAttribute("aria-pressed", "true");
   });
 
   it("keeps sibling chips in sync via shared state", async () => {
