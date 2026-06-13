@@ -439,6 +439,7 @@ describe("demoteToMonth", () => {
     ];
     const next = demoteToMonth(tasks, "a", "2026-05");
     expect(next[0].custom_fields.scheduled_months).toEqual(["2026-05"]);
+    expect(next[0].custom_fields.unscheduled_at).toBe("2026-05-21");
     expect(next[0].custom_fields.is_adhoc).toBe("true"); // preserved
   });
 

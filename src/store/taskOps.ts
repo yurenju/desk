@@ -225,7 +225,7 @@ export function demoteToMonth(tasks: Task[], id: string, currentMonth: string): 
   return tasks.map((t) =>
     t.id === id
       ? patch(t, {
-          unscheduled_at: day, // leave the day layer; scheduled_dates trail is kept
+          unscheduled_at: day, // dismiss the day (= last scheduled date); scheduled_dates trail stays
           scheduled_months: nextMonths,
           daily_priority: undefined,
         })
