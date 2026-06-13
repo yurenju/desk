@@ -177,6 +177,32 @@ describe("PATCH /api/todo/:id", () => {
     expect(spy.mock.calls[0][2].customFields).toEqual({ monthly_priority: null });
   });
 
+  it("forwards unscheduled_at as a custom field", async () => {
+    const env = makeEnv();
+    await seedSession(env);
+    const spy = vi.spyOn(wspc, "patchTodo").mockResolvedValue({
+      id: "tod_1", status: "open", title: "A", created_at: 0, updated_at: 0, custom_fields: {},
+    });
+    const req = new Request("https://d/api/todo/tod_1", {
+      method: "PATCH",
+      headers: { ...cookie, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        unscheduled_at: "2026-05-21",
+        scheduled_months: ["2026-05"],
+        daily_priority: null,
+      }),
+    });
+    await handlePatchTodo(req, env, "tod_1");
+    expect(spy.mock.calls[0][2]).toEqual({
+      status: undefined,
+      customFields: {
+        unscheduled_at: "2026-05-21",
+        scheduled_months: ["2026-05"],
+        daily_priority: null,
+      },
+    });
+  });
+
   it("passes title through to patchTodo as a top-level field", async () => {
     const env = makeEnv();
     await seedSession(env);
