@@ -66,7 +66,7 @@ describe("toggleDone", () => {
 
 describe("addTodayTask", () => {
   it("appends an adhoc task scheduled for today", () => {
-    const next = addTodayTask([], "回電話", "2026-05-22", "new-id", NOW);
+    const next = addTodayTask([], "回電話", "2026-05-22", "new-id", NOW, true);
     expect(next).toHaveLength(1);
     expect(next[0]).toMatchObject({
       id: "new-id",
@@ -78,12 +78,12 @@ describe("addTodayTask", () => {
   });
 
   it("trims the title", () => {
-    const next = addTodayTask([], "  買菜  ", "2026-05-22", "x", NOW);
+    const next = addTodayTask([], "  買菜  ", "2026-05-22", "x", NOW, true);
     expect(next[0].title).toBe("買菜");
   });
 
   it("ignores a blank title", () => {
-    const next = addTodayTask([], "   ", "2026-05-22", "x", NOW);
+    const next = addTodayTask([], "   ", "2026-05-22", "x", NOW, true);
     expect(next).toHaveLength(0);
   });
 
@@ -283,7 +283,7 @@ describe("setMonthlyPriority", () => {
 
 describe("addMonthTask", () => {
   it("creates a month-scoped non-adhoc task", () => {
-    const out = addMonthTask([], "計畫", "2026-05", "tmp-1", "2026-05-01T00:00:00Z");
+    const out = addMonthTask([], "計畫", "2026-05", "tmp-1", "2026-05-01T00:00:00Z", false);
     expect(out[0].custom_fields.scheduled_months).toEqual(["2026-05"]);
     expect(out[0].custom_fields.is_adhoc).toBe("false");
   });

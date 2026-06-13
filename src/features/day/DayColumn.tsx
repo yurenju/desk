@@ -6,7 +6,8 @@ import { useTasksStore } from "@/store/tasks";
 import { useDroppableZone } from "@/features/plan-view/useDroppableZone";
 import { TaskRow } from "./TaskRow";
 import { Top3Card } from "./Top3Card";
-import { AddTaskInput } from "./AddTaskInput";
+import { AddTaskBar } from "@/ui/AddTaskBar";
+import { isAdhocOf } from "@/lib/entryMode";
 import styles from "./DayColumn.module.css";
 
 export interface DayColumnProps {
@@ -18,6 +19,7 @@ export interface DayColumnProps {
 
 export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayColumnProps) {
   const storeToday = useTasksStore((s) => s.today);
+  const addTodayTask = useTasksStore((s) => s.addTodayTask);
   const entries = useMemo(() => tasksOnDate(allTasks, selectedDate), [allTasks, selectedDate]);
 
   const primary = entries.filter((e) => e.kind === "primary");
@@ -154,7 +156,14 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
         </div>
       )}
 
-      {isInteractive && <AddTaskInput date={selectedDate} />}
+      {isInteractive && (
+          <AddTaskBar
+            placeholder="+ 加一件這天的事…"
+            ariaLabel="新增這天的事"
+            withMode
+            onSubmit={(title, mode) => addTodayTask(title, selectedDate, isAdhocOf(mode ?? "planned"))}
+          />
+        )}
     </div>
   );
 }

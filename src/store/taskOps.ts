@@ -34,7 +34,7 @@ export function addTodayTask(
   today: string,
   id: string,
   now: string,
-  isAdhoc = true,
+  isAdhoc: boolean,
 ): Task[] {
   const trimmed = title.trim();
   if (!trimmed) return tasks;
@@ -125,7 +125,7 @@ export function addMonthTask(
   month: string,
   id: string,
   now: string,
-  isAdhoc = false,
+  isAdhoc: boolean,
 ): Task[] {
   const trimmed = title.trim();
   if (!trimmed) return tasks;

@@ -34,7 +34,7 @@ interface TasksState {
   loadTasks: () => Promise<void>;
   reload: () => Promise<void>;
   toggleDone: (id: string) => Promise<void>;
-  addTodayTask: (title: string, date: string, isAdhoc?: boolean) => Promise<void>;
+  addTodayTask: (title: string, date: string, isAdhoc: boolean) => Promise<void>;
   editTitle: (id: string, title: string) => Promise<void>;
   editDescription: (id: string, description: string) => Promise<void>;
   bumpSubtaskCount: (id: string, delta: number) => void;
@@ -43,7 +43,7 @@ interface TasksState {
   setDailyPriority: (id: string, n: Priority | null, date: string) => Promise<void>;
   setAdhoc: (id: string, isAdhoc: boolean) => Promise<void>;
   setMonthlyPriority: (id: string, n: Priority | null, month: string) => Promise<void>;
-  addMonthTask: (title: string, month: string, isAdhoc?: boolean) => Promise<void>;
+  addMonthTask: (title: string, month: string, isAdhoc: boolean) => Promise<void>;
   addBacklogTask: (title: string) => Promise<void>;
   promoteToMonth: (id: string, month: string) => Promise<void>;
   planScheduleDay: (id: string, date: string) => Promise<void>;
@@ -95,7 +95,7 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     }
   },
 
-  async addTodayTask(title, date, isAdhoc = true) {
+  async addTodayTask(title, date, isAdhoc) {
     const trimmed = title.trim();
     if (!trimmed) return;
     const prev = get().tasks;
@@ -232,7 +232,7 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     }
   },
 
-  async addMonthTask(title, month, isAdhoc = false) {
+  async addMonthTask(title, month, isAdhoc) {
     const trimmed = title.trim();
     if (!trimmed) return;
     const prev = get().tasks;
