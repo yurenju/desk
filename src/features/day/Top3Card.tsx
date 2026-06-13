@@ -2,10 +2,12 @@ import type { Task } from "@/lib/types";
 import { Checkbox } from "@/ui/Checkbox";
 import { UnplannedChip } from "@/ui/Chip";
 import { Menu } from "@/ui/Menu";
+import type { MenuItemSpec } from "@/ui/Menu/Menu";
 import { PriorityRing } from "@/ui/PriorityRing";
 import { useDraggableRow } from "@/features/plan-view/useDraggableRow";
 import { TaskDetailTrigger } from "@/features/task-detail/TaskDetailTrigger";
 import { useTaskRow } from "./useTaskRow";
+import { useTasksStore } from "@/store/tasks";
 import styles from "./Top3Card.module.css";
 
 export interface Top3CardProps {
@@ -41,6 +43,7 @@ function Top3Item({
   interactive?: boolean;
 }) {
   const row = useTaskRow(t.id, date);
+  const today = useTasksStore((s) => s.today);
   const { ref: dragRef, isDragging, handleProps } = useDraggableRow(`day:${t.id}`);
   const isAdhoc = t.custom_fields.is_adhoc === "true";
   const order = (t.custom_fields.daily_priority ?? t.custom_fields.monthly_priority) as
@@ -106,6 +109,9 @@ function Top3Item({
               </button>
             }
             items={[
+              ...(date !== today
+                ? [{ key: "move-today", label: "⤴ 移到今天", onSelect: row.moveToToday } satisfies MenuItemSpec]
+                : []),
               isAdhoc
                 ? { key: "to-planned", label: "↑ 移到計畫內", onSelect: row.toggleAdhoc }
                 : { key: "to-adhoc", label: "↓ 標為計畫外", onSelect: row.toggleAdhoc },
