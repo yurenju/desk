@@ -412,3 +412,40 @@ describe("bumpSubtaskCount", () => {
     expect(useTasksStore.getState().tasks[0].subtask_count).toBe(0);
   });
 });
+
+describe("useTasksStore carryover actions", () => {
+  it("moveToToday appends today and keeps the trail", async () => {
+    vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+    useTasksStore.setState({
+      tasks: [
+        {
+          id: "p1", title: "順延我", status: "open", created_at: "x", updated_at: "x",
+          custom_fields: { scheduled_dates: ["2026-05-20"] },
+        },
+      ],
+      today: MOCK_TODAY,
+      status: "ready",
+    });
+    await useTasksStore.getState().moveToToday("p1");
+    const t = useTasksStore.getState().tasks.find((x) => x.id === "p1")!;
+    expect(t.custom_fields.scheduled_dates).toEqual(["2026-05-20", MOCK_TODAY]);
+  });
+
+  it("demoteToMonth unschedules from the day and lands in the current month", async () => {
+    vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+    useTasksStore.setState({
+      tasks: [
+        {
+          id: "p2", title: "退回我", status: "open", created_at: "x", updated_at: "x",
+          custom_fields: { scheduled_dates: ["2026-05-21"], is_adhoc: "true" },
+        },
+      ],
+      today: MOCK_TODAY,
+      status: "ready",
+    });
+    await useTasksStore.getState().demoteToMonth("p2");
+    const t = useTasksStore.getState().tasks.find((x) => x.id === "p2")!;
+    expect(t.custom_fields.unscheduled_at).toBe("2026-05-21");
+    expect(t.custom_fields.scheduled_months).toEqual(["2026-05"]); // MOCK_TODAY is 2026-05-22
+  });
+});
