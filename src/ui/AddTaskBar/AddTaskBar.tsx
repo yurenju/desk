@@ -3,14 +3,16 @@ import { useEntryMode, type EntryMode } from "@/lib/entryMode";
 import { EntryModeChip } from "./EntryModeChip";
 import styles from "./AddTaskBar.module.css";
 
-export interface AddTaskBarProps {
+export type AddTaskBarProps = {
   placeholder: string;
   ariaLabel: string;
-  withMode?: boolean;
-  onSubmit: (title: string, mode?: EntryMode) => void;
-}
+} & (
+  | { withMode: true; onSubmit: (title: string, mode: EntryMode) => void }
+  | { withMode?: false; onSubmit: (title: string) => void }
+);
 
-export function AddTaskBar({ placeholder, ariaLabel, withMode = false, onSubmit }: AddTaskBarProps) {
+export function AddTaskBar(props: AddTaskBarProps) {
+  const { placeholder, ariaLabel } = props;
   const [value, setValue] = useState("");
   const [mode] = useEntryMode();
 
@@ -19,7 +21,8 @@ export function AddTaskBar({ placeholder, ariaLabel, withMode = false, onSubmit 
       setValue("");
       return;
     }
-    onSubmit(value, withMode ? mode : undefined);
+    if (props.withMode) props.onSubmit(value, mode);
+    else props.onSubmit(value);
     setValue("");
   };
 
@@ -36,7 +39,7 @@ export function AddTaskBar({ placeholder, ariaLabel, withMode = false, onSubmit 
           if (e.key === "Enter" && !e.nativeEvent.isComposing) submit();
         }}
       />
-      {withMode && <EntryModeChip />}
+      {props.withMode && <EntryModeChip />}
     </div>
   );
 }

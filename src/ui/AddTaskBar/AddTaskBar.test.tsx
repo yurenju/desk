@@ -52,6 +52,6 @@ describe("AddTaskBar", () => {
     render(<AddTaskBar placeholder="加事…" ariaLabel="新增" onSubmit={onSubmit} />);
     expect(screen.queryByRole("button")).toBeNull();
     await user.type(screen.getByLabelText("新增"), "backlog 事{Enter}");
-    expect(onSubmit).toHaveBeenCalledWith("backlog 事", undefined);
+    expect(onSubmit).toHaveBeenCalledWith("backlog 事");
   });
 });

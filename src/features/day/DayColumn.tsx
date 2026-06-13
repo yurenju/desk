@@ -161,7 +161,7 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
             placeholder="+ 加一件這天的事…"
             ariaLabel="新增這天的事"
             withMode
-            onSubmit={(title, mode) => addTodayTask(title, selectedDate, isAdhocOf(mode ?? "planned"))}
+            onSubmit={(title, mode) => addTodayTask(title, selectedDate, isAdhocOf(mode))}
           />
         )}
     </div>
