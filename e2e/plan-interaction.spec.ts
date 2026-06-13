@@ -119,8 +119,18 @@ test("drags a backlog task onto a non-focus week cell's top-3 zone (min-height r
   // bounding boxes. Without this the week column may be partially off-screen
   // and the drag endpoint coordinates would be outside the viewport, making
   // dnd-kit see no droppable under the pointer.
-  await source.scrollIntoViewIfNeeded();
+  //
+  // Order matters: scroll the LOWER element (the week cell) in first, then the
+  // UPPER element (the backlog source) last. The source sits above the target in
+  // the document, so scrolling the target in pushes the source up; doing the
+  // source last leaves it pinned at the top edge while the target — only ~500 px
+  // below, well within the 720 px viewport — stays visible. Doing it the other
+  // way round scrolls the source off the top (negative y), so page.mouse.down()
+  // fires outside the viewport and the drag never activates. This only bit on
+  // Windows, where larger font metrics make the plan layout tall enough that
+  // source and target can't both be on screen at the default scroll position.
   await top3Zone.scrollIntoViewIfNeeded();
+  await source.scrollIntoViewIfNeeded();
 
   const sBox = await source.boundingBox();
   const tBox = await top3Zone.boundingBox();
