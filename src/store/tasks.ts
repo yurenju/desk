@@ -8,6 +8,8 @@ import {
   addBacklogTask as addBacklogTaskOp,
   promoteToMonth as promoteToMonthOp,
   planScheduleDay as planScheduleDayOp,
+  moveToToday as moveToTodayOp,
+  demoteToMonth as demoteToMonthOp,
   deleteTask,
   editTitle,
   restoreTask as restoreTaskOp,
@@ -17,7 +19,7 @@ import {
   toggleDone,
 } from "./taskOps";
 import type { RemovedTask } from "./taskOps";
-import { todayISO } from "@/lib/date";
+import { todayISO, currentMonthISO } from "@/lib/date";
 
 const now = () => new Date().toISOString();
 
@@ -47,6 +49,8 @@ interface TasksState {
   addBacklogTask: (title: string) => Promise<void>;
   promoteToMonth: (id: string, month: string) => Promise<void>;
   planScheduleDay: (id: string, date: string) => Promise<void>;
+  moveToToday: (id: string) => Promise<void>;
+  demoteToMonth: (id: string) => Promise<void>;
   clearTasks: () => void;
   clearRecentlyDeleted: () => void;
   clearError: () => void;
@@ -287,6 +291,40 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
       await enqueuePatch(id, {
         scheduled_dates: updated.custom_fields.scheduled_dates,
         scheduled_months: updated.custom_fields.scheduled_months,
+      });
+    } catch {
+      set({ tasks: prev, error: "save_failed" });
+    }
+  },
+
+  async moveToToday(id) {
+    const prev = get().tasks;
+    const next = moveToTodayOp(prev, id, get().today);
+    if (next === prev) return;
+    set({ tasks: next, error: null });
+    const updated = next.find((t) => t.id === id)!;
+    try {
+      await enqueuePatch(id, {
+        scheduled_dates: updated.custom_fields.scheduled_dates,
+        daily_priority: updated.custom_fields.daily_priority ?? null,
+      });
+    } catch {
+      set({ tasks: prev, error: "save_failed" });
+    }
+  },
+
+  async demoteToMonth(id) {
+    const prev = get().tasks;
+    const month = currentMonthISO(new Date(get().today + "T00:00:00"));
+    const next = demoteToMonthOp(prev, id, month);
+    if (next === prev) return;
+    set({ tasks: next, error: null });
+    const updated = next.find((t) => t.id === id)!;
+    try {
+      await enqueuePatch(id, {
+        unscheduled_at: updated.custom_fields.unscheduled_at,
+        scheduled_months: updated.custom_fields.scheduled_months,
+        daily_priority: null,
       });
     } catch {
       set({ tasks: prev, error: "save_failed" });

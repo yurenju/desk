@@ -8,6 +8,8 @@ export function useTaskRow(id: string, date: string) {
   const editTitle = useTasksStore((s) => s.editTitle);
   const setDailyPriority = useTasksStore((s) => s.setDailyPriority);
   const setAdhoc = useTasksStore((s) => s.setAdhoc);
+  const moveToToday = useTasksStore((s) => s.moveToToday);
+  const demoteToMonth = useTasksStore((s) => s.demoteToMonth);
   const current = useTasksStore((s) => s.tasks.find((t) => t.id === id));
 
   const [isEditing, setIsEditing] = useState(false);
@@ -23,6 +25,8 @@ export function useTaskRow(id: string, date: string) {
       const isAdhoc = current?.custom_fields.is_adhoc === "true";
       setAdhoc(id, !isAdhoc);
     },
+    moveToToday: () => moveToToday(id),
+    demoteToMonth: () => demoteToMonth(id),
     startEdit: (initial: string) => {
       setDraft(initial);
       setIsEditing(true);

@@ -6,6 +6,7 @@ import { useTasksStore } from "@/store/tasks";
 import { allTasks, MOCK_TODAY } from "@/mock/data";
 import * as api from "@/lib/api/todo";
 import type { Task } from "@/lib/types";
+import { currentMonthISO } from "@/lib/date";
 
 beforeEach(() => {
   vi.restoreAllMocks();
@@ -130,5 +131,61 @@ describe("TaskRow recurring marker", () => {
   it("shows no ↻ marker for a non-recurring task", () => {
     render(rowFor("d5"));
     expect(screen.queryByLabelText("重複任務")).not.toBeInTheDocument();
+  });
+});
+
+describe("TaskRow carryover actions", () => {
+  const PAST = "2026-05-20";
+  function seed(task: Task) {
+    useTasksStore.setState({ tasks: [task], today: MOCK_TODAY, status: "ready", error: null });
+  }
+  const pastTask = (): Task => ({
+    id: "p1", title: "順延我", status: "open", created_at: "x", updated_at: "x",
+    custom_fields: { scheduled_dates: [PAST], is_adhoc: "false" },
+  });
+
+  it("offers 移到今天 on a past day and forwards the task to today", async () => {
+    const user = userEvent.setup();
+    seed(pastTask());
+    render(<TaskRow task={useTasksStore.getState().tasks[0]} kind="primary" date={PAST} interactive />);
+    await user.click(screen.getByLabelText("更多動作"));
+    await user.click(await screen.findByRole("menuitem", { name: /移到今天/ }));
+    const t = useTasksStore.getState().tasks.find((x) => x.id === "p1")!;
+    expect(t.custom_fields.scheduled_dates).toEqual([PAST, MOCK_TODAY]);
+  });
+
+  it("hides 移到今天 when viewing today", async () => {
+    const user = userEvent.setup();
+    seed({ ...pastTask(), custom_fields: { scheduled_dates: [MOCK_TODAY] } });
+    render(<TaskRow task={useTasksStore.getState().tasks[0]} kind="primary" date={MOCK_TODAY} interactive />);
+    await user.click(screen.getByLabelText("更多動作"));
+    expect(screen.queryByRole("menuitem", { name: /移到今天/ })).toBeNull();
+  });
+
+  it("demotes a task back to the current month via 丟回月度", async () => {
+    const user = userEvent.setup();
+    seed(pastTask());
+    render(<TaskRow task={useTasksStore.getState().tasks[0]} kind="primary" date={PAST} interactive />);
+    await user.click(screen.getByLabelText("更多動作"));
+    await user.click(await screen.findByRole("menuitem", { name: /丟回月度/ }));
+    const t = useTasksStore.getState().tasks.find((x) => x.id === "p1")!;
+    expect(t.custom_fields.unscheduled_at).toBe(PAST);
+    expect(t.custom_fields.scheduled_months).toEqual([
+      currentMonthISO(new Date(MOCK_TODAY + "T00:00:00")),
+    ]);
+  });
+
+  it("renders a dismissed trail row as 退回月度", () => {
+    render(
+      <TaskRow
+        task={{
+          id: "d1", title: "已退回", status: "open", created_at: "x", updated_at: "x",
+          custom_fields: { scheduled_dates: [PAST], unscheduled_at: PAST },
+        }}
+        kind="dismissed"
+        date={PAST}
+      />,
+    );
+    expect(screen.getByText("· 退回月度")).toBeInTheDocument();
   });
 });

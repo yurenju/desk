@@ -64,6 +64,7 @@ export async function handlePatchTodo(
       description?: string;
       scheduled_dates?: string[];
       scheduled_months?: string[];
+      unscheduled_at?: string;
     };
     try {
       body = (await request.json()) as {
@@ -76,6 +77,7 @@ export async function handlePatchTodo(
         description?: string;
         scheduled_dates?: string[];
         scheduled_months?: string[];
+        unscheduled_at?: string;
       };
     } catch {
       return json({ error: "invalid_json" }, 400);
@@ -87,6 +89,7 @@ export async function handlePatchTodo(
     if ("is_adhoc" in body) customFields.is_adhoc = body.is_adhoc ?? null;
     if ("scheduled_dates" in body && body.scheduled_dates) customFields.scheduled_dates = body.scheduled_dates;
     if ("scheduled_months" in body && body.scheduled_months) customFields.scheduled_months = body.scheduled_months;
+    if ("unscheduled_at" in body && body.unscheduled_at) customFields.unscheduled_at = body.unscheduled_at;
     const todo = await patchTodo(accessToken, id, {
       status: body.status,
       customFields: Object.keys(customFields).length ? customFields : undefined,
