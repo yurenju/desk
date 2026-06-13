@@ -106,6 +106,38 @@ describe("Top3Card (interactive)", () => {
     ).toBe("true");
   });
 
+  it("hides 移到今天 for a top-3 task already on today", async () => {
+    const user = userEvent.setup();
+    render(<TestComponent />);
+
+    await user.click(screen.getByLabelText("更多動作"));
+    expect(screen.queryByRole("menuitem", { name: /移到今天/ })).toBeNull();
+  });
+
+  it("moves a carryover top-3 task to today via the overflow menu", async () => {
+    const user = userEvent.setup();
+    const carryoverDate = "2026-05-21";
+    const Carryover = () => {
+      const tasks = useTasksStore((s) => s.tasks);
+      return (
+        <Top3Card
+          tasks={tasks.filter((t) => t.id === "w-thu")}
+          title="最重要的三件事"
+          date={carryoverDate}
+          interactive
+        />
+      );
+    };
+    render(<Carryover />);
+
+    await user.click(screen.getByLabelText("更多動作"));
+    await user.click(await screen.findByRole("menuitem", { name: /移到今天/ }));
+
+    expect(
+      useTasksStore.getState().tasks.find((t) => t.id === "w-thu")!.custom_fields.scheduled_dates,
+    ).toContain(MOCK_TODAY);
+  });
+
   it("opens a priority menu and sets the chosen slot", async () => {
     const user = userEvent.setup();
     render(<TestComponent />);

@@ -39,6 +39,44 @@ test("move-to-today forwards a past-day task into today", async ({ page }) => {
   await expect(page.getByText("順延 e2e")).toBeVisible();
 });
 
+test("move-to-today forwards a past-day top-3 task into today", async ({ page }) => {
+  await gotoTodaySeeded(page);
+
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const yesterday = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
+
+  await page.goto(`/focus/${yesterday}`);
+  await expect(page).toHaveURL(new RegExp(`/focus/${yesterday}$`));
+
+  // add an open task on that past day, then promote it into the top-3 card
+  const input = page.getByPlaceholder("+ 加一件這天的事…");
+  await input.fill("順延重點 e2e");
+  await input.press("Enter");
+
+  const taskRow = rowOf(page, "順延重點 e2e");
+  await taskRow.hover();
+  await taskRow.getByRole("button", { name: /今日重點/ }).click();
+  await page.getByRole("menuitemradio", { name: /今日第一/ }).click();
+
+  // now it lives in the top-3 card (a <li>); move it to today from there.
+  // Scope to the <li> that owns an overflow menu — the week-rail day chip also
+  // contains the title text but has no 更多動作 button.
+  const top3Item = page
+    .locator("li", { hasText: "順延重點 e2e" })
+    .filter({ has: page.getByLabel("更多動作") });
+  await top3Item.hover();
+  await top3Item.getByLabel("更多動作").click();
+  await page.getByRole("menuitem", { name: /移到今天/ }).click();
+
+  // back to today → it now lives here
+  await page.getByRole("navigation", { name: "週導覽" }).getByRole("link", { name: "回今天" }).click();
+  await expect(page).toHaveURL(/\/focus(\/\d{4}-\d{2}-\d{2})?$/);
+  await expect(page.getByText("順延重點 e2e")).toBeVisible();
+});
+
 test("demote-to-month turns a day task into a 退回月度 trail", async ({ page }) => {
   await gotoTodaySeeded(page);
 
