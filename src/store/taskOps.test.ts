@@ -497,17 +497,13 @@ describe("demoteToMonth", () => {
 });
 
 function monthTask(id: string, months: string[], priority?: string): Task {
-  return {
+  return makeTask({
     id,
-    title: id,
-    status: "open",
-    created_at: "2026-06-01T00:00:00.000Z",
-    updated_at: "2026-06-01T00:00:00.000Z",
     custom_fields: {
       scheduled_months: months,
       ...(priority ? { monthly_priority: priority } : {}),
     },
-  };
+  });
 }
 
 describe("moveToNextMonth", () => {
@@ -532,5 +528,10 @@ describe("moveToNextMonth", () => {
   it("is a no-op for an unknown id", () => {
     const tasks = [monthTask("a", ["2026-06"])];
     expect(moveToNextMonth(tasks, "zzz")).toBe(tasks);
+  });
+
+  it("is a no-op when the next month is already the last entry", () => {
+    const tasks = [monthTask("a", ["2026-06", "2026-07"])];
+    expect(moveToNextMonth(tasks, "a")).toBe(tasks);
   });
 });
