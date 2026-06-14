@@ -305,6 +305,37 @@ export interface Todo {
   recurring_template_id?: string;
 }
 
+// WSPC /todo/items caps each page at 200 (and defaults to 50 when limit is
+// omitted). Always request the max page size and follow next_cursor so callers
+// get the FULL set — otherwise older todos silently fall off the first page once
+// recurring occurrences pile up, and the frontend (which derives every view from
+// this set) just never sees them.
+const TODO_PAGE_LIMIT = 200;
+
+async function fetchAllTodoItems(
+  accessToken: string,
+  baseParams: URLSearchParams,
+  context: string,
+): Promise<Todo[]> {
+  const all: Todo[] = [];
+  let cursor: string | undefined;
+  do {
+    const params = new URLSearchParams(baseParams);
+    params.set("limit", String(TODO_PAGE_LIMIT));
+    if (cursor) params.set("cursor", cursor);
+    const res = await fetch(`${WSPC_BASE}/todo/items?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) {
+      throw new Error(`WSPC ${context} failed: ${res.status} ${await res.text()}`);
+    }
+    const data = (await res.json()) as { todos?: Todo[]; next_cursor?: string };
+    if (data.todos) all.push(...data.todos);
+    cursor = data.next_cursor;
+  } while (cursor);
+  return all;
+}
+
 // Returns all non-cancelled tasks for the given type. Cancelled is excluded by
 // omission: we enumerate the three live statuses (open/in_progress/done) rather
 // than requesting cancelled. The frontend derives month/week/day/backlog views
@@ -317,14 +348,7 @@ export async function listTodos(
   params.set("project_id", opts.projectId);
   params.set("type_id", opts.typeId);
   for (const s of ["open", "in_progress", "done"]) params.append("status", s);
-  const res = await fetch(`${WSPC_BASE}/todo/items?${params.toString()}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!res.ok) {
-    throw new Error(`WSPC listTodos failed: ${res.status} ${await res.text()}`);
-  }
-  const data = (await res.json()) as { todos?: Todo[] };
-  return data.todos ?? [];
+  return fetchAllTodoItems(accessToken, params, "listTodos");
 }
 
 // Direct children of one parent todo (subtask checklist). WSPC scopes children
@@ -339,14 +363,7 @@ export async function listChildren(
   params.set("type_id", opts.typeId);
   params.set("parent_id", opts.parentId);
   for (const s of ["open", "in_progress", "done"]) params.append("status", s);
-  const res = await fetch(`${WSPC_BASE}/todo/items?${params.toString()}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!res.ok) {
-    throw new Error(`WSPC listChildren failed: ${res.status} ${await res.text()}`);
-  }
-  const data = (await res.json()) as { todos?: Todo[] };
-  return data.todos ?? [];
+  return fetchAllTodoItems(accessToken, params, "listChildren");
 }
 
 export async function createTodo(

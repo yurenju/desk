@@ -437,6 +437,38 @@ describe("listTodos", () => {
     expect(u.searchParams.getAll("status")).toEqual(["open", "in_progress", "done"]);
     expect(fetchSpy.mock.calls[0][0] as string).not.toContain("cf.");
   });
+
+  it("follows next_cursor across pages and concatenates every page", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            todos: [{ id: "tod_1", status: "open", title: "p1", created_at: 0, updated_at: 0 }],
+            next_cursor: "CUR1",
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            todos: [{ id: "tod_2", status: "open", title: "p2", created_at: 0, updated_at: 0 }],
+          }),
+          { status: 200 },
+        ),
+      );
+    const out = await listTodos("at", { projectId: "prj_1", typeId: "typ_1" });
+    expect(out.map((t) => t.id)).toEqual(["tod_1", "tod_2"]);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    const u1 = new URL(fetchSpy.mock.calls[0][0] as string);
+    expect(u1.searchParams.get("limit")).toBe("200");
+    expect(u1.searchParams.has("cursor")).toBe(false);
+    const u2 = new URL(fetchSpy.mock.calls[1][0] as string);
+    expect(u2.searchParams.get("cursor")).toBe("CUR1");
+    expect(u2.searchParams.get("project_id")).toBe("prj_1");
+    expect(u2.searchParams.getAll("status")).toEqual(["open", "in_progress", "done"]);
+  });
 });
 
 describe("createTodo", () => {
@@ -502,6 +534,34 @@ describe("listChildren", () => {
   it("throws when WSPC responds non-2xx", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("nope", { status: 500 }));
     await expect(listChildren("at", { projectId: "p1", typeId: "t1", parentId: "tod_1" })).rejects.toThrow();
+  });
+
+  it("follows next_cursor across pages and concatenates every page", async () => {
+    const spy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            todos: [{ id: "c1", status: "open", title: "s1", created_at: 0, updated_at: 0 }],
+            next_cursor: "CUR1",
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            todos: [{ id: "c2", status: "open", title: "s2", created_at: 0, updated_at: 0 }],
+          }),
+          { status: 200 },
+        ),
+      );
+    const out = await listChildren("at", { projectId: "p1", typeId: "t1", parentId: "tod_1" });
+    expect(out.map((t) => t.id)).toEqual(["c1", "c2"]);
+    expect(spy).toHaveBeenCalledTimes(2);
+    const u2 = new URL(spy.mock.calls[1][0] as string);
+    expect(u2.searchParams.get("cursor")).toBe("CUR1");
+    expect(u2.searchParams.get("parent_id")).toBe("tod_1");
   });
 });
 
