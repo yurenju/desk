@@ -144,7 +144,13 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
       {trails.length > 0 && (
         <section className={styles.section}>
           {trails.map((e) => (
-            <TaskRow key={e.task.id} task={e.task} kind={e.kind} date={selectedDate} />
+            <TaskRow
+              key={e.task.id}
+              task={e.task}
+              kind={e.kind}
+              date={selectedDate}
+              interactive={isInteractive}
+            />
           ))}
         </section>
       )}

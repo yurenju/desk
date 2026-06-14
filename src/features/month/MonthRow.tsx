@@ -30,6 +30,7 @@ export function MonthRow({
   const isAdhoc = task.custom_fields.is_adhoc === "true";
   const row = useMonthRow(task.id, { month, selectedDate });
   const editable = Boolean(interactive) && kind === "primary";
+  const checkable = Boolean(interactive);
   const { ref: dragRef, isDragging, handleProps } = useDraggableRow(`month:${task.id}`);
   const draggable = kind === "primary";
 
@@ -43,8 +44,8 @@ export function MonthRow({
     >
       <Checkbox
         checked={isDone}
-        disabled={!editable}
-        onCheckedChange={editable ? row.toggle : undefined}
+        disabled={!checkable}
+        onCheckedChange={checkable ? row.toggle : undefined}
         aria-label={task.title}
       />
       {showRing && editable && (
