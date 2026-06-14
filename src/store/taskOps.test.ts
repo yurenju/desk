@@ -553,4 +553,22 @@ describe("demoteToBacklog", () => {
     const tasks = [monthTask("a", [])];
     expect(demoteToBacklog(tasks, "a", "2026-06-14")).toBe(tasks);
   });
+
+  it("dismisses a residual scheduled day so the task leaves the day layer", () => {
+    const tasks = [
+      makeTask({
+        id: "a",
+        custom_fields: {
+          scheduled_months: ["2026-06"],
+          scheduled_dates: ["2026-06-10"],
+          daily_priority: "1",
+          monthly_priority: "2",
+        },
+      }),
+    ];
+    const next = demoteToBacklog(tasks, "a", "2026-06-14");
+    expect(primaryDate(next[0])).toBeNull();
+    expect(next[0].custom_fields.daily_priority).toBeUndefined();
+    expect(layer(next[0])).toBe("backlog");
+  });
 });

@@ -258,7 +258,7 @@ export function demoteToBacklog(tasks: Task[], id: string, today: string): Task[
     t.id === id
       ? patch(t, {
           unscheduled_month: months[months.length - 1], // dismiss active month
-          unscheduled_at: today, // also dismiss any residual day scheduling
+          unscheduled_at: today, // a month task may have no active day; stamp "now" to dismiss any residual day scheduling
           monthly_priority: undefined,
           daily_priority: undefined,
         })
