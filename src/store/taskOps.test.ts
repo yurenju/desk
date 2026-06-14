@@ -15,6 +15,7 @@ import {
   planScheduleDay,
   moveToToday,
   demoteToMonth,
+  moveToNextMonth,
 } from "./taskOps";
 import { primaryDate } from "@/lib/tasks";
 
@@ -492,5 +493,44 @@ describe("demoteToMonth", () => {
   it("returns the same ref when id is not found", () => {
     const tasks = [makeTask({ id: "a", custom_fields: { scheduled_dates: ["2026-05-21"] } })];
     expect(demoteToMonth(tasks, "zz", "2026-05")).toBe(tasks);
+  });
+});
+
+function monthTask(id: string, months: string[], priority?: string): Task {
+  return {
+    id,
+    title: id,
+    status: "open",
+    created_at: "2026-06-01T00:00:00.000Z",
+    updated_at: "2026-06-01T00:00:00.000Z",
+    custom_fields: {
+      scheduled_months: months,
+      ...(priority ? { monthly_priority: priority } : {}),
+    },
+  };
+}
+
+describe("moveToNextMonth", () => {
+  it("appends the next month and clears monthly_priority", () => {
+    const tasks = [monthTask("a", ["2026-06"], "1")];
+    const next = moveToNextMonth(tasks, "a");
+    expect(next[0].custom_fields.scheduled_months).toEqual(["2026-06", "2026-07"]);
+    expect(next[0].custom_fields.monthly_priority).toBeUndefined();
+  });
+
+  it("rolls over the year (12 -> next Jan)", () => {
+    const tasks = [monthTask("a", ["2026-12"])];
+    const next = moveToNextMonth(tasks, "a");
+    expect(next[0].custom_fields.scheduled_months).toEqual(["2026-12", "2027-01"]);
+  });
+
+  it("is a no-op when the task has no scheduled month", () => {
+    const tasks = [monthTask("a", [])];
+    expect(moveToNextMonth(tasks, "a")).toBe(tasks);
+  });
+
+  it("is a no-op for an unknown id", () => {
+    const tasks = [monthTask("a", ["2026-06"])];
+    expect(moveToNextMonth(tasks, "zzz")).toBe(tasks);
   });
 });
