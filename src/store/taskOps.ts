@@ -249,3 +249,20 @@ export function moveToNextMonth(tasks: Task[], id: string): Task[] {
   );
 }
 
+export function demoteToBacklog(tasks: Task[], id: string, today: string): Task[] {
+  const target = tasks.find((t) => t.id === id);
+  if (!target) return tasks;
+  const months = target.custom_fields.scheduled_months ?? [];
+  if (months.length === 0) return tasks; // already backlog
+  return tasks.map((t) =>
+    t.id === id
+      ? patch(t, {
+          unscheduled_month: months[months.length - 1], // dismiss active month
+          unscheduled_at: today, // also dismiss any residual day scheduling
+          monthly_priority: undefined,
+          daily_priority: undefined,
+        })
+      : t,
+  );
+}
+

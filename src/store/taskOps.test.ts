@@ -16,8 +16,9 @@ import {
   moveToToday,
   demoteToMonth,
   moveToNextMonth,
+  demoteToBacklog,
 } from "./taskOps";
-import { primaryDate } from "@/lib/tasks";
+import { primaryDate, layer } from "@/lib/tasks";
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
   return {
@@ -534,5 +535,22 @@ describe("moveToNextMonth", () => {
     const tasks = [monthTask("a", ["2026-06", "2026-07"])];
     const next = moveToNextMonth(tasks, "a");
     expect(next[0].custom_fields.scheduled_months).toEqual(["2026-06", "2026-07", "2026-08"]);
+  });
+});
+
+describe("demoteToBacklog", () => {
+  it("dismisses the active month and lands in backlog", () => {
+    const tasks = [monthTask("a", ["2026-06"], "2")];
+    const next = demoteToBacklog(tasks, "a", "2026-06-14");
+    expect(next[0].custom_fields.unscheduled_month).toBe("2026-06");
+    expect(next[0].custom_fields.unscheduled_at).toBe("2026-06-14");
+    expect(next[0].custom_fields.monthly_priority).toBeUndefined();
+    expect(next[0].custom_fields.daily_priority).toBeUndefined();
+    expect(layer(next[0])).toBe("backlog");
+  });
+
+  it("is a no-op when the task has no scheduled month", () => {
+    const tasks = [monthTask("a", [])];
+    expect(demoteToBacklog(tasks, "a", "2026-06-14")).toBe(tasks);
   });
 });
