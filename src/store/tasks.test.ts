@@ -519,6 +519,7 @@ describe("demoteToBacklog action", () => {
     const t = useTasksStore.getState().tasks.find((x) => x.id === "m2")!;
     expect(t.custom_fields.scheduled_months).toEqual(["2026-06"]);
     expect(t.custom_fields.unscheduled_month).toBeUndefined();
+    expect(t.custom_fields.monthly_priority).toBe("3");
     expect(useTasksStore.getState().error).toBe("save_failed");
   });
 });
