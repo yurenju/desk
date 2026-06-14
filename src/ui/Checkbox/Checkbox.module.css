@@ -52,3 +52,19 @@
   outline: none;
   box-shadow: var(--shadow-focus);
 }
+
+/* Disabled: read-only rows (e.g. a non-interactive DayColumn variant, or a
+   primary row whose column isn't interactive) render a disabled checkbox.
+   nativeButton emits the native `disabled` attr; Base UI also adds a valueless
+   `data-disabled` hook — match both so it reads as inactive. */
+.root:disabled,
+.root[data-disabled] {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* a disabled checkbox shouldn't react to hover */
+.root:disabled:hover,
+.root[data-disabled]:hover {
+  border-color: var(--color-rule);
+}

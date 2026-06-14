@@ -188,4 +188,35 @@ describe("TaskRow carryover actions", () => {
     );
     expect(screen.getByText("· 退回月度")).toBeInTheDocument();
   });
+
+  it("a forwarded trail row is checkable but has no overflow menu", () => {
+    render(
+      <TaskRow
+        task={{
+          id: "f1", title: "已順延", status: "open", created_at: "x", updated_at: "x",
+          custom_fields: { scheduled_dates: [PAST, MOCK_TODAY] },
+        }}
+        kind="forwarded"
+        date={PAST}
+        interactive
+      />,
+    );
+    expect(screen.getByRole("checkbox")).not.toBeDisabled();
+    expect(screen.queryByRole("button", { name: "更多動作" })).not.toBeInTheDocument();
+  });
+
+  it("a dismissed trail row is checkable", () => {
+    render(
+      <TaskRow
+        task={{
+          id: "d2", title: "已退回", status: "open", created_at: "x", updated_at: "x",
+          custom_fields: { scheduled_dates: [PAST], unscheduled_at: PAST },
+        }}
+        kind="dismissed"
+        date={PAST}
+        interactive
+      />,
+    );
+    expect(screen.getByRole("checkbox")).not.toBeDisabled();
+  });
 });

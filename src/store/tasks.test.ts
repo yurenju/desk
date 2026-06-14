@@ -443,6 +443,87 @@ describe("bumpSubtaskCount", () => {
   });
 });
 
+describe("moveToNextMonth action", () => {
+  it("optimistically appends next month and clears monthly_priority", async () => {
+    const spy = vi.spyOn(queue, "enqueuePatch").mockResolvedValue({} as never);
+    useTasksStore.setState({
+      tasks: [{
+        id: "m1", title: "月任務", status: "open", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_months: ["2026-05"], monthly_priority: "1" },
+      }],
+      status: "ready", error: null,
+    });
+    await useTasksStore.getState().moveToNextMonth("m1");
+    const t = useTasksStore.getState().tasks.find((x) => x.id === "m1")!;
+    expect(t.custom_fields.scheduled_months).toEqual(["2026-05", "2026-06"]);
+    expect(t.custom_fields.monthly_priority).toBeUndefined();
+    expect(spy).toHaveBeenCalledWith("m1", {
+      scheduled_months: ["2026-05", "2026-06"],
+      monthly_priority: null,
+    });
+  });
+
+  it("rolls back and sets error when enqueuePatch rejects", async () => {
+    vi.spyOn(queue, "enqueuePatch").mockRejectedValue(new Error("boom"));
+    useTasksStore.setState({
+      tasks: [{
+        id: "m1", title: "月任務", status: "open", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_months: ["2026-05"], monthly_priority: "2" },
+      }],
+      status: "ready", error: null,
+    });
+    await useTasksStore.getState().moveToNextMonth("m1");
+    const t = useTasksStore.getState().tasks.find((x) => x.id === "m1")!;
+    expect(t.custom_fields.scheduled_months).toEqual(["2026-05"]);
+    expect(t.custom_fields.monthly_priority).toBe("2");
+    expect(useTasksStore.getState().error).toBe("save_failed");
+  });
+});
+
+describe("demoteToBacklog action", () => {
+  it("optimistically sets unscheduled_month/unscheduled_at and clears priorities", async () => {
+    const spy = vi.spyOn(queue, "enqueuePatch").mockResolvedValue({} as never);
+    useTasksStore.setState({
+      tasks: [{
+        id: "m2", title: "月任務退回", status: "open", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_months: ["2026-06"], monthly_priority: "1", daily_priority: "2" },
+      }],
+      today: "2026-06-14",
+      status: "ready", error: null,
+    });
+    await useTasksStore.getState().demoteToBacklog("m2");
+    const t = useTasksStore.getState().tasks.find((x) => x.id === "m2")!;
+    expect(t.custom_fields.unscheduled_month).toBe("2026-06");
+    expect(t.custom_fields.unscheduled_at).toBe("2026-06-14");
+    expect(t.custom_fields.monthly_priority).toBeUndefined();
+    expect(t.custom_fields.daily_priority).toBeUndefined();
+    expect(spy).toHaveBeenCalledWith("m2", {
+      unscheduled_month: "2026-06",
+      unscheduled_at: "2026-06-14",
+      monthly_priority: null,
+      daily_priority: null,
+    });
+  });
+
+  it("rolls back and sets error when enqueuePatch rejects", async () => {
+    vi.spyOn(queue, "enqueuePatch").mockRejectedValue(new Error("boom"));
+    useTasksStore.setState({
+      tasks: [{
+        id: "m2", title: "月任務退回", status: "open", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_months: ["2026-06"], monthly_priority: "3" },
+      }],
+      today: "2026-06-14",
+      status: "ready", error: null,
+    });
+    await useTasksStore.getState().demoteToBacklog("m2");
+    const t = useTasksStore.getState().tasks.find((x) => x.id === "m2")!;
+    expect(t.custom_fields.scheduled_months).toEqual(["2026-06"]);
+    expect(t.custom_fields.unscheduled_month).toBeUndefined();
+    expect(t.custom_fields.monthly_priority).toBe("3");
+    expect(useTasksStore.getState().error).toBe("save_failed");
+  });
+});
+
 describe("useTasksStore carryover actions", () => {
   it("moveToToday appends today and keeps the trail", async () => {
     vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);

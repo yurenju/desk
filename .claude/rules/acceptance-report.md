@@ -13,7 +13,7 @@ paths:
 
 plan 既有的「手動 preview 驗收」task（每份 plan 的最後一個 task）要**擴充**成同時產出報告。task 內容固定包含這些 step：
 
-1. 起 dev server，用 playwright-cli + dev-login 登入（見下方「截圖落地」）。
+1. 起 dev server，用 playwright-cli（`--persistent --profile` 共用 profile）開 preview，並用 `/api/me` 探測登入狀態（見下方「截圖落地」）。
 2. 對照 spec 的驗收標準逐項實機操作驗收，記 pass / fail。
 3. 截圖落地：把要佐證的畫面用 playwright-cli 存成 PNG 到 `docs/acceptance-reports/<plan-slug>/assets/`。
 4. 寫 `docs/acceptance-reports/<plan-slug>/report.md`（範本見下）。
@@ -35,16 +35,16 @@ playwright-cli install --skills
 **驗收流程**：
 
 ```bash
-# 1. 起 dev server（cloudflare vite-plugin 一起跑 worker BFF，/api/dev-login 同源）
-npm run dev -- --host 127.0.0.1 --port 5173   # 背景跑
+# 1. 起 dev server（cloudflare vite-plugin 一起跑 worker BFF；登入狀態靠共用 KV）
+npm run dev -- --host 127.0.0.1 --port 5173   # 背景跑；一次只跑一個 worktree 的 dev server
 
-# 2. 開 browser
-playwright-cli open http://127.0.0.1:5173
+# 2. 開 browser —— 一定要 --persistent --profile（共用 profile：__Host-Session cookie 跨呼叫 / 跨 worktree 留著）
+playwright-cli open --persistent --profile ~/.desk-dev/pw-profile http://127.0.0.1:5173
 
-# 3. dev-login：同源後用 eval 打 POST，cookie 會留給後續 call
-playwright-cli eval "async () => (await fetch('/api/dev-login', {method:'POST'})).status"
-#   回 200 = 登入成功；回 401 seed_refresh_failed = 種子過期，
-#   依 CLAUDE.md「本機 preview 登入」走一次 device flow capture 再更新 canonical 檔。
+# 3. 探測登入狀態：打 /api/me（共用 KV session 有效時回 200 + {user_id,email}）
+playwright-cli eval "async () => 'me=' + (await fetch('/api/me', {credentials:'same-origin'})).status"
+#   200 = 已登入，直接驗收；401 = session 過期（~30 天沒碰），
+#   請使用者用丟棄式測試帳號走一次 WSPC device flow（見 CLAUDE.md「本機 preview 登入」）後再續。
 
 # 4. 逐項驗收：snapshot 拿 element ref，再 click / fill / check 操作
 playwright-cli snapshot

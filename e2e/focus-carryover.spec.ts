@@ -93,6 +93,31 @@ test("demote-to-month turns a day task into a 退回月度 trail", async ({ page
   await expect(page.getByText("· 退回月度")).toBeVisible();
 });
 
+test("dismissed trail row checkbox is enabled and can be checked complete", async ({ page }) => {
+  await gotoTodaySeeded(page);
+
+  // Add a task, demote it to month → it becomes a "· 退回月度" dismissed trail.
+  const input = page.getByPlaceholder("+ 加一件這天的事…");
+  await input.fill("退回完成 e2e");
+  await input.press("Enter");
+
+  const row = rowOf(page, "退回完成 e2e");
+  await row.hover();
+  await row.getByLabel("更多動作").click();
+  await page.getByRole("menuitem", { name: /丟回月度/ }).click();
+
+  // The trail banner appears; find the trail row by its trail label.
+  await expect(page.getByText("· 退回月度")).toBeVisible();
+
+  // The checkbox for this task should be enabled (trail rows are checkable).
+  const checkbox = page.getByRole("checkbox", { name: "退回完成 e2e" });
+  await expect(checkbox).toBeEnabled();
+
+  // Click it → task becomes done.
+  await checkbox.click();
+  await expect(checkbox).toBeChecked();
+});
+
 test("demote-to-month works from the top-3 card too", async ({ page }) => {
   await gotoTodaySeeded(page);
 

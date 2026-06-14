@@ -1,6 +1,6 @@
 import type { Task, TaskCustomFields, Priority } from "@/lib/types";
 import { primaryDate, primaryMonth, nextFreeDailySlot } from "@/lib/tasks";
-import { monthOf } from "@/lib/date";
+import { monthOf, addMonths } from "@/lib/date";
 
 function patch(t: Task, cf: Partial<TaskCustomFields>, now?: string): Task {
   const newCustomFields = { ...t.custom_fields, ...cf };
@@ -229,6 +229,42 @@ export function demoteToMonth(tasks: Task[], id: string, currentMonth: string): 
       ? patch(t, {
           unscheduled_at: day, // dismiss the day (= last scheduled date); scheduled_dates trail stays
           scheduled_months: nextMonths,
+          daily_priority: undefined,
+        })
+      : t,
+  );
+}
+
+export function moveToNextMonth(tasks: Task[], id: string): Task[] {
+  const target = tasks.find((t) => t.id === id);
+  if (!target) return tasks;
+  const months = target.custom_fields.scheduled_months ?? [];
+  if (months.length === 0) return tasks; // not a month task
+  const last = months[months.length - 1];
+  const nextMonth = monthOf(addMonths(`${last}-01`, 1));
+  return tasks.map((t) =>
+    t.id === id
+      ? patch(t, { scheduled_months: [...months, nextMonth], monthly_priority: undefined })
+      : t,
+  );
+}
+
+export function demoteToBacklog(tasks: Task[], id: string, today: string): Task[] {
+  const target = tasks.find((t) => t.id === id);
+  if (!target) return tasks;
+  const months = target.custom_fields.scheduled_months ?? [];
+  if (months.length === 0) return tasks; // already backlog
+  const dates = target.custom_fields.scheduled_dates ?? [];
+  const lastDate = dates[dates.length - 1];
+  // Dismiss any residual day scheduling — including a day in the future — so the
+  // task truly lands in backlog. Stamp the later of `today` and the last scheduled day.
+  const dismissAt = lastDate && lastDate > today ? lastDate : today;
+  return tasks.map((t) =>
+    t.id === id
+      ? patch(t, {
+          unscheduled_month: months[months.length - 1], // dismiss active month
+          unscheduled_at: dismissAt,
+          monthly_priority: undefined,
           daily_priority: undefined,
         })
       : t,

@@ -25,6 +25,9 @@ export function TaskRow({ task, kind, date, showAdhocChip, interactive, showRing
   const row = useTaskRow(task.id, date);
   const today = useTasksStore((s) => s.today);
   const editable = Boolean(interactive) && kind === "primary";
+  // Trail rows (forwarded/dismissed) stay read-only — no ring/menu/edit — but can
+  // still be checked complete (same entity), so the checkbox uses `checkable`, not `editable`.
+  const checkable = Boolean(interactive);
   const { ref: dragRef, isDragging, handleProps } = useDraggableRow(`day:${task.id}`);
   const draggable = kind === "primary";
 
@@ -43,8 +46,8 @@ export function TaskRow({ task, kind, date, showAdhocChip, interactive, showRing
     >
       <Checkbox
         checked={isDone}
-        disabled={!editable}
-        onCheckedChange={editable ? row.toggle : undefined}
+        disabled={!checkable}
+        onCheckedChange={checkable ? row.toggle : undefined}
         aria-label={task.title}
       />
       {showRing && editable && (

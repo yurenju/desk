@@ -10,6 +10,41 @@ test("shows this month's tasks in the Monthly column", async ({ page }) => {
   await expect(page.getByText("本月最重要的事 A")).toBeVisible();
 });
 
+test("month row overflow menu has 移到下月 and 丟回 Backlog; 移到下月 demotes the row to a trail", async ({
+  page,
+}) => {
+  // "本月其他計畫 B" is a pure month task (no day scheduling) with no monthly_priority,
+  // so it shows in the "其他計劃內" section with an interactive ⋯ menu.
+  const row = page
+    .locator("div")
+    .filter({ has: page.getByText("本月其他計畫 B") })
+    .filter({ has: page.getByRole("button", { name: "更多動作" }) })
+    .last();
+
+  await row.getByRole("button", { name: "更多動作" }).click();
+
+  // Both new actions must appear in the menu.
+  await expect(page.getByRole("menuitem", { name: /移到下月/ })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: /丟回 Backlog/ })).toBeVisible();
+
+  // Click 移到下月 → the task's primary month advances to next month, so it
+  // becomes a forwarded trail (↪) in this month — the ⋯ menu disappears.
+  await page.getByRole("menuitem", { name: /移到下月/ }).click();
+
+  // After the action the task row shows the forwarded trail indicator (↪)
+  // because its primary month is now next month. Scope to the innermost row
+  // that contains the task title — it's the one that gains the ↪ span.
+  const trailRow = page
+    .locator("div")
+    .filter({ has: page.getByText("本月其他計畫 B") })
+    .filter({ has: page.getByText("↪") })
+    .last();
+  await expect(trailRow).toBeVisible();
+
+  // The ⋯ overflow menu is gone from that row (trail rows are read-only).
+  await expect(trailRow.getByRole("button", { name: "更多動作" })).toHaveCount(0);
+});
+
 test("adds a month task and persists across reload", async ({ page }) => {
   const input = page.getByPlaceholder("+ 加一件這個月要做的事…");
   await input.fill("月度新增測試");

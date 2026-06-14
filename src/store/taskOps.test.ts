@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { Task } from "@/lib/types";
+import type { Task, Priority } from "@/lib/types";
 import {
   toggleDone,
   addTodayTask,
@@ -15,8 +15,10 @@ import {
   planScheduleDay,
   moveToToday,
   demoteToMonth,
+  moveToNextMonth,
+  demoteToBacklog,
 } from "./taskOps";
-import { primaryDate } from "@/lib/tasks";
+import { primaryDate, layer } from "@/lib/tasks";
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
   return {
@@ -492,5 +494,99 @@ describe("demoteToMonth", () => {
   it("returns the same ref when id is not found", () => {
     const tasks = [makeTask({ id: "a", custom_fields: { scheduled_dates: ["2026-05-21"] } })];
     expect(demoteToMonth(tasks, "zz", "2026-05")).toBe(tasks);
+  });
+});
+
+function monthTask(id: string, months: string[], priority?: Priority): Task {
+  return makeTask({
+    id,
+    custom_fields: {
+      scheduled_months: months,
+      ...(priority ? { monthly_priority: priority } : {}),
+    },
+  });
+}
+
+describe("moveToNextMonth", () => {
+  it("appends the next month and clears monthly_priority", () => {
+    const tasks = [monthTask("a", ["2026-06"], "1")];
+    const next = moveToNextMonth(tasks, "a");
+    expect(next[0].custom_fields.scheduled_months).toEqual(["2026-06", "2026-07"]);
+    expect(next[0].custom_fields.monthly_priority).toBeUndefined();
+  });
+
+  it("rolls over the year (12 -> next Jan)", () => {
+    const tasks = [monthTask("a", ["2026-12"])];
+    const next = moveToNextMonth(tasks, "a");
+    expect(next[0].custom_fields.scheduled_months).toEqual(["2026-12", "2027-01"]);
+  });
+
+  it("is a no-op when the task has no scheduled month", () => {
+    const tasks = [monthTask("a", [])];
+    expect(moveToNextMonth(tasks, "a")).toBe(tasks);
+  });
+
+  it("is a no-op for an unknown id", () => {
+    const tasks = [monthTask("a", ["2026-06"])];
+    expect(moveToNextMonth(tasks, "zzz")).toBe(tasks);
+  });
+
+  it("defers further on a repeat (append-only, one month each time)", () => {
+    const tasks = [monthTask("a", ["2026-06", "2026-07"])];
+    const next = moveToNextMonth(tasks, "a");
+    expect(next[0].custom_fields.scheduled_months).toEqual(["2026-06", "2026-07", "2026-08"]);
+  });
+});
+
+describe("demoteToBacklog", () => {
+  it("dismisses the active month and lands in backlog", () => {
+    const tasks = [monthTask("a", ["2026-06"], "2")];
+    const next = demoteToBacklog(tasks, "a", "2026-06-14");
+    expect(next[0].custom_fields.unscheduled_month).toBe("2026-06");
+    expect(next[0].custom_fields.unscheduled_at).toBe("2026-06-14");
+    expect(next[0].custom_fields.monthly_priority).toBeUndefined();
+    expect(next[0].custom_fields.daily_priority).toBeUndefined();
+    expect(layer(next[0])).toBe("backlog");
+  });
+
+  it("is a no-op when the task has no scheduled month", () => {
+    const tasks = [monthTask("a", [])];
+    expect(demoteToBacklog(tasks, "a", "2026-06-14")).toBe(tasks);
+  });
+
+  it("dismisses a residual scheduled day so the task leaves the day layer", () => {
+    const tasks = [
+      makeTask({
+        id: "a",
+        custom_fields: {
+          scheduled_months: ["2026-06"],
+          scheduled_dates: ["2026-06-10"],
+          daily_priority: "1",
+          monthly_priority: "2",
+        },
+      }),
+    ];
+    const next = demoteToBacklog(tasks, "a", "2026-06-14");
+    expect(primaryDate(next[0])).toBeNull();
+    expect(next[0].custom_fields.daily_priority).toBeUndefined();
+    expect(layer(next[0])).toBe("backlog");
+  });
+
+  it("dismisses a FUTURE scheduled day so the task still lands in backlog", () => {
+    const tasks = [
+      makeTask({
+        id: "a",
+        custom_fields: {
+          scheduled_months: ["2026-06"],
+          scheduled_dates: ["2026-06-20"], // after `today`
+          daily_priority: "1",
+          monthly_priority: "2",
+        },
+      }),
+    ];
+    const next = demoteToBacklog(tasks, "a", "2026-06-14");
+    expect(next[0].custom_fields.unscheduled_at).toBe("2026-06-20"); // stamped the later date
+    expect(primaryDate(next[0])).toBeNull();
+    expect(layer(next[0])).toBe("backlog");
   });
 });

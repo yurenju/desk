@@ -116,6 +116,7 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
               kind={e.kind}
               month={month}
               selectedDate={selectedDate}
+              interactive
             />
           ))}
         </section>
