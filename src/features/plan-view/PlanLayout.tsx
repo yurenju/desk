@@ -14,12 +14,10 @@ import {
   type Over,
 } from "@dnd-kit/core";
 import type { Task } from "@/lib/types";
-import { CarryoverBanner } from "@/features/carryover/CarryoverBanner";
 import { MonthColumn } from "@/features/month/MonthColumn";
 import { WeekColumn } from "@/features/week/WeekColumn";
 import { DayColumn } from "@/features/day/DayColumn";
 import { SegmentedControl } from "@/ui/SegmentedControl";
-import { MOCK_CARRYOVER_MONTH } from "@/mock/data";
 import { useTasksStore } from "@/store/tasks";
 import { nextFreeDailySlot } from "@/lib/tasks";
 import { useHoverCapable } from "@/lib/useHoverCapable";
@@ -165,13 +163,6 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
       <DragEnabledProvider value={dragEnabled}>
         <WeekDropHintProvider value={weekHint}>
         <main className={styles.page}>
-          <CarryoverBanner
-            fromLabel="從上月延續"
-            summary={`${MOCK_CARRYOVER_MONTH.fromMonth} 沒做完的任務`}
-            count={MOCK_CARRYOVER_MONTH.count}
-            actions={["→ 本月三件事", "→ 本月其他", "丟回 backlog"]}
-          />
-
           <div className={styles.mobileTabs}>
             <SegmentedControl<MobileTab>
               value={tab}

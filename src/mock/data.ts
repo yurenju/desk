@@ -249,14 +249,3 @@ export const allTasks: Task[] = [
     custom_fields: { scheduled_dates: ["2026-05-24"], daily_priority: "1" },
   }),
 ];
-
-/** Carryover banner mock content. */
-export const MOCK_CARRYOVER_DAY = {
-  fromDate: "2026-05-21",
-  count: 3,
-};
-
-export const MOCK_CARRYOVER_MONTH = {
-  fromMonth: "2026-04",
-  count: 2,
-};
