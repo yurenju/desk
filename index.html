@@ -11,6 +11,25 @@
       rel="stylesheet"
     />
     <title>desk-scaffold</title>
+    <script>
+      // Apply the theme before first paint so the page never flashes the
+      // default (light) tokens, and so the theme is correct on load instead of
+      // only after the ThemeToggle (lazily mounted inside the menu) renders.
+      // Keep this logic in sync with src/lib/theme.ts (key + auto resolution).
+      (function () {
+        try {
+          var pref = localStorage.getItem("desk.theme");
+          if (pref !== "light" && pref !== "dark") {
+            pref = window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+          }
+          document.documentElement.setAttribute("data-theme", pref);
+        } catch (e) {
+          /* localStorage/matchMedia unavailable — fall back to CSS :root default */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
