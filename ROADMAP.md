@@ -28,9 +28,8 @@
 | Slice 3 — Monthly 互動 + promote | ✅ 完成 | — |
 | Slice 3.5 — Plan 週導覽 + Day 欄可規劃 | ✅ 完成 | [#16](https://github.com/yurenju/desk/pull/16) |
 | Slice 4 — Plan 模式完整拖曳 + Backlog 互動 | ✅ 完成 | — |
-| Slice 5 — Focus 丟回月度（部分） | ✅ 部分完成(2026-06-13) | — |
-| Slice 6 — Focus 移到今天（部分） | ✅ 部分完成(2026-06-13) | — |
-| Slice 5/6 其餘項目 | ⏳ 規劃中 | — |
+| Slice 5 — Dismiss / Unschedule（移到下月 / 丟回 Backlog / 軌跡可勾） | ✅ 完成(2026-06-14) | — |
+| Slice 6 — 移除 carryover banner | ✅ 完成(2026-06-14；移到其他日期 待做) | — |
 
 **Slice 0 比原規劃多做的部分**(因為「中高保真度」視覺要做到位,自然把後面 slice 的純視覺工作也帶進來了):
 
@@ -296,47 +295,40 @@
 >
 > 相關 spec / plan：[docs/superpowers/specs/2026-06-13-focus-carryover-actions-design.md](docs/superpowers/specs/2026-06-13-focus-carryover-actions-design.md)、[docs/superpowers/plans/2026-06-13-focus-carryover-actions.md](docs/superpowers/plans/2026-06-13-focus-carryover-actions.md)
 
-**尚未完成**：
-- [ ] 丟回 Backlog 按鈕(月層級):寫入 `unscheduled_month = last(scheduled_months)` 同時 `unscheduled_at = today`
-- [ ] 移到下月按鈕:`scheduled_months.push(next_month)`
-- [ ] forwarded / dismissed trail row 的互動:只能勾完成(其他動作 disabled),確認 Slice 0 渲染邏輯仍正確
-- [ ] 完成 trail task 後 `done_on` 寫入 + UI 切換到 ✓ 完成樣式
+**已完成（2026-06-14）**：剩餘四項全數 ship。
+- [x] 丟回 Backlog 按鈕(月層級):寫入 `unscheduled_month = last(scheduled_months)` 同時 `unscheduled_at = max(today, last(scheduled_dates))`(連未來日也 dismiss),清 monthly / daily priority。掛在 Plan 月列共用選單。
+- [x] 移到下月按鈕:`scheduled_months.push(next_month)`(由任務自己的 last 月推導,append-only)、清 `monthly_priority`。
+- [x] forwarded / dismissed trail row 的互動:`checkable = interactive`(只能勾完成,ring / menu / 編輯仍 gated 在 primary)。日(TaskRow)與月(MonthRow)對稱;DayColumn / MonthColumn 的 trail section 補傳 `interactive`。
+- [x] 完成 trail task 後 `done_on` 寫入 + ✓ 完成樣式(沿用既有 `toggleDone` + `.done`)。
 
-**不做**:carryover banner 的動作(下一片)。
+> 相關 spec / plan：[docs/superpowers/specs/2026-06-14-slice-5-dismiss-unschedule-design.md](docs/superpowers/specs/2026-06-14-slice-5-dismiss-unschedule-design.md)、[docs/superpowers/plans/2026-06-14-slice-5-dismiss-unschedule.md](docs/superpowers/plans/2026-06-14-slice-5-dismiss-unschedule.md)。手動 preview 驗收對照「驗收標準」1–10 逐項 PASS（#4 失敗回滾屬選測，由 store 單元測試覆蓋）。
 
-### Slice 6 — Carryover banner 動作 + 月底 Review ⏳（部分完成 2026-06-13）
+**不做**:carryover banner —— 已整個移除(見 Slice 6)。
 
-**目標**:把「打開新一天 / 新一月」的入口流程實際接起來。
+### Slice 6 — 移除 carryover banner + 月底 Review（待議）⏳（部分完成 2026-06-13）
 
-> Banner 的視覺已在 Slice 0 完成(靜態示意),這片把 carryover 判定 + 三個動作按鈕接起來。
+**決策（2026-06-14）**：**移除 carryover banner**,不再把它接起來。
+
+緣由:Slice 5/6 已 ship 的 per-row 動作(「移到今天」/「丟回月度」,Focus 每列 `⋯` menu)已涵蓋 carryover 的**「動作」**面。banner 唯一獨有的是**「主動浮現 stale 任務」**(在今天/本月畫面 push 提醒昨天/上月沒做完的),但這片刻意**不另做浮現機制** —— 改靠 WeekRail 翻日 / 翻週 + per-row 處理(pull,使用者自己去找)。原本 Slice 6 幾乎整片就是「把兩個 banner 接起來」,banner 拿掉後重新定義。
+
+> 背景:兩個 banner(Focus 日 carryover、Plan 月 carryover)從 Slice 0 起就是吃 mock(`MOCK_CARRYOVER_DAY` / `MOCK_CARRYOVER_MONTH`)、按鈕全 `disabled` 的靜態示意,從未接過真實資料。
 
 **已完成（2026-06-13）**：Focus 日層級「移到今天」per-row 動作（Focus tab 每列 `⋯` menu，非 banner）：
 - [x] 「移到今天」：`scheduled_dates.push(today)`（append-only，保留原來的日期做為順延軌跡）；若 today 三件事有空位則 `daily_priority` reassign 到空位，否則清除。
 - [x] 「移到今天」只在非 today 的日期檢視時顯示。
 
-> 注意：這是 **per-row** 動作，**非** carryover banner 上的批次動作；banner 動作**尚未建置**。「移到其他日期」也**未建置**。
->
 > 相關 spec / plan：[docs/superpowers/specs/2026-06-13-focus-carryover-actions-design.md](docs/superpowers/specs/2026-06-13-focus-carryover-actions-design.md)、[docs/superpowers/plans/2026-06-13-focus-carryover-actions.md](docs/superpowers/plans/2026-06-13-focus-carryover-actions.md)
 
-**尚未完成**：
-- [ ] 日 carryover 判定(前端 client-side filter):
-  ```
-  scheduled_dates.length > 0
-    AND last(scheduled_dates) < today
-    AND last(scheduled_dates) > (unscheduled_at ?? "")
-  ```
-- [ ] 日 carryover banner 動作:「→ 三件事 / → 計劃內 / 略過」三動作真的寫入 store
-- [ ] 「移到其他日期」動作（per-row）
-- [ ] 月 carryover 判定:
-  ```
-  scheduled_months.length > 0
-    AND last(scheduled_months) < current_month
-    AND last(scheduled_months) > (unscheduled_month ?? "")
-    AND 沒有 today 在 scheduled_dates
-  ```
-- [ ] 月 carryover banner 動作:「→ 本月最重要三件事 / → 本月其他任務 / 丟回 backlog」
-- [ ] 月底 Review 介面(逐筆處理本月未完成 task)
-- [ ] Banner 只在實際有 carryover 時顯示(Slice 0 是 hard-coded 永遠顯示)
+**本片範圍**：
+- [x] **移除 carryover banner**(2026-06-14):刪 `CarryoverBanner` 元件 + CSS Module、`TodayLayout` / `PlanLayout` 兩處使用、`MOCK_CARRYOVER_DAY` / `MOCK_CARRYOVER_MONTH` mock。隨 Slice 5 剩項一併 ship(見上節 spec / plan)。
+- [ ] **「移到其他日期」per-row 動作**(Focus 每列 `⋯` menu,補在「移到今天」旁,可挑任一天)。**仍未做。**
+
+**不做（已決定捨棄）**:
+- 日 / 月 carryover 自動偵測 + banner 動作(「→ 三件事 / → 計劃內 / 略過」、「→ 本月三件事 / 其他 / 丟回 backlog」)。
+- stale 任務的主動浮現機制 —— 決定靠翻日 / 翻週,不做 banner、不做 WeekRail 未完成標記、不把過去任務以軌跡列塞進今天。
+
+**待議(之後討論,不在本片)**:
+- **月底 Review 介面**。構想:一次開「任意兩個月」的雙欄面板,任務可從一欄送到另一欄(左右互送)來收束跨月未完成。等日層級的東西做完、實際用一輪後再拍板細節與要不要做。
 
 ### Slice 7 — 排序、`is_adhoc` 染色、打磨
 
