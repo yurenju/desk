@@ -10,6 +10,8 @@ import {
   planScheduleDay as planScheduleDayOp,
   moveToToday as moveToTodayOp,
   demoteToMonth as demoteToMonthOp,
+  moveToNextMonth as moveToNextMonthOp,
+  demoteToBacklog as demoteToBacklogOp,
   deleteTask,
   editTitle,
   restoreTask as restoreTaskOp,
@@ -51,6 +53,8 @@ interface TasksState {
   planScheduleDay: (id: string, date: string) => Promise<void>;
   moveToToday: (id: string) => Promise<void>;
   demoteToMonth: (id: string) => Promise<void>;
+  moveToNextMonth: (id: string) => Promise<void>;
+  demoteToBacklog: (id: string) => Promise<void>;
   clearTasks: () => void;
   clearRecentlyDeleted: () => void;
   clearError: () => void;
@@ -324,6 +328,40 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
       await enqueuePatch(id, {
         unscheduled_at: updated.custom_fields.unscheduled_at,
         scheduled_months: updated.custom_fields.scheduled_months,
+        daily_priority: null,
+      });
+    } catch {
+      set({ tasks: prev, error: "save_failed" });
+    }
+  },
+
+  async moveToNextMonth(id) {
+    const prev = get().tasks;
+    const next = moveToNextMonthOp(prev, id);
+    if (next === prev) return;
+    set({ tasks: next, error: null });
+    const updated = next.find((t) => t.id === id)!;
+    try {
+      await enqueuePatch(id, {
+        scheduled_months: updated.custom_fields.scheduled_months,
+        monthly_priority: null,
+      });
+    } catch {
+      set({ tasks: prev, error: "save_failed" });
+    }
+  },
+
+  async demoteToBacklog(id) {
+    const prev = get().tasks;
+    const next = demoteToBacklogOp(prev, id, get().today);
+    if (next === prev) return;
+    set({ tasks: next, error: null });
+    const updated = next.find((t) => t.id === id)!;
+    try {
+      await enqueuePatch(id, {
+        unscheduled_month: updated.custom_fields.unscheduled_month,
+        unscheduled_at: updated.custom_fields.unscheduled_at,
+        monthly_priority: null,
         daily_priority: null,
       });
     } catch {
