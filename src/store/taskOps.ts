@@ -254,11 +254,16 @@ export function demoteToBacklog(tasks: Task[], id: string, today: string): Task[
   if (!target) return tasks;
   const months = target.custom_fields.scheduled_months ?? [];
   if (months.length === 0) return tasks; // already backlog
+  const dates = target.custom_fields.scheduled_dates ?? [];
+  const lastDate = dates[dates.length - 1];
+  // Dismiss any residual day scheduling — including a day in the future — so the
+  // task truly lands in backlog. Stamp the later of `today` and the last scheduled day.
+  const dismissAt = lastDate && lastDate > today ? lastDate : today;
   return tasks.map((t) =>
     t.id === id
       ? patch(t, {
           unscheduled_month: months[months.length - 1], // dismiss active month
-          unscheduled_at: today, // a month task may have no active day; stamp "now" to dismiss any residual day scheduling
+          unscheduled_at: dismissAt,
           monthly_priority: undefined,
           daily_priority: undefined,
         })

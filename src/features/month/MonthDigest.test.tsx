@@ -76,6 +76,12 @@ it("renders progress and top-3 but not the 其他 list, plus an edit link", asyn
   // The 其他 list should NOT appear
   expect(screen.queryByText(/^其他 \(/)).not.toBeInTheDocument();
 
+  // The non-priority task's title should NOT be shown (hidden, not just the header)
+  expect(screen.queryByText("其他月度任務")).not.toBeInTheDocument();
+
+  // The progress label should count BOTH primary tasks (including the hidden one)
+  expect(screen.getByText(/計劃內已完成 0\/2/)).toBeInTheDocument();
+
   // An edit link pointing to /plan/$date should be present
   const link = screen.getByRole("link", { name: /在計畫頁編輯本月/ });
   expect(link).toHaveAttribute("href", expect.stringContaining("/plan/2026-06-14"));

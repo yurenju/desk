@@ -571,4 +571,22 @@ describe("demoteToBacklog", () => {
     expect(next[0].custom_fields.daily_priority).toBeUndefined();
     expect(layer(next[0])).toBe("backlog");
   });
+
+  it("dismisses a FUTURE scheduled day so the task still lands in backlog", () => {
+    const tasks = [
+      makeTask({
+        id: "a",
+        custom_fields: {
+          scheduled_months: ["2026-06"],
+          scheduled_dates: ["2026-06-20"], // after `today`
+          daily_priority: "1",
+          monthly_priority: "2",
+        },
+      }),
+    ];
+    const next = demoteToBacklog(tasks, "a", "2026-06-14");
+    expect(next[0].custom_fields.unscheduled_at).toBe("2026-06-20"); // stamped the later date
+    expect(primaryDate(next[0])).toBeNull();
+    expect(layer(next[0])).toBe("backlog");
+  });
 });
