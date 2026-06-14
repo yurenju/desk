@@ -10,6 +10,8 @@ export function useMonthRow(id: string, opts: { month: string; selectedDate: str
   const setDailyPriority = useTasksStore((s) => s.setDailyPriority);
   const setAdhoc = useTasksStore((s) => s.setAdhoc);
   const planScheduleDay = useTasksStore((s) => s.planScheduleDay);
+  const moveToNextMonth = useTasksStore((s) => s.moveToNextMonth);
+  const demoteToBacklog = useTasksStore((s) => s.demoteToBacklog);
   const current = useTasksStore((s) => s.tasks.find((t) => t.id === id));
 
   const [isEditing, setIsEditing] = useState(false);
@@ -42,5 +44,7 @@ export function useMonthRow(id: string, opts: { month: string; selectedDate: str
       setIsEditing(false);
     },
     cancelEdit: () => setIsEditing(false),
+    moveToNextMonth: () => moveToNextMonth(id),
+    demoteToBacklog: () => demoteToBacklog(id),
   };
 }

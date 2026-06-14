@@ -50,3 +50,17 @@ it("promotes into the day's top-3 via the overflow menu", async () => {
   expect(t.custom_fields.scheduled_dates).toEqual(["2026-05-22"]);
   expect(t.custom_fields.daily_priority).toBe("1");
 });
+
+it("month row menu includes 移到下月 and 丟回 Backlog", async () => {
+  vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+  useTasksStore.setState({
+    tasks: [{ id: "m10", title: "測試任務", status: "open", created_at: "x", updated_at: "x",
+      custom_fields: { scheduled_months: ["2026-05"] } }],
+    today: "2026-05-22", status: "ready", error: null,
+  });
+  render(<MonthRow task={useTasksStore.getState().tasks[0]} kind="primary"
+    month="2026-05" selectedDate="2026-05-22" interactive />);
+  await userEvent.click(screen.getByLabelText("更多動作"));
+  expect(await screen.findByText("↪ 移到下月")).toBeInTheDocument();
+  expect(screen.getByText("↩ 丟回 Backlog")).toBeInTheDocument();
+});
