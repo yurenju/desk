@@ -1,15 +1,15 @@
 .wrap { display: flex; flex-direction: column; gap: 2px; }
 .progress { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.track { flex: 1; height: 6px; border-radius: 3px; background: rgba(0,0,0,0.08); overflow: hidden; }
-.fill { height: 100%; background: var(--color-accent, #c08a4a); }
-.count { font-size: 12px; color: var(--color-text-muted, #6a6453); }
+.track { flex: 1; height: 6px; border-radius: 3px; background: var(--color-rule-faint); overflow: hidden; }
+.fill { height: 100%; background: var(--color-accent); }
+.count { font-size: 12px; color: var(--color-ink-faint); }
 .row { display: flex; align-items: center; gap: 10px; padding: 6px 4px; border-radius: 6px; }
-.row:hover { background: rgba(0,0,0,0.03); }
+.row:hover { background: var(--color-paper-alt); }
 .title { flex: 1; text-align: left; background: none; border: none; cursor: text; font: inherit; color: inherit; padding: 0; }
 .done .title { text-decoration: line-through; opacity: 0.5; }
-.editInput { flex: 1; font: inherit; border: none; border-bottom: 1px solid var(--color-accent, #c08a4a); background: transparent; color: inherit; padding: 2px 0; }
+.editInput { flex: 1; font: inherit; border: none; border-bottom: 1px solid var(--color-accent); background: transparent; color: inherit; padding: 2px 0; }
 .del { background: none; border: none; cursor: pointer; opacity: 0.5; }
 .del:hover { opacity: 1; }
 .add { display: flex; align-items: center; gap: 10px; padding: 8px 4px; }
-.plus { color: var(--color-text-muted, #9a927e); }
-.addInput { flex: 1; font: inherit; border: none; border-bottom: 1px dashed var(--color-border, #c9bfa6); background: transparent; color: inherit; padding: 3px 2px; }
+.plus { color: var(--color-ink-faint); }
+.addInput { flex: 1; font: inherit; border: none; border-bottom: 1px dashed var(--color-rule); background: transparent; color: inherit; padding: 3px 2px; }
