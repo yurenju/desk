@@ -30,6 +30,8 @@ export function MonthRow({
   const isAdhoc = task.custom_fields.is_adhoc === "true";
   const row = useMonthRow(task.id, { month, selectedDate });
   const editable = Boolean(interactive) && kind === "primary";
+  // Trail rows (forwarded/dismissed) stay read-only — no ring/menu/edit — but can
+  // still be checked complete (same entity), so the checkbox uses `checkable`, not `editable`.
   const checkable = Boolean(interactive);
   const { ref: dragRef, isDragging, handleProps } = useDraggableRow(`month:${task.id}`);
   const draggable = kind === "primary";
