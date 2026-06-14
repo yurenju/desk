@@ -40,6 +40,7 @@ export interface TodoPatch {
   scheduled_dates?: string[];
   scheduled_months?: string[];
   unscheduled_at?: string;
+  unscheduled_month?: string;
 }
 
 export async function patchTodoApi(id: string, patch: TodoPatch): Promise<Task> {

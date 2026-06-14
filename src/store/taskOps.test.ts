@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { Task } from "@/lib/types";
+import type { Task, Priority } from "@/lib/types";
 import {
   toggleDone,
   addTodayTask,
@@ -497,7 +497,7 @@ describe("demoteToMonth", () => {
   });
 });
 
-function monthTask(id: string, months: string[], priority?: string): Task {
+function monthTask(id: string, months: string[], priority?: Priority): Task {
   return makeTask({
     id,
     custom_fields: {
