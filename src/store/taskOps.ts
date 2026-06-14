@@ -242,9 +242,6 @@ export function moveToNextMonth(tasks: Task[], id: string): Task[] {
   if (months.length === 0) return tasks; // not a month task
   const last = months[months.length - 1];
   const nextMonth = monthOf(addMonths(`${last}-01`, 1));
-  // Idempotency: if the second-to-last month's successor is already the last entry, nothing to do
-  if (months.length >= 2 && monthOf(addMonths(`${months[months.length - 2]}-01`, 1)) === last)
-    return tasks; // already there
   return tasks.map((t) =>
     t.id === id
       ? patch(t, { scheduled_months: [...months, nextMonth], monthly_priority: undefined })

@@ -530,8 +530,9 @@ describe("moveToNextMonth", () => {
     expect(moveToNextMonth(tasks, "zzz")).toBe(tasks);
   });
 
-  it("is a no-op when the next month is already the last entry", () => {
+  it("defers further on a repeat (append-only, one month each time)", () => {
     const tasks = [monthTask("a", ["2026-06", "2026-07"])];
-    expect(moveToNextMonth(tasks, "a")).toBe(tasks);
+    const next = moveToNextMonth(tasks, "a");
+    expect(next[0].custom_fields.scheduled_months).toEqual(["2026-06", "2026-07", "2026-08"]);
   });
 });
