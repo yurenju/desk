@@ -4,16 +4,17 @@ import { tasksOnMonth } from "@/lib/tasks";
 import { formatMonth, dayOfMonth } from "@/lib/date";
 import { ProgressBar } from "@/ui/ProgressBar";
 import { Top3Card } from "@/features/day/Top3Card";
-import { MonthRow } from "./MonthRow";
+import { Link } from "@tanstack/react-router";
 import styles from "./MonthDigest.module.css";
 
 export interface MonthDigestProps {
   allTasks: Task[];
   month: string;
   today: string;
+  selectedDate: string;
 }
 
-export function MonthDigest({ allTasks, month, today }: MonthDigestProps) {
+export function MonthDigest({ allTasks, month, today, selectedDate }: MonthDigestProps) {
   const entries = useMemo(() => tasksOnMonth(allTasks, month), [allTasks, month]);
   const primary = entries.filter((e) => e.kind === "primary");
 
@@ -25,8 +26,6 @@ export function MonthDigest({ allTasks, month, today }: MonthDigestProps) {
         Number(b.task.custom_fields.monthly_priority),
     )
     .map((e) => e.task);
-
-  const others = primary.filter((e) => !e.task.custom_fields.monthly_priority);
 
   const daysInMonth = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
   const dayN = dayOfMonth(today);
@@ -55,20 +54,9 @@ export function MonthDigest({ allTasks, month, today }: MonthDigestProps) {
         <Top3Card tasks={top3} title="本月三件大事" date={today} variant="plain" />
       )}
 
-      {others.length > 0 && (
-        <section className={styles.section}>
-          <header className={styles.sectionHead}>其他 ({others.length})</header>
-          {others.map((e) => (
-            <MonthRow
-              key={e.task.id}
-              task={e.task}
-              kind={e.kind}
-              month={month}
-              selectedDate={today}
-            />
-          ))}
-        </section>
-      )}
+      <Link to="/plan/$date" params={{ date: selectedDate }} className={styles.editLink}>
+        在計畫頁編輯本月 →
+      </Link>
     </div>
   );
 }

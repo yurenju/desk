@@ -37,7 +37,7 @@ export function TodayLayout({ allTasks, selectedDate, today, month }: TodayLayou
           <DayColumn allTasks={allTasks} selectedDate={selectedDate} variant="today-hero" />
         </section>
         <aside className={[styles.cell, styles.right].join(" ")}>
-          <MonthDigest allTasks={allTasks} month={month} today={today} />
+          <MonthDigest allTasks={allTasks} month={month} today={today} selectedDate={selectedDate} />
         </aside>
       </div>
 
