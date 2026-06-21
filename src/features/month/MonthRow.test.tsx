@@ -64,3 +64,36 @@ it("month row menu includes 移到下月 and 丟回 Backlog", async () => {
   expect(await screen.findByText("↪ 移到下月")).toBeInTheDocument();
   expect(screen.getByText("↩ 丟回 Backlog")).toBeInTheDocument();
 });
+
+it("shows a carried-over delay dot for a task scheduled in an earlier month", () => {
+  useTasksStore.setState({
+    tasks: [{ id: "c1", title: "延遲任務", status: "open", created_at: "x", updated_at: "x",
+      custom_fields: { scheduled_months: ["2026-04", "2026-05"] } }],
+    today: "2026-05-22", status: "ready", error: null,
+  });
+  render(<MonthRow task={useTasksStore.getState().tasks[0]} kind="primary"
+    month="2026-05" selectedDate="2026-05-22" interactive showRing />);
+  expect(screen.getByTitle("之前的月份就排了，一直拖到現在")).toBeInTheDocument();
+});
+
+it("shows a dismissed delay dot for a task bounced off a day this month", () => {
+  useTasksStore.setState({
+    tasks: [{ id: "c2", title: "落掉任務", status: "open", created_at: "x", updated_at: "x",
+      custom_fields: { scheduled_months: ["2026-05"], unscheduled_at: "2026-05-10" } }],
+    today: "2026-05-22", status: "ready", error: null,
+  });
+  render(<MonthRow task={useTasksStore.getState().tasks[0]} kind="primary"
+    month="2026-05" selectedDate="2026-05-22" interactive showRing />);
+  expect(screen.getByTitle("這個月排到某天卻沒做")).toBeInTheDocument();
+});
+
+it("shows no delay title for a fresh this-month task", () => {
+  useTasksStore.setState({
+    tasks: [{ id: "c3", title: "新任務", status: "open", created_at: "x", updated_at: "x",
+      custom_fields: { scheduled_months: ["2026-05"] } }],
+    today: "2026-05-22", status: "ready", error: null,
+  });
+  render(<MonthRow task={useTasksStore.getState().tasks[0]} kind="primary"
+    month="2026-05" selectedDate="2026-05-22" interactive showRing />);
+  expect(screen.queryByTitle(/排了|沒做/)).toBeNull();
+});
