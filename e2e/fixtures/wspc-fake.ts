@@ -103,6 +103,9 @@ function seed(): void {
 
   // Month-scoped todos for the Plan/Monthly column
   const month = today.slice(0, 7);
+  const [py, pm] = month.split("-").map(Number);
+  const prevIdx = py * 12 + (pm - 1) - 1;
+  const prevMonth = `${Math.floor(prevIdx / 12)}-${String((prevIdx % 12) + 1).padStart(2, "0")}`;
   todos.push(
     {
       id: "pm1",
@@ -123,6 +126,26 @@ function seed(): void {
       created_at: base,
       updated_at: base,
       custom_fields: { scheduled_months: [month], is_adhoc: "false" },
+    },
+    {
+      id: "pm3",
+      project_id: PROJECT_ID,
+      type_id: TYPE_ID,
+      status: "done",
+      title: "本月已完成 C",
+      created_at: base,
+      updated_at: base,
+      custom_fields: { scheduled_months: [month], is_adhoc: "false", done_on: `${today}T08:00:00Z` },
+    },
+    {
+      id: "pm4",
+      project_id: PROJECT_ID,
+      type_id: TYPE_ID,
+      status: "open",
+      title: "本月延遲 D",
+      created_at: base,
+      updated_at: base,
+      custom_fields: { scheduled_months: [prevMonth, month], is_adhoc: "false" },
     },
   );
 

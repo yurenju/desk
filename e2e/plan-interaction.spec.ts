@@ -343,6 +343,21 @@ test("recurring occurrence lands on its day with ↻ and stays out of backlog", 
   await expect(page.getByRole("button", { name: /Backlog \(0\)/ })).toBeVisible();
 });
 
+test("completed month tasks collapse into a 已完成 group, expandable on click", async ({ page }) => {
+  // "本月已完成 C" is a done month task — hidden until the 已完成 group is expanded.
+  await expect(page.getByText("本月已完成 C")).toBeHidden();
+  const toggle = page.getByRole("button", { name: /已完成 \(\d+\)/ });
+  await expect(toggle).toBeVisible();
+  await toggle.click();
+  await expect(page.getByText("本月已完成 C")).toBeVisible();
+});
+
+test("a carried-over month task shows a delay dot", async ({ page }) => {
+  // "本月延遲 D" was scheduled in the previous month too → carried delay marker.
+  await expect(page.getByText("本月延遲 D")).toBeVisible();
+  await expect(page.getByTitle("之前的月份就排了，一直拖到現在")).toBeVisible();
+});
+
 test("shows a live top-3 / other hint while dragging over a week cell", async ({ page }) => {
   // A week cell is one droppable split by vertical position, so it must tell the
   // user mid-drag which half they're over. Drag, settle over the cell centre,
