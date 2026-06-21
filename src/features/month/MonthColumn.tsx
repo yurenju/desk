@@ -33,16 +33,10 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
     )
     .map((e) => e.task);
 
-  const otherPlanned = primary.filter(
-    (e) => !e.task.custom_fields.monthly_priority && e.task.custom_fields.is_adhoc !== "true",
-  );
-  const adhoc = primary.filter(
-    (e) => !e.task.custom_fields.monthly_priority && e.task.custom_fields.is_adhoc === "true",
-  );
+  const others = primary.filter((e) => !e.task.custom_fields.monthly_priority);
   const trails = entries.filter((e) => e.kind !== "primary");
 
-  const nothing =
-    top3.length === 0 && otherPlanned.length === 0 && adhoc.length === 0 && trails.length === 0;
+  const nothing = top3.length === 0 && others.length === 0 && trails.length === 0;
 
   return (
     <div ref={dropRef} className={[styles.col, isOver && styles.isOver].filter(Boolean).join(" ")}>
@@ -73,27 +67,10 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
 
       {top3.length > 0 && <MonthHeroCard top3={top3} month={month} selectedDate={selectedDate} />}
 
-      {otherPlanned.length > 0 && (
+      {others.length > 0 && (
         <section className={styles.section}>
-          <header className={styles.sectionHead}>其他計劃內</header>
-          {otherPlanned.map((e) => (
-            <MonthRow
-              key={e.task.id}
-              task={e.task}
-              kind={e.kind}
-              month={month}
-              selectedDate={selectedDate}
-              interactive
-              showRing
-            />
-          ))}
-        </section>
-      )}
-
-      {adhoc.length > 0 && (
-        <section className={styles.section}>
-          <header className={[styles.sectionHead, styles.adhocHead].join(" ")}>計劃外</header>
-          {adhoc.map((e) => (
+          <header className={styles.sectionHead}>其他任務</header>
+          {others.map((e) => (
             <MonthRow
               key={e.task.id}
               task={e.task}
