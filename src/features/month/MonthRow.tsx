@@ -17,6 +17,8 @@ export interface MonthRowProps {
   selectedDate: string;
   interactive?: boolean;
   showRing?: boolean;
+  weekdayLabel?: string;
+  otherWeekDate?: string;
 }
 
 export function MonthRow({
@@ -26,6 +28,8 @@ export function MonthRow({
   selectedDate,
   interactive,
   showRing,
+  weekdayLabel,
+  otherWeekDate,
 }: MonthRowProps) {
   const isDone = task.status === "done";
   const isAdhoc = task.custom_fields.is_adhoc === "true";
@@ -105,6 +109,8 @@ export function MonthRow({
       {kind === "forwarded" && <span className={styles.trail}>↪</span>}
       {kind === "dismissed" && <span className={styles.trail}>·略過</span>}
       {isAdhoc && <UnplannedChip />}
+      {weekdayLabel && <span className={styles.weekChip}>{weekdayLabel}</span>}
+      {otherWeekDate && <span className={styles.otherDate}>{otherWeekDate}</span>}
       {!row.isEditing && <TaskDetailTrigger task={task} />}
       {editable && !row.isEditing && (
         <div className={styles.actions}>

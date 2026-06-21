@@ -97,3 +97,37 @@ it("shows no delay title for a fresh this-month task", () => {
     month="2026-05" selectedDate="2026-05-22" interactive showRing />);
   expect(screen.queryByTitle(/排了|沒做/)).toBeNull();
 });
+
+it("renders a weekday chip when weekdayLabel is set", () => {
+  useTasksStore.setState({
+    tasks: [{ id: "w1", title: "排定任務", status: "open", created_at: "x", updated_at: "x",
+      custom_fields: { scheduled_months: ["2026-05"] } }],
+    today: "2026-05-22", status: "ready", error: null,
+  });
+  render(<MonthRow task={useTasksStore.getState().tasks[0]} kind="primary"
+    month="2026-05" selectedDate="2026-05-22" interactive weekdayLabel="週二" />);
+  expect(screen.getByText("週二")).toBeInTheDocument();
+});
+
+it("renders a short-date hint when otherWeekDate is set", () => {
+  useTasksStore.setState({
+    tasks: [{ id: "w2", title: "別週任務", status: "open", created_at: "x", updated_at: "x",
+      custom_fields: { scheduled_months: ["2026-05"] } }],
+    today: "2026-05-22", status: "ready", error: null,
+  });
+  render(<MonthRow task={useTasksStore.getState().tasks[0]} kind="primary"
+    month="2026-05" selectedDate="2026-05-22" interactive otherWeekDate="1/28" />);
+  expect(screen.getByText("1/28")).toBeInTheDocument();
+});
+
+it("renders neither chip nor hint by default", () => {
+  useTasksStore.setState({
+    tasks: [{ id: "w3", title: "普通任務", status: "open", created_at: "x", updated_at: "x",
+      custom_fields: { scheduled_months: ["2026-05"] } }],
+    today: "2026-05-22", status: "ready", error: null,
+  });
+  render(<MonthRow task={useTasksStore.getState().tasks[0]} kind="primary"
+    month="2026-05" selectedDate="2026-05-22" interactive />);
+  expect(screen.queryByText("週二")).toBeNull();
+  expect(screen.queryByText("1/28")).toBeNull();
+});
