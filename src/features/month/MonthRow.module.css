@@ -79,3 +79,18 @@
 .dismissed {
   background: var(--color-warn, #c98a1e);
 }
+.weekChip {
+  flex: none;
+  font-family: var(--font-sans);
+  font-size: var(--text-2xs);
+  color: var(--color-ink-soft);
+  background: var(--color-paper-alt);
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+.otherDate {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--color-ink-faint);
+}

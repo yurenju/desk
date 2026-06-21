@@ -56,6 +56,13 @@ export function primaryDate(t: Task): string | null {
   return last > u ? last : null;
 }
 
+/** The task's effective day if it falls within `week` (the 7 ISO dates from
+ * weekOf), else null. Used to mark month tasks already placed in the viewed week. */
+export function dayInWeek(t: Task, week: string[]): string | null {
+  const d = primaryDate(t);
+  return d && week.includes(d) ? d : null;
+}
+
 export function layer(t: Task): Layer {
   if (primaryDate(t)) return "daily";
   if (primaryMonth(t)) return "monthly";

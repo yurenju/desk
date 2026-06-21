@@ -1,10 +1,10 @@
 import { it, expect, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { RouterProvider, createRouter, createMemoryHistory } from "@tanstack/react-router";
 import { routeTree } from "@/routeTree.gen";
 import { useTasksStore } from "@/store/tasks";
-import { formatMonth } from "@/lib/date";
+import { formatMonth, weekdayZh, shortDate } from "@/lib/date";
 
 function renderInRouter(path: string) {
   const router = createRouter({
@@ -20,6 +20,7 @@ beforeEach(() => {
     new Response("{}", { status: 401 }),
   );
   useTasksStore.setState({ tasks: [], today: "2099-01-15", status: "ready", error: null });
+  localStorage.clear();
 });
 
 it("shows empty-state when month has no tasks", async () => {
@@ -77,7 +78,7 @@ it("collapses completed tasks into a 已完成 group, expandable on click", asyn
 
   // Done task is hidden until the group is expanded.
   expect(screen.queryByText("已完成任務")).toBeNull();
-  const toggle = screen.getByRole("button", { name: /已完成 \(1\)/ });
+  const toggle = screen.getByRole("button", { name: /其他已完成 \(1\)/ });
   await userEvent.click(toggle);
   expect(screen.getByText("已完成任務")).toBeInTheDocument();
 });
@@ -118,6 +119,24 @@ it("collapses undone moved-away (forwarded) tasks into a 已移走 group", async
   expect(screen.getByText("已順延任務")).toBeInTheDocument();
 });
 
+it("remembers a collapse group's expanded state across remount via localStorage", async () => {
+  useTasksStore.setState({
+    tasks: [
+      { id: "fw", title: "已順延任務", status: "open", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_months: ["2099-01", "2099-02"] } },
+    ],
+    today: "2099-01-15", status: "ready", error: null,
+  });
+  const first = renderInRouter("/plan/2099-01-15");
+  await userEvent.click(await screen.findByRole("button", { name: /已移走 \(1\)/ }));
+  expect(screen.getByText("已順延任務")).toBeInTheDocument();
+  first.unmount();
+
+  // Remount: the expanded state must be restored from localStorage without clicking.
+  renderInRouter("/plan/2099-01-15");
+  expect(await screen.findByText("已順延任務")).toBeInTheDocument();
+});
+
 it("puts a completed forwarded task into 已完成, not a loose row or 已移走", async () => {
   // Forwarded AND done → 'done wins': it goes into 已完成, never shows loose,
   // and produces no 已移走 group.
@@ -129,9 +148,65 @@ it("puts a completed forwarded task into 已完成, not a loose row or 已移走
     today: "2099-01-15", status: "ready", error: null,
   });
   renderInRouter("/plan/2099-01-15");
-  const toggle = await screen.findByRole("button", { name: /已完成 \(1\)/ });
+  const toggle = await screen.findByRole("button", { name: /其他已完成 \(1\)/ });
   expect(screen.queryByText("順延但做完")).toBeNull();
   expect(screen.queryByRole("button", { name: /已移走/ })).toBeNull();
   await userEvent.click(toggle);
   expect(screen.getByText("順延但做完")).toBeInTheDocument();
+});
+
+it("groups a task scheduled into the viewed week under 已排入本週 with a weekday chip", async () => {
+  useTasksStore.setState({
+    tasks: [
+      { id: "s1", title: "本週任務", status: "open", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_months: ["2099-01"], scheduled_dates: ["2099-01-15"] } },
+    ],
+    today: "2099-01-15", status: "ready", error: null,
+  });
+  renderInRouter("/plan/2099-01-15");
+  const monthCol = await screen.findByTestId("month-column");
+  const toggle = await within(monthCol).findByRole("button", { name: /已排入本週 \(1\)/ });
+  // Before expanding: task is not visible inside the month column collapse group
+  expect(within(monthCol).queryByText("本週任務")).toBeNull();
+  await userEvent.click(toggle);
+  expect(within(monthCol).getByText("本週任務")).toBeInTheDocument();
+  expect(within(monthCol).getByText(weekdayZh("2099-01-15"))).toBeInTheDocument();
+});
+
+it("keeps a done task scheduled this week in 已排入本週, not 其他已完成", async () => {
+  useTasksStore.setState({
+    tasks: [
+      { id: "sd", title: "本週做完", status: "done", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_months: ["2099-01"], scheduled_dates: ["2099-01-15"] } },
+    ],
+    today: "2099-01-15", status: "ready", error: null,
+  });
+  renderInRouter("/plan/2099-01-15");
+  expect(await screen.findByRole("button", { name: /已排入本週 \(1\)/ })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /其他已完成/ })).toBeNull();
+});
+
+it("keeps a task scheduled in another week in 其他任務 with a short-date hint", async () => {
+  useTasksStore.setState({
+    tasks: [
+      { id: "ow", title: "別週任務", status: "open", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_months: ["2099-01"], scheduled_dates: ["2099-01-28"] } },
+    ],
+    today: "2099-01-15", status: "ready", error: null,
+  });
+  renderInRouter("/plan/2099-01-15");
+  expect(await screen.findByText("別週任務")).toBeInTheDocument(); // visible, not collapsed
+  expect(screen.getByText(shortDate("2099-01-28"))).toBeInTheDocument(); // "1/28"
+});
+
+it("moves a task into 已排入本週 when its week is the one being viewed", async () => {
+  useTasksStore.setState({
+    tasks: [
+      { id: "ow2", title: "別週任務", status: "open", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_months: ["2099-01"], scheduled_dates: ["2099-01-28"] } },
+    ],
+    today: "2099-01-15", status: "ready", error: null,
+  });
+  renderInRouter("/plan/2099-01-28");
+  expect(await screen.findByRole("button", { name: /已排入本週 \(1\)/ })).toBeInTheDocument();
 });

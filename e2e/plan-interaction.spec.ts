@@ -347,10 +347,10 @@ test("recurring occurrence lands on its day with ↻ and stays out of backlog", 
   await expect(page.getByRole("button", { name: /Backlog \(0\)/ })).toBeVisible();
 });
 
-test("completed month tasks collapse into a 已完成 group, expandable on click", async ({ page }) => {
-  // "本月已完成 C" is a done month task — hidden until the 已完成 group is expanded.
+test("completed month tasks collapse into a 其他已完成 group, expandable on click", async ({ page }) => {
+  // "本月已完成 C" is a done month task — hidden until the 其他已完成 group is expanded.
   await expect(page.getByText("本月已完成 C")).toBeHidden();
-  const toggle = page.getByRole("button", { name: /已完成 \(\d+\)/ });
+  const toggle = page.getByRole("button", { name: /其他已完成 \(\d+\)/ });
   await expect(toggle).toBeVisible();
   await toggle.click();
   await expect(page.getByText("本月已完成 C")).toBeVisible();
@@ -360,6 +360,27 @@ test("a carried-over month task shows a delay dot", async ({ page }) => {
   // "本月延遲 D" was scheduled in the previous month too → carried delay marker.
   await expect(page.getByText("本月延遲 D")).toBeVisible();
   await expect(page.getByTitle("之前的月份就排了，一直拖到現在")).toBeVisible();
+});
+
+test("a month task scheduled into this week shows in 已排入本週 and persists expand state", async ({
+  page,
+}) => {
+  // pm5 ("本月排入本週 E") is scheduled to today (within this week) → collapsed
+  // under 已排入本週 by default. Scope to the month column to avoid matching the
+  // same task in the Day column (it's also scheduled to today).
+  const monthCol = page.getByTestId("month-column");
+  const toggle = monthCol.getByRole("button", { name: /已排入本週 \(\d+\)/ });
+  await expect(toggle).toBeVisible();
+  await expect(monthCol.getByText("本月排入本週 E")).toBeHidden();
+
+  // Expand → the task is revealed.
+  await toggle.click();
+  await expect(monthCol.getByText("本月排入本週 E")).toBeVisible();
+
+  // Expand state persists across reload (localStorage).
+  await page.reload();
+  const monthColAfter = page.getByTestId("month-column");
+  await expect(monthColAfter.getByText("本月排入本週 E")).toBeVisible();
 });
 
 test("shows a live top-3 / other hint while dragging over a week cell", async ({ page }) => {
