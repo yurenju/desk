@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Task } from "./types";
-import { primaryDate, primaryMonth, layer, tasksOnDate, tasksOnMonth, nextFreeDailySlot, delayKind } from "./tasks";
+import { primaryDate, primaryMonth, layer, tasksOnDate, tasksOnMonth, nextFreeDailySlot, delayKind, delaySummary } from "./tasks";
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
   return {
@@ -244,5 +244,37 @@ describe("delayKind", () => {
       custom_fields: { scheduled_months: ["2026-06"], unscheduled_at: "2026-05-30" },
     });
     expect(delayKind(t, "2026-06")).toBe("none");
+  });
+});
+
+describe("delaySummary", () => {
+  it("reports carried months and the earliest month", () => {
+    const t = makeTask({ id: "1", custom_fields: { scheduled_months: ["2026-04", "2026-06"] } });
+    expect(delaySummary(t, "2026-06")).toEqual({
+      carriedMonths: 2,
+      earliestMonth: "2026-04",
+      dismissedDate: null,
+    });
+  });
+
+  it("reports the dismissed date when unscheduled_at is this month", () => {
+    const t = makeTask({
+      id: "1",
+      custom_fields: { scheduled_months: ["2026-06"], unscheduled_at: "2026-06-15" },
+    });
+    expect(delaySummary(t, "2026-06")).toEqual({
+      carriedMonths: 0,
+      earliestMonth: null,
+      dismissedDate: "2026-06-15",
+    });
+  });
+
+  it("reports zero delay for a fresh this-month task", () => {
+    const t = makeTask({ id: "1", custom_fields: { scheduled_months: ["2026-06"] } });
+    expect(delaySummary(t, "2026-06")).toEqual({
+      carriedMonths: 0,
+      earliestMonth: null,
+      dismissedDate: null,
+    });
   });
 });
