@@ -39,7 +39,15 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
   const rest = entries.filter(
     (e) => !(e.kind === "primary" && e.task.custom_fields.monthly_priority),
   );
-  const undoneOthers = rest.filter((e) => e.kind === "primary" && e.task.status !== "done");
+  // 計劃外 (adhoc) tasks sink below 計劃內 ones so the focus stays on planned
+  // work. Array.sort is stable, so order within each group is preserved.
+  const undoneOthers = rest
+    .filter((e) => e.kind === "primary" && e.task.status !== "done")
+    .sort(
+      (a, b) =>
+        Number(a.task.custom_fields.is_adhoc === "true") -
+        Number(b.task.custom_fields.is_adhoc === "true"),
+    );
   const doneAll = rest.filter((e) => e.task.status === "done");
   const movedAway = rest.filter((e) => e.kind !== "primary" && e.task.status !== "done");
 
