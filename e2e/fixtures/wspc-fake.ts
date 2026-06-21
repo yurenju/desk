@@ -147,6 +147,16 @@ function seed(): void {
       updated_at: base,
       custom_fields: { scheduled_months: [prevMonth, month], is_adhoc: "false" },
     },
+    {
+      id: "pm5",
+      project_id: PROJECT_ID,
+      type_id: TYPE_ID,
+      status: "open",
+      title: "本月排入本週 E",
+      created_at: base,
+      updated_at: base,
+      custom_fields: { scheduled_months: [month], scheduled_dates: [today], is_adhoc: "false" },
+    },
   );
 
   // A recurring occurrence as WSPC materializes it: native recurrence_occurrence_at
