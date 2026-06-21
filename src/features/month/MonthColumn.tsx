@@ -1,8 +1,8 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import type { Task } from "@/lib/types";
-import { tasksOnMonth } from "@/lib/tasks";
-import { formatMonth, addMonths } from "@/lib/date";
+import { tasksOnMonth, dayInWeek, primaryDate } from "@/lib/tasks";
+import { formatMonth, addMonths, weekOf, weekdayZh, shortDate } from "@/lib/date";
 import { isAdhocOf } from "@/lib/entryMode";
 import { useTasksStore } from "@/store/tasks";
 import { BacklogSection } from "@/features/backlog/BacklogSection";
@@ -21,11 +21,11 @@ export interface MonthColumnProps {
 export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps) {
   const { ref: dropRef, isOver } = useDroppableZone({ kind: "month" });
   const addMonthTask = useTasksStore((s) => s.addMonthTask);
+  const week = useMemo(() => weekOf(selectedDate), [selectedDate]);
   const entries = useMemo(() => tasksOnMonth(allTasks, month), [allTasks, month]);
-  const primary = entries.filter((e) => e.kind === "primary");
 
-  const top3 = primary
-    .filter((e) => e.task.custom_fields.monthly_priority)
+  const top3 = entries
+    .filter((e) => e.kind === "primary" && e.task.custom_fields.monthly_priority)
     .sort(
       (a, b) =>
         Number(a.task.custom_fields.monthly_priority) -
@@ -33,32 +33,37 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
     )
     .map((e) => e.task);
 
-  // Everything outside top3, partitioned by what the user is actually looking at:
-  // live tasks to do this month, things already done (whatever path they took),
-  // and undone tasks that have moved away (forwarded to a later month / dismissed).
+  // Everything outside top3, partitioned by precedence (first match wins):
+  // 1) placed on a day in the viewed week (incl. done), 2) done elsewhere,
+  // 3) moved away (undone, forwarded/dismissed), 4) the live "other tasks" pool.
   const rest = entries.filter(
     (e) => !(e.kind === "primary" && e.task.custom_fields.monthly_priority),
   );
-  // 計劃外 (adhoc) tasks sink below 計劃內 ones so the focus stays on planned
-  // work. Array.sort is stable, so order within each group is preserved.
-  const undoneOthers = rest
-    .filter((e) => e.kind === "primary" && e.task.status !== "done")
+  const scheduledThisWeek = rest
+    .filter((e) => dayInWeek(e.task, week) !== null)
+    .sort((a, b) => (dayInWeek(a.task, week)! < dayInWeek(b.task, week)! ? -1 : 1));
+  const remaining = rest.filter((e) => dayInWeek(e.task, week) === null);
+  const doneOther = remaining.filter((e) => e.task.status === "done");
+  const undone = remaining.filter((e) => e.task.status !== "done");
+  const movedAway = undone.filter((e) => e.kind !== "primary");
+  // 計劃外 (adhoc) sinks below 計劃內; Array.sort is stable so order is preserved.
+  const others = undone
+    .filter((e) => e.kind === "primary")
     .sort(
       (a, b) =>
         Number(a.task.custom_fields.is_adhoc === "true") -
         Number(b.task.custom_fields.is_adhoc === "true"),
     );
-  const doneAll = rest.filter((e) => e.task.status === "done");
-  const movedAway = rest.filter((e) => e.kind !== "primary" && e.task.status !== "done");
 
   const nothing =
     top3.length === 0 &&
-    undoneOthers.length === 0 &&
-    doneAll.length === 0 &&
+    others.length === 0 &&
+    scheduledThisWeek.length === 0 &&
+    doneOther.length === 0 &&
     movedAway.length === 0;
 
   return (
-    <div ref={dropRef} className={[styles.col, isOver && styles.isOver].filter(Boolean).join(" ")}>
+    <div ref={dropRef} data-testid="month-column" className={[styles.col, isOver && styles.isOver].filter(Boolean).join(" ")}>
       <header className={styles.head}>
         <div className={styles.eyebrow}>MONTH · 規劃</div>
         <div className={styles.titleRow}>
@@ -86,10 +91,35 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
 
       {top3.length > 0 && <MonthHeroCard top3={top3} month={month} selectedDate={selectedDate} />}
 
-      {undoneOthers.length > 0 && (
+      {others.length > 0 && (
         <section className={styles.section}>
           <header className={styles.sectionHead}>其他任務</header>
-          {undoneOthers.map((e) => (
+          {others.map((e) => {
+            const pd = primaryDate(e.task);
+            const otherWeekDate = pd && !week.includes(pd) ? shortDate(pd) : undefined;
+            return (
+              <MonthRow
+                key={e.task.id}
+                task={e.task}
+                kind={e.kind}
+                month={month}
+                selectedDate={selectedDate}
+                interactive
+                showRing
+                otherWeekDate={otherWeekDate}
+              />
+            );
+          })}
+        </section>
+      )}
+
+      {scheduledThisWeek.length > 0 && (
+        <CollapseGroup
+          label="已排入本週"
+          count={scheduledThisWeek.length}
+          persistKey="desk.plan.month.collapse.scheduledThisWeek"
+        >
+          {scheduledThisWeek.map((e) => (
             <MonthRow
               key={e.task.id}
               task={e.task}
@@ -98,14 +128,19 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
               selectedDate={selectedDate}
               interactive
               showRing
+              weekdayLabel={weekdayZh(dayInWeek(e.task, week)!)}
             />
           ))}
-        </section>
+        </CollapseGroup>
       )}
 
-      {doneAll.length > 0 && (
-        <CollapseGroup label="已完成" count={doneAll.length} persistKey="desk.plan.month.collapse.done">
-          {doneAll.map((e) => (
+      {doneOther.length > 0 && (
+        <CollapseGroup
+          label="其他已完成"
+          count={doneOther.length}
+          persistKey="desk.plan.month.collapse.done"
+        >
+          {doneOther.map((e) => (
             <MonthRow
               key={e.task.id}
               task={e.task}
@@ -120,7 +155,11 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
       )}
 
       {movedAway.length > 0 && (
-        <CollapseGroup label="已移走" count={movedAway.length} persistKey="desk.plan.month.collapse.movedAway">
+        <CollapseGroup
+          label="已移走"
+          count={movedAway.length}
+          persistKey="desk.plan.month.collapse.movedAway"
+        >
           {movedAway.map((e) => (
             <MonthRow
               key={e.task.id}
