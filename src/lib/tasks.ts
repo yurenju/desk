@@ -8,6 +8,46 @@ export function primaryMonth(t: Task): string | null {
   return last > u ? last : null;
 }
 
+export type DelayKind = "none" | "dismissed" | "carried";
+
+/**
+ * Delay signal for a task shown in `month`'s plan column.
+ * - "carried": scheduled in a month earlier than `month` (still dragging on).
+ * - "dismissed": was put on a day this month then bounced back to the month layer.
+ * "carried" wins when both apply (it is the heavier signal).
+ */
+export function delayKind(t: Task, month: string): DelayKind {
+  const months = t.custom_fields.scheduled_months ?? [];
+  if (months.some((m) => m < month)) return "carried";
+  const u = t.custom_fields.unscheduled_at ?? "";
+  if (u.startsWith(month)) return "dismissed";
+  return "none";
+}
+
+export interface DelaySummary {
+  carriedMonths: number;
+  earliestMonth: string | null;
+  dismissedDate: string | null;
+}
+
+function monthsBetween(a: string, b: string): number {
+  const [ay, am] = a.split("-").map(Number);
+  const [by, bm] = b.split("-").map(Number);
+  return (by - ay) * 12 + (bm - am);
+}
+
+/** The two conclusions the task-detail page shows: how long it has been
+ * carried across months, and whether it was bounced off a day this month. */
+export function delaySummary(t: Task, month: string): DelaySummary {
+  const months = t.custom_fields.scheduled_months ?? [];
+  const earlier = months.filter((m) => m < month);
+  const earliestMonth = earlier.length ? earlier.reduce((a, b) => (a < b ? a : b)) : null;
+  const carriedMonths = earliestMonth ? monthsBetween(earliestMonth, month) : 0;
+  const u = t.custom_fields.unscheduled_at ?? "";
+  const dismissedDate = u.startsWith(month) ? u : null;
+  return { carriedMonths, earliestMonth, dismissedDate };
+}
+
 export function primaryDate(t: Task): string | null {
   const arr = t.custom_fields.scheduled_dates ?? [];
   if (arr.length === 0) return null;

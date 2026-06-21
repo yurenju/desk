@@ -56,6 +56,15 @@ playwright-cli screenshot --filename docs/acceptance-reports/<plan-slug>/assets/
 
 操作細節（ref、selector、各指令）交給 `playwright-cli` skill；這裡只規範登入方式、要截哪些、存哪、命名。
 
+## 截圖一律內嵌，不要只放連結
+
+報告裡每張截圖**一律用 `![說明](assets/NN-*.png)` 內嵌語法**呈現，讓使用者打開 `.md`（GitHub / Claude Code app / 任何 markdown viewer）就直接看到圖，不用點開檔案。
+
+- ❌ 只在表格 cell 放 `[01](assets/01-foo.png)` 這種純連結 —— 打開 md 看不到圖，要再點一次。
+- ✅ 在敘述段落或驗收結果底下用 `![完成後的月份欄](assets/01-foo.png)` 直接嵌圖。
+
+驗收結果表格的「佐證」欄用文字指向圖（例「見截圖 01」），**圖本身則內嵌在表格下方的「## 截圖」一節**（或直接嵌在對應的敘述段落裡）。路徑用相對 `assets/NN-*.png`，這樣報告目錄整包搬動也不會斷。
+
 ## report.md 範本
 
 照這個結構寫（繁中敘述，程式碼 / 路徑英文）：
@@ -87,7 +96,13 @@ API request/response 範例當佐證。>
 
 | # | 驗收標準 | 結果 | 佐證／備註 |
 | --- | --- | --- | --- |
-| 1 | … | ✅ PASS | 截圖 01 |
+| 1 | … | ✅ PASS | 見截圖 01 |
+
+## 截圖
+
+<每張截圖用 `![]()` 內嵌，配一行說明，讓使用者打開 md 直接看到。>
+
+![完成後的月份欄](assets/01-foo.png)
 
 ## 已知限制 / 備註
 

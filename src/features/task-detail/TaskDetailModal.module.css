@@ -21,6 +21,7 @@
 .muted { color: var(--color-ink-faint); font-size: 13px; }
 .footer { padding: 12px 18px; border-top: 1px solid var(--color-rule-faint); }
 .delete { background: none; border: none; cursor: pointer; font-size: 13px; color: var(--color-flag); }
+.delayLine { font-size: 13px; color: var(--color-ink-soft); margin: 0 0 6px; }
 
 @media (max-width: 560px) {
   .popup { top: auto; bottom: 0; left: 0; transform: none; width: 100vw; max-height: 92vh; border-radius: 16px 16px 0 0; }

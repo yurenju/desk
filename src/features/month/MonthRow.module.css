@@ -65,3 +65,17 @@
 .dragging {
   opacity: 0.5;
 }
+
+.dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: transparent;
+}
+.carried {
+  background: var(--color-flag, #c1432e);
+}
+.dismissed {
+  background: var(--color-warn, #c98a1e);
+}

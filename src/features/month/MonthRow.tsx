@@ -1,4 +1,5 @@
 import type { Task, TrailKind } from "@/lib/types";
+import { delayKind } from "@/lib/tasks";
 import { Checkbox } from "@/ui/Checkbox";
 import { UnplannedChip } from "@/ui/Chip";
 import { Menu } from "@/ui/Menu";
@@ -28,6 +29,13 @@ export function MonthRow({
 }: MonthRowProps) {
   const isDone = task.status === "done";
   const isAdhoc = task.custom_fields.is_adhoc === "true";
+  const delay = kind === "primary" && !isDone ? delayKind(task, month) : "none";
+  const delayTitle =
+    delay === "carried"
+      ? "之前的月份就排了，一直拖到現在"
+      : delay === "dismissed"
+        ? "這個月排到某天卻沒做"
+        : undefined;
   const row = useMonthRow(task.id, { month, selectedDate });
   const editable = Boolean(interactive) && kind === "primary";
   // Trail rows (forwarded/dismissed) stay read-only — no ring/menu/edit — but can
@@ -70,6 +78,13 @@ export function MonthRow({
             { key: "3", label: "③ 本月第三", onSelect: () => row.setPriority("3") },
             { key: "none", label: "— 移除重點", onSelect: () => row.setPriority(null) },
           ]}
+        />
+      )}
+      {kind === "primary" && (
+        <span
+          className={[styles.dot, delay !== "none" && styles[delay]].filter(Boolean).join(" ")}
+          title={delayTitle}
+          aria-hidden={delay === "none" ? true : undefined}
         />
       )}
       {row.isEditing ? (
