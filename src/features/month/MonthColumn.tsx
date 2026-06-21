@@ -104,7 +104,7 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
       )}
 
       {doneAll.length > 0 && (
-        <CollapseGroup label="已完成" count={doneAll.length}>
+        <CollapseGroup label="已完成" count={doneAll.length} persistKey="desk.plan.month.collapse.done">
           {doneAll.map((e) => (
             <MonthRow
               key={e.task.id}
@@ -120,7 +120,7 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
       )}
 
       {movedAway.length > 0 && (
-        <CollapseGroup label="已移走" count={movedAway.length}>
+        <CollapseGroup label="已移走" count={movedAway.length} persistKey="desk.plan.month.collapse.movedAway">
           {movedAway.map((e) => (
             <MonthRow
               key={e.task.id}
@@ -146,24 +146,42 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
   );
 }
 
-/** Collapsible, default-collapsed group (e.g. 已完成 / 已移走) of month rows. */
+function readOpen(key: string): boolean {
+  if (typeof localStorage === "undefined") return false;
+  return localStorage.getItem(key) === "open";
+}
+function writeOpen(key: string, open: boolean): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(key, open ? "open" : "collapsed");
+}
+
+/** Collapsible group (e.g. 已排入本週 / 其他已完成 / 已移走) whose open/closed
+ * state persists in localStorage under `persistKey` (default collapsed). */
 function CollapseGroup({
   label,
   count,
+  persistKey,
   children,
 }: {
   label: string;
   count: number;
+  persistKey: string;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(() => readOpen(persistKey));
+  function toggle() {
+    setOpen((v) => {
+      writeOpen(persistKey, !v);
+      return !v;
+    });
+  }
   return (
     <div className={styles.doneGroup}>
       <button
         type="button"
         className={styles.doneToggle}
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
       >
         {open ? "▾" : "▸"} {label} ({count})
       </button>

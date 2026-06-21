@@ -20,6 +20,7 @@ beforeEach(() => {
     new Response("{}", { status: 401 }),
   );
   useTasksStore.setState({ tasks: [], today: "2099-01-15", status: "ready", error: null });
+  localStorage.clear();
 });
 
 it("shows empty-state when month has no tasks", async () => {
@@ -116,6 +117,24 @@ it("collapses undone moved-away (forwarded) tasks into a 已移走 group", async
   expect(screen.queryByText("已順延任務")).toBeNull();
   await userEvent.click(toggle);
   expect(screen.getByText("已順延任務")).toBeInTheDocument();
+});
+
+it("remembers a collapse group's expanded state across remount via localStorage", async () => {
+  useTasksStore.setState({
+    tasks: [
+      { id: "fw", title: "已順延任務", status: "open", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_months: ["2099-01", "2099-02"] } },
+    ],
+    today: "2099-01-15", status: "ready", error: null,
+  });
+  const first = renderInRouter("/plan/2099-01-15");
+  await userEvent.click(await screen.findByRole("button", { name: /已移走 \(1\)/ }));
+  expect(screen.getByText("已順延任務")).toBeInTheDocument();
+  first.unmount();
+
+  // Remount: the expanded state must be restored from localStorage without clicking.
+  renderInRouter("/plan/2099-01-15");
+  expect(await screen.findByText("已順延任務")).toBeInTheDocument();
 });
 
 it("puts a completed forwarded task into 已完成, not a loose row or 已移走", async () => {
