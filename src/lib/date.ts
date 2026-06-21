@@ -69,6 +69,18 @@ export function shortWeekday(date: string): string {
   return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()];
 }
 
+/** Returns Chinese weekday label: "週日" / "週一" / ... */
+export function weekdayZh(date: string): string {
+  const d = new Date(date + "T00:00:00");
+  return ["週日", "週一", "週二", "週三", "週四", "週五", "週六"][d.getDay()];
+}
+
+/** Formats YYYY-MM-DD as "M/D" without leading zeros, e.g. "1/5". */
+export function shortDate(date: string): string {
+  const [, m, d] = date.split("-").map(Number);
+  return `${m}/${d}`;
+}
+
 /** Returns day-of-month number, e.g. 22. */
 export function dayOfMonth(date: string): number {
   return Number(date.split("-")[2]);

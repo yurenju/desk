@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { Task } from "./types";
-import { primaryDate, primaryMonth, layer, tasksOnDate, tasksOnMonth, nextFreeDailySlot, delayKind, delaySummary } from "./tasks";
+import { primaryDate, primaryMonth, layer, tasksOnDate, tasksOnMonth, nextFreeDailySlot, delayKind, delaySummary, dayInWeek } from "./tasks";
+import { weekOf } from "./date";
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
   return {
@@ -276,5 +277,25 @@ describe("delaySummary", () => {
       earliestMonth: null,
       dismissedDate: null,
     });
+  });
+});
+
+describe("dayInWeek", () => {
+  const wk = weekOf("2099-01-15");
+  const mk = (dates?: string[], u?: string): Task => ({
+    id: "t", title: "t", status: "open", created_at: "x", updated_at: "x",
+    custom_fields: { scheduled_dates: dates, unscheduled_at: u },
+  });
+  it("returns the day when primaryDate falls inside the week", () => {
+    expect(dayInWeek(mk(["2099-01-15"]), wk)).toBe("2099-01-15");
+  });
+  it("returns null when primaryDate is outside the week", () => {
+    expect(dayInWeek(mk(["2099-01-28"]), wk)).toBeNull();
+  });
+  it("returns null when there is no scheduled date", () => {
+    expect(dayInWeek(mk(undefined), wk)).toBeNull();
+  });
+  it("returns null when unscheduled_at cancels the date", () => {
+    expect(dayInWeek(mk(["2099-01-15"], "2099-01-20"), wk)).toBeNull();
   });
 });

@@ -8,6 +8,8 @@ import {
   addDays,
   addMonths,
   monthOf,
+  weekdayZh,
+  shortDate,
 } from "./date";
 
 describe("isValidDateParam", () => {
@@ -112,5 +114,20 @@ describe("addMonths", () => {
 describe("monthOf", () => {
   it("extracts YYYY-MM from a YYYY-MM-DD date", () => {
     expect(monthOf("2026-06-08")).toBe("2026-06");
+  });
+});
+
+describe("weekdayZh", () => {
+  it("maps ISO dates to Chinese weekday labels", () => {
+    expect(weekdayZh("2024-01-07")).toBe("週日"); // 2024-01-07 is a Sunday
+    expect(weekdayZh("2024-01-08")).toBe("週一");
+    expect(weekdayZh("2024-01-13")).toBe("週六");
+  });
+});
+
+describe("shortDate", () => {
+  it("formats YYYY-MM-DD as M/D without leading zeros", () => {
+    expect(shortDate("2026-01-05")).toBe("1/5");
+    expect(shortDate("2026-12-28")).toBe("12/28");
   });
 });
