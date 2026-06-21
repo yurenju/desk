@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import type { Task } from "@/lib/types";
 import { tasksOnMonth } from "@/lib/tasks";
@@ -34,6 +34,9 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
     .map((e) => e.task);
 
   const others = primary.filter((e) => !e.task.custom_fields.monthly_priority);
+  const undoneOthers = others.filter((e) => e.task.status !== "done");
+  const doneOthers = others.filter((e) => e.task.status === "done");
+  const [showDone, setShowDone] = useState(false);
   const trails = entries.filter((e) => e.kind !== "primary");
 
   const nothing = top3.length === 0 && others.length === 0 && trails.length === 0;
@@ -70,7 +73,7 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
       {others.length > 0 && (
         <section className={styles.section}>
           <header className={styles.sectionHead}>其他任務</header>
-          {others.map((e) => (
+          {undoneOthers.map((e) => (
             <MonthRow
               key={e.task.id}
               task={e.task}
@@ -81,6 +84,30 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
               showRing
             />
           ))}
+          {doneOthers.length > 0 && (
+            <div className={styles.doneGroup}>
+              <button
+                type="button"
+                className={styles.doneToggle}
+                aria-expanded={showDone}
+                onClick={() => setShowDone((v) => !v)}
+              >
+                {showDone ? "▾" : "▸"} 已完成 ({doneOthers.length})
+              </button>
+              {showDone &&
+                doneOthers.map((e) => (
+                  <MonthRow
+                    key={e.task.id}
+                    task={e.task}
+                    kind={e.kind}
+                    month={month}
+                    selectedDate={selectedDate}
+                    interactive
+                    showRing
+                  />
+                ))}
+            </div>
+          )}
         </section>
       )}
 
