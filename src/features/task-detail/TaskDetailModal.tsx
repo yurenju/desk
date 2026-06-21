@@ -1,6 +1,7 @@
 import { Dialog } from "@base-ui/react/dialog";
 import { useTasksStore } from "@/store/tasks";
 import { todayISO } from "@/lib/date";
+import { primaryMonth, delaySummary } from "@/lib/tasks";
 import { Checkbox } from "@/ui/Checkbox";
 import { useTaskDetailStore } from "./store";
 import { useTaskDetail } from "./useTaskDetail";
@@ -23,6 +24,10 @@ export function TaskDetailModal() {
   const detail = useTaskDetail(openId);
 
   const open = Boolean(openId && task);
+
+  const delayMonth = task ? primaryMonth(task) : null;
+  const delay = task && delayMonth ? delaySummary(task, delayMonth) : null;
+  const hasDelay = Boolean(delay && (delay.carriedMonths > 0 || delay.dismissedDate));
 
   return (
     <Dialog.Root open={open} onOpenChange={(next) => { if (!next) close(); }}>
@@ -65,6 +70,20 @@ export function TaskDetailModal() {
                   <span className={styles.chip}>本月</span>
                 )}
               </div>
+
+              {hasDelay && delay && (
+                <section className={styles.section}>
+                  <div className={styles.label}>拖延狀況</div>
+                  {delay.carriedMonths > 0 && (
+                    <p className={styles.delayLine}>
+                      🔴 跨月拖延 {delay.carriedMonths} 個月 · {delay.earliestMonth} 就排了
+                    </p>
+                  )}
+                  {delay.dismissedDate && (
+                    <p className={styles.delayLine}>🟡 本月排到某天沒做 · {delay.dismissedDate.slice(5)}</p>
+                  )}
+                </section>
+              )}
 
               <section className={styles.section}>
                 <div className={styles.label}>描述</div>
