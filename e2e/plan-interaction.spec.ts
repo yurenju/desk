@@ -14,7 +14,7 @@ test("month row overflow menu has 移到下月 and 丟回 Backlog; 移到下月 
   page,
 }) => {
   // "本月其他計畫 B" is a pure month task (no day scheduling) with no monthly_priority,
-  // so it shows in the "其他計劃內" section with an interactive ⋯ menu.
+  // so it shows in the "其他任務" section with an interactive ⋯ menu.
   const row = page
     .locator("div")
     .filter({ has: page.getByText("本月其他計畫 B") })
@@ -28,8 +28,12 @@ test("month row overflow menu has 移到下月 and 丟回 Backlog; 移到下月 
   await expect(page.getByRole("menuitem", { name: /丟回 Backlog/ })).toBeVisible();
 
   // Click 移到下月 → the task's primary month advances to next month, so it
-  // becomes a forwarded trail (↪) in this month — the ⋯ menu disappears.
+  // becomes a forwarded trail (↪) in this month — the ⋯ menu disappears, and the
+  // undone trail is collapsed into the 已移走 group.
   await page.getByRole("menuitem", { name: /移到下月/ }).click();
+
+  // Expand 已移走 to reveal the forwarded trail row.
+  await page.getByRole("button", { name: /已移走 \(\d+\)/ }).click();
 
   // After the action the task row shows the forwarded trail indicator (↪)
   // because its primary month is now next month. Scope to the innermost row
