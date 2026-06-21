@@ -82,6 +82,25 @@ it("collapses completed tasks into a 已完成 group, expandable on click", asyn
   expect(screen.getByText("已完成任務")).toBeInTheDocument();
 });
 
+it("orders 計劃外 tasks after 計劃內 in the 其他任務 list", async () => {
+  // Adhoc inserted first, planned second — the rendered order must still put
+  // the planned (計劃內) row before the adhoc (計劃外) one, to keep focus on 計劃內.
+  useTasksStore.setState({
+    tasks: [
+      { id: "a1", title: "計劃外任務", status: "open", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_months: ["2099-01"], is_adhoc: "true" } },
+      { id: "p1", title: "計劃內任務", status: "open", created_at: "x", updated_at: "x",
+        custom_fields: { scheduled_months: ["2099-01"], is_adhoc: "false" } },
+    ],
+    today: "2099-01-15", status: "ready", error: null,
+  });
+  renderInRouter("/plan/2099-01-15");
+  const planned = await screen.findByText("計劃內任務");
+  const adhoc = screen.getByText("計劃外任務");
+  // planned precedes adhoc in document order (DOCUMENT_POSITION_FOLLOWING === 4)
+  expect(planned.compareDocumentPosition(adhoc) & 4).toBeTruthy();
+});
+
 it("collapses undone moved-away (forwarded) tasks into a 已移走 group", async () => {
   // scheduled in 2099-01 then forwarded to 2099-02 → kind 'forwarded' in January,
   // still undone → belongs in 已移走, collapsed by default.
