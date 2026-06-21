@@ -138,7 +138,7 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
         <CollapseGroup
           label="其他已完成"
           count={doneOther.length}
-          persistKey="desk.plan.month.collapse.done"
+          persistKey="desk.plan.month.collapse.doneOther"
         >
           {doneOther.map((e) => (
             <MonthRow
