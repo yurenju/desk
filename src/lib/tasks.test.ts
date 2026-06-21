@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Task } from "./types";
-import { primaryDate, primaryMonth, layer, tasksOnDate, tasksOnMonth, nextFreeDailySlot } from "./tasks";
+import { primaryDate, primaryMonth, layer, tasksOnDate, tasksOnMonth, nextFreeDailySlot, delayKind } from "./tasks";
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
   return {
@@ -208,5 +208,41 @@ describe("nextFreeDailySlot", () => {
     expect(
       nextFreeDailySlot([onDay("a", "1"), onDay("b", "3"), onDay("c", "2")], "2026-06-08", "c"),
     ).toBe("2");
+  });
+});
+
+describe("delayKind", () => {
+  it("returns 'carried' when scheduled in an earlier month", () => {
+    const t = makeTask({ id: "1", custom_fields: { scheduled_months: ["2026-04", "2026-06"] } });
+    expect(delayKind(t, "2026-06")).toBe("carried");
+  });
+
+  it("returns 'dismissed' when unscheduled_at falls in this month", () => {
+    const t = makeTask({
+      id: "1",
+      custom_fields: { scheduled_months: ["2026-06"], unscheduled_at: "2026-06-15" },
+    });
+    expect(delayKind(t, "2026-06")).toBe("dismissed");
+  });
+
+  it("prefers 'carried' over 'dismissed' when both apply", () => {
+    const t = makeTask({
+      id: "1",
+      custom_fields: { scheduled_months: ["2026-05", "2026-06"], unscheduled_at: "2026-06-15" },
+    });
+    expect(delayKind(t, "2026-06")).toBe("carried");
+  });
+
+  it("returns 'none' for a fresh this-month task", () => {
+    const t = makeTask({ id: "1", custom_fields: { scheduled_months: ["2026-06"] } });
+    expect(delayKind(t, "2026-06")).toBe("none");
+  });
+
+  it("does not treat a previous month's unscheduled_at as this-month dismissed", () => {
+    const t = makeTask({
+      id: "1",
+      custom_fields: { scheduled_months: ["2026-06"], unscheduled_at: "2026-05-30" },
+    });
+    expect(delayKind(t, "2026-06")).toBe("none");
   });
 });

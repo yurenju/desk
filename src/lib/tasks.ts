@@ -8,6 +8,22 @@ export function primaryMonth(t: Task): string | null {
   return last > u ? last : null;
 }
 
+export type DelayKind = "none" | "dismissed" | "carried";
+
+/**
+ * Delay signal for a task shown in `month`'s plan column.
+ * - "carried": scheduled in a month earlier than `month` (still dragging on).
+ * - "dismissed": was put on a day this month then bounced back to the month layer.
+ * "carried" wins when both apply (it is the heavier signal).
+ */
+export function delayKind(t: Task, month: string): DelayKind {
+  const months = t.custom_fields.scheduled_months ?? [];
+  if (months.some((m) => m < month)) return "carried";
+  const u = t.custom_fields.unscheduled_at ?? "";
+  if (u.startsWith(month)) return "dismissed";
+  return "none";
+}
+
 export function primaryDate(t: Task): string | null {
   const arr = t.custom_fields.scheduled_dates ?? [];
   if (arr.length === 0) return null;
