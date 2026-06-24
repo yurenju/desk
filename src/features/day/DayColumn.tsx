@@ -1,9 +1,12 @@
 import { useMemo } from "react";
 import type { Task } from "@/lib/types";
-import { tasksOnDate } from "@/lib/tasks";
+import { tasksOnDate, byPosition } from "@/lib/tasks";
 import { dayOfMonth, shortWeekday } from "@/lib/date";
 import { useTasksStore } from "@/store/tasks";
 import { useDroppableZone } from "@/features/plan-view/useDroppableZone";
+import { SortableSection } from "@/features/plan-view/SortableSection";
+import { containerId } from "@/features/plan-view/planDrag";
+import { useDragOrdering } from "@/features/plan-view/useDragOrdering";
 import { TaskRow } from "./TaskRow";
 import { Top3Card } from "./Top3Card";
 import { AddTaskBar } from "@/ui/AddTaskBar";
@@ -32,17 +35,42 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
     )
     .map((e) => e.task);
 
-  const otherPlanned = primary.filter(
-    (e) => !e.task.custom_fields.daily_priority && e.task.custom_fields.is_adhoc !== "true",
-  );
+  const otherPlanned = primary
+    .filter((e) => !e.task.custom_fields.daily_priority && e.task.custom_fields.is_adhoc !== "true")
+    .sort((a, b) => byPosition(a.task, b.task));
 
   // Exclude tasks already promoted to Top3 (mirrors otherPlanned) so a
   // prioritised adhoc task isn't rendered in both sections.
-  const adhoc = primary.filter(
-    (e) => !e.task.custom_fields.daily_priority && e.task.custom_fields.is_adhoc === "true",
-  );
+  const adhoc = primary
+    .filter((e) => !e.task.custom_fields.daily_priority && e.task.custom_fields.is_adhoc === "true")
+    .sort((a, b) => byPosition(a.task, b.task));
 
   const trails = entries.filter((e) => e.kind !== "primary");
+
+  // Live drag preview: re-order each section by the DndContext's preview map.
+  // `taskById` spans every primary task so an overflow preview (which pulls a
+  // task from "other" into top3, or pushes top3's 3rd into "other") can resolve
+  // tasks that aren't in the section's own base list.
+  const { previewOrder } = useDragOrdering();
+  // Lookup over every primary task on the day. Left un-memoized on purpose: the
+  // React Compiler handles memoization, and a manual useMemo over the
+  // non-memoized `primary` array trips react-hooks/preserve-manual-memoization.
+  const taskById = new Map(primary.map((e) => [`day:${e.task.id}`, e.task]));
+  const orderSection = (cid: string, base: Task[]): Task[] => {
+    const baseIds = base.map((t) => `day:${t.id}`);
+    const ids = previewOrder(cid, baseIds);
+    return ids.map((id) => taskById.get(id)).filter((t): t is Task => Boolean(t));
+  };
+  const otherCid = containerId({ kind: "other", date: selectedDate });
+  const adhocCid = containerId({ kind: "adhoc", date: selectedDate });
+  const otherOrdered = orderSection(
+    otherCid,
+    otherPlanned.map((e) => e.task),
+  );
+  const adhocOrdered = orderSection(
+    adhocCid,
+    adhoc.map((e) => e.task),
+  );
 
   const isEmpty =
     top3.length === 0 && otherPlanned.length === 0 && adhoc.length === 0 && trails.length === 0;
@@ -87,6 +115,7 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
             variant="accent"
             date={selectedDate}
             interactive={isInteractive}
+            taskById={taskById}
           />
         ) : (
           isInteractive &&
@@ -98,44 +127,48 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
         ref={otherRef}
         className={[styles.dropZone, otherIsOver && styles.isOver].filter(Boolean).join(" ")}
       >
-        {otherPlanned.length > 0 && (
+        {otherOrdered.length > 0 && (
           <section className={styles.section}>
             <header className={styles.sectionHead}>
-              其他計劃內 <span className={styles.count}>{otherPlanned.length}</span>
+              其他計劃內 <span className={styles.count}>{otherOrdered.length}</span>
             </header>
-            {otherPlanned.map((e) => (
-              <TaskRow
-                key={e.task.id}
-                task={e.task}
-                kind={e.kind}
-                date={selectedDate}
-                interactive={isInteractive}
-                showRing={isInteractive}
-              />
-            ))}
+            <SortableSection id={otherCid} items={otherOrdered.map((t) => `day:${t.id}`)}>
+              {otherOrdered.map((t) => (
+                <TaskRow
+                  key={t.id}
+                  task={t}
+                  kind="primary"
+                  date={selectedDate}
+                  interactive={isInteractive}
+                  showRing={isInteractive}
+                />
+              ))}
+            </SortableSection>
           </section>
         )}
 
-        {adhoc.length > 0 && (
+        {adhocOrdered.length > 0 && (
           <section className={styles.section}>
             <header className={[styles.sectionHead, styles.adhocHead].join(" ")}>
               {isToday ? "今天臨時加的" : "臨時加的"}{" "}
-              <span className={styles.count}>{adhoc.length}</span>
+              <span className={styles.count}>{adhocOrdered.length}</span>
             </header>
-            {adhoc.map((e) => (
-              <TaskRow
-                key={e.task.id}
-                task={e.task}
-                kind={e.kind}
-                date={selectedDate}
-                interactive={isInteractive}
-                showRing={isInteractive}
-              />
-            ))}
+            <SortableSection id={adhocCid} items={adhocOrdered.map((t) => `day:${t.id}`)}>
+              {adhocOrdered.map((t) => (
+                <TaskRow
+                  key={t.id}
+                  task={t}
+                  kind="primary"
+                  date={selectedDate}
+                  interactive={isInteractive}
+                  showRing={isInteractive}
+                />
+              ))}
+            </SortableSection>
           </section>
         )}
 
-        {isInteractive && otherPlanned.length === 0 && adhoc.length === 0 && otherIsOver && (
+        {isInteractive && otherOrdered.length === 0 && adhocOrdered.length === 0 && otherIsOver && (
           <div className={styles.dropHint}>拖到這裡 → 其他計劃內</div>
         )}
       </div>

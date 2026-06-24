@@ -338,7 +338,7 @@
 
 - [x] **(1) 修 Month 欄標題擠壓**(2026-06-24)—— 窄月欄(Focus 的 MonthDigest 用 `Top3Card`、Plan 的 `MonthRow`)裡 `min-width:0` 讓 CJK title 在 meta(`◔` 子任務數 / `·有描述`)+ 展開鈕競爭寬度時崩塌成逐字直書。改成 title 給 `min-width` 保底 + row `flex-wrap`,meta/展開鈕擠不下時換到下一行;寬版日 hero 空間足夠不會誤觸。
 - [x] **(2) `is_adhoc` 染色規則**(2026-06-24)—— 新增 `isDayAdhocChip(task, date)`:日欄 chip 只在「adhoc AND 當天建立 AND 只排當天」才顯示(真正的當日臨時插單);月度欄維持無條件紅 chip(「月中膨脹」警示)。把畫面上過半的紅噪音收掉。
-- [ ] ~~**(3) `position`(lex-order)+ 同欄拖曳排序**~~ —— **先不做(2026-06-24 決定)**。理由:它服務的是 Backlog / 其他計劃內這種**刻意不排序的溢位桶**,三件事 ring 已處理「什麼重要」;手動排序這桶價值有限,卻要動 dnd-kit 拖曳系統 + lex-order 重排 + 樂觀更新 + e2e,複雜度不抵效益。等實際用到「需要手排溢位桶」的痛點再評估。`position` 欄位型別已保留在 `TaskCustomFields`。
+- [x] **(3) `position`(lex-order)+ 同欄拖曳排序 + 三件事拖曳重排**(2026-06-25)—— 原 2026-06-24 決定「先不做」,使用者後來改主意一次做完整版並擴大範圍:三件事(①②③)可拖曳重排、插入名次 + 連鎖下推 + 尾端溢出(被擠出者落「其他」第一格)+ 放下前即時預覽;活動池(backlog / 其他任務 / 其他計劃內 / 臨時加的)啟用 `position`(lex midpoint)手排,寫回 WSPC;Week 日格只排三件事;Focus 中欄可拖、左右不可拖;`⋯` menu / ring 指定名次統一走同一套溢出語意。`@dnd-kit/sortable` + 共用 `src/features/plan-view/planDrag.ts`。設計 [2026-06-24-drag-reorder-design.md](docs/superpowers/specs/2026-06-24-drag-reorder-design.md)・計畫 [2026-06-24-drag-reorder.md](docs/superpowers/plans/2026-06-24-drag-reorder.md)(subagent-driven,每 task 兩段 review + 終審;手動驗收 12/14 PASS、2 環境性 partial、無真實缺陷)。
 - [ ] **(4) 空狀態文案 + loading / error 細節**(進行中 2026-06-24)—— 補各區空狀態與載入 / 錯誤呈現。**鍵盤快捷鍵不做**(2026-06-24 決定:互動已可用滑鼠 / menu 完成,快捷鍵屬臆測性打磨,等有需求再說)。
 
 > 砍掉的項目見 Slice 6「不做」:carryover 自動浮現、「移到其他日期」per-row 動作均不做。

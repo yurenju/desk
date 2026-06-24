@@ -7,6 +7,7 @@ export function useTaskRow(id: string, date: string) {
   const deleteTask = useTasksStore((s) => s.deleteTask);
   const editTitle = useTasksStore((s) => s.editTitle);
   const setDailyPriority = useTasksStore((s) => s.setDailyPriority);
+  const reorderPriority = useTasksStore((s) => s.reorderPriority);
   const setAdhoc = useTasksStore((s) => s.setAdhoc);
   const moveToToday = useTasksStore((s) => s.moveToToday);
   const demoteToMonth = useTasksStore((s) => s.demoteToMonth);
@@ -20,7 +21,8 @@ export function useTaskRow(id: string, date: string) {
     draft,
     toggle: () => toggleDone(id),
     remove: () => deleteTask(id),
-    setPriority: (n: Priority | null) => setDailyPriority(id, n, date),
+    setPriority: (n: Priority | null) =>
+      n === null ? setDailyPriority(id, null, date) : reorderPriority(id, n, "daily", date),
     toggleAdhoc: () => {
       const isAdhoc = current?.custom_fields.is_adhoc === "true";
       setAdhoc(id, !isAdhoc);

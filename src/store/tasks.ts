@@ -19,6 +19,8 @@ import {
   setDailyPriority,
   setMonthlyPriority as setMonthlyPriorityOp,
   toggleDone,
+  reorderPriority as reorderPriorityOp,
+  reorderInPool as reorderInPoolOp,
 } from "./taskOps";
 import type { RemovedTask } from "./taskOps";
 import { todayISO, currentMonthISO } from "@/lib/date";
@@ -55,6 +57,8 @@ interface TasksState {
   demoteToMonth: (id: string) => Promise<void>;
   moveToNextMonth: (id: string) => Promise<void>;
   demoteToBacklog: (id: string) => Promise<void>;
+  reorderPriority: (id: string, targetRank: Priority, axis: "daily" | "monthly", scope: string) => Promise<void>;
+  reorderInPool: (id: string, prevId: string | null, nextId: string | null) => Promise<void>;
   clearTasks: () => void;
   clearRecentlyDeleted: () => void;
   clearError: () => void;
@@ -364,6 +368,53 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
         monthly_priority: null,
         daily_priority: null,
       });
+    } catch {
+      set({ tasks: prev, error: "save_failed" });
+    }
+  },
+
+  async reorderPriority(id, targetRank, axis, scope) {
+    const prev = get().tasks;
+    const next = reorderPriorityOp(prev, id, targetRank, axis, scope);
+    if (next === prev) return;
+    set({ tasks: next, error: null });
+    const field = axis === "daily" ? "daily_priority" : "monthly_priority";
+    const changed = next.filter((t) => {
+      const before = prev.find((p) => p.id === t.id);
+      if (!before) return false;
+      return (
+        before.custom_fields[field] !== t.custom_fields[field] ||
+        before.custom_fields.position !== t.custom_fields.position
+      );
+    });
+    try {
+      await Promise.all(
+        changed.map((t) =>
+          enqueuePatch(t.id, {
+            [field]: t.custom_fields[field] ?? null,
+            ...(t.custom_fields.position !== prev.find((p) => p.id === t.id)?.custom_fields.position
+              ? { position: t.custom_fields.position ?? null }
+              : {}),
+          }),
+        ),
+      );
+    } catch {
+      try {
+        await get().reload();
+      } catch {
+        /* reload already set status:"error" */
+      }
+    }
+  },
+
+  async reorderInPool(id, prevId, nextId) {
+    const prev = get().tasks;
+    const next = reorderInPoolOp(prev, id, prevId, nextId);
+    if (next === prev) return;
+    set({ tasks: next, error: null });
+    const updated = next.find((t) => t.id === id)!;
+    try {
+      await enqueuePatch(id, { position: updated.custom_fields.position });
     } catch {
       set({ tasks: prev, error: "save_failed" });
     }

@@ -7,7 +7,7 @@ export function useMonthRow(id: string, opts: { month: string; selectedDate: str
   const deleteTask = useTasksStore((s) => s.deleteTask);
   const editTitle = useTasksStore((s) => s.editTitle);
   const setMonthlyPriority = useTasksStore((s) => s.setMonthlyPriority);
-  const setDailyPriority = useTasksStore((s) => s.setDailyPriority);
+  const reorderPriority = useTasksStore((s) => s.reorderPriority);
   const setAdhoc = useTasksStore((s) => s.setAdhoc);
   const planScheduleDay = useTasksStore((s) => s.planScheduleDay);
   const moveToNextMonth = useTasksStore((s) => s.moveToNextMonth);
@@ -22,13 +22,16 @@ export function useMonthRow(id: string, opts: { month: string; selectedDate: str
     draft,
     toggle: () => toggleDone(id),
     remove: () => deleteTask(id),
-    setPriority: (n: Priority | null) => setMonthlyPriority(id, n, opts.month),
+    setPriority: (n: Priority | null) =>
+      n === null
+        ? setMonthlyPriority(id, null, opts.month)
+        : reorderPriority(id, n, "monthly", opts.month),
     // Schedule this task onto the focus date. With a priority it also lands in
-    // that day's top-3 (setDailyPriority evicts the slot's prior occupant, just
-    // like the day ring); without one it stays in the day's other-planned.
+    // that day's top-3 via reorderPriority (cascade + overflow); without one it
+    // stays in the day's other-planned.
     promote: (priority: Priority | null = null) => {
       planScheduleDay(id, opts.selectedDate);
-      if (priority) setDailyPriority(id, priority, opts.selectedDate);
+      if (priority) reorderPriority(id, priority, "daily", opts.selectedDate);
     },
     toggleAdhoc: () => {
       const isAdhoc = current?.custom_fields.is_adhoc === "true";

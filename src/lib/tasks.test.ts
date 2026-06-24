@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Task } from "./types";
-import { primaryDate, primaryMonth, layer, tasksOnDate, tasksOnMonth, nextFreeDailySlot, delayKind, delaySummary, dayInWeek, isDayAdhocChip } from "./tasks";
+import { primaryDate, primaryMonth, layer, tasksOnDate, tasksOnMonth, nextFreeDailySlot, delayKind, delaySummary, dayInWeek, isDayAdhocChip, byPosition } from "./tasks";
 import { weekOf } from "./date";
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
@@ -336,5 +336,21 @@ describe("dayInWeek", () => {
   });
   it("returns null when unscheduled_at cancels the date", () => {
     expect(dayInWeek(mk(["2099-01-15"], "2099-01-20"), wk)).toBeNull();
+  });
+});
+
+describe("byPosition", () => {
+  const mk = (id: string, position?: string): Task => ({
+    id, title: id, status: "open", created_at: "", updated_at: "",
+    custom_fields: position ? { position } : {},
+  });
+  it("orders by position string when both present", () => {
+    expect(byPosition(mk("a", "b"), mk("b", "d"))).toBeLessThan(0);
+  });
+  it("treats missing position as equal (stable fallback)", () => {
+    expect(byPosition(mk("a"), mk("b"))).toBe(0);
+  });
+  it("a positioned task sorts before an unpositioned one", () => {
+    expect(byPosition(mk("a", "m"), mk("b"))).toBeLessThan(0);
   });
 });

@@ -2,7 +2,7 @@ import type { Task, TrailKind } from "@/lib/types";
 import { Checkbox } from "@/ui/Checkbox";
 import { UnplannedChip } from "@/ui/Chip";
 import { Menu } from "@/ui/Menu";
-import { useDraggableRow } from "@/features/plan-view/useDraggableRow";
+import { useSortableRow } from "@/features/plan-view/useSortableRow";
 import { TaskDetailTrigger } from "@/features/task-detail/TaskDetailTrigger";
 import { useTaskRow } from "./useTaskRow";
 import { DailyPriorityMenu } from "./DailyPriorityMenu";
@@ -28,12 +28,13 @@ export function TaskRow({ task, kind, date, interactive, showRing }: TaskRowProp
   // Trail rows (forwarded/dismissed) stay read-only — no ring/menu/edit — but can
   // still be checked complete (same entity), so the checkbox uses `checkable`, not `editable`.
   const checkable = Boolean(interactive);
-  const { ref: dragRef, isDragging, handleProps } = useDraggableRow(`day:${task.id}`);
+  const { ref: dragRef, isDragging, handleProps, style } = useSortableRow(`day:${task.id}`);
   const draggable = kind === "primary";
 
   return (
     <div
       ref={draggable ? dragRef : undefined}
+      style={draggable ? style : undefined}
       className={[
         styles.row,
         styles[`k_${kind}`],

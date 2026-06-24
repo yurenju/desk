@@ -1,10 +1,13 @@
 import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { Task } from "@/lib/types";
 import { tasksOnDate } from "@/lib/tasks";
 import { weekOf, shortWeekday, dayOfMonth, isoWeek, addDays } from "@/lib/date";
 import { useDroppableZone } from "@/features/plan-view/useDroppableZone";
 import { useDraggableRow } from "@/features/plan-view/useDraggableRow";
+import { useSortableRow } from "@/features/plan-view/useSortableRow";
+import { containerId } from "@/features/plan-view/planDrag";
 import { useWeekDropHint } from "@/features/plan-view/dragContext";
 import styles from "./WeekColumn.module.css";
 
@@ -21,16 +24,36 @@ interface WeekTaskItemProps {
   title: string;
   done: boolean;
   recurring?: boolean;
+  /** true → use useSortableRow (top-3); false → use useDraggableRow (other zone). */
+  sortable?: boolean;
 }
 
-function WeekTaskItem({ taskId, date, order, title, done, recurring }: WeekTaskItemProps) {
+function WeekTop3Item({ taskId, date, order, title, done }: Omit<WeekTaskItemProps, "sortable" | "recurring">) {
+  const sortableId = `week:${date}:${taskId}`;
+  const { ref, style, handleProps, isDragging } = useSortableRow(sortableId);
+  const bullet = `${order}.`;
+  return (
+    <li
+      ref={ref}
+      style={style}
+      {...handleProps}
+      className={[styles.task, done && styles.done, isDragging && styles.dragging]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <span className={styles.taskOrder}>{bullet}</span> {title}
+    </li>
+  );
+}
+
+function WeekOtherItem({ taskId, date, title, done, recurring }: Omit<WeekTaskItemProps, "sortable" | "order">) {
   const { ref: dragRef, handleProps } = useDraggableRow(`week:${date}:${taskId}`);
-  const bullet = order == null ? (recurring ? "↻" : "·") : `${order}.`;
+  const bullet = recurring ? "↻" : "·";
   return (
     <li
       ref={dragRef}
       {...handleProps}
-      className={[styles.task, done && styles.done, order == null && styles.otherTask]
+      className={[styles.task, done && styles.done, styles.otherTask]
         .filter(Boolean)
         .join(" ")}
     >
@@ -115,26 +138,32 @@ function WeekDayCell({ date, allTasks, selectedDate }: WeekDayCellProps) {
               </span>
             </>
           )}
-          <ol
-            data-testid={`week-top3-${date}`}
-            className={[styles.tasks, overTop3 && styles.halfActive].filter(Boolean).join(" ")}
+          <SortableContext
+            id={containerId({ kind: "weekTop3", date })}
+            items={top3.map((e) => `week:${date}:${e.task.id}`)}
+            strategy={verticalListSortingStrategy}
           >
-            {top3.map((e, i) => (
-              <WeekTaskItem
-                key={e.task.id}
-                taskId={e.task.id}
-                date={date}
-                order={i + 1}
-                title={e.task.title}
-                done={e.task.status === "done"}
-              />
-            ))}
-          </ol>
+            <ol
+              data-testid={`week-top3-${date}`}
+              className={[styles.tasks, overTop3 && styles.halfActive].filter(Boolean).join(" ")}
+            >
+              {top3.map((e, i) => (
+                <WeekTop3Item
+                  key={e.task.id}
+                  taskId={e.task.id}
+                  date={date}
+                  order={i + 1}
+                  title={e.task.title}
+                  done={e.task.status === "done"}
+                />
+              ))}
+            </ol>
+          </SortableContext>
           <ul
             className={[styles.otherZone, overOther && styles.halfActive].filter(Boolean).join(" ")}
           >
             {others.map((e) => (
-              <WeekTaskItem
+              <WeekOtherItem
                 key={e.task.id}
                 taskId={e.task.id}
                 date={date}

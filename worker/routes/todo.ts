@@ -58,6 +58,7 @@ export async function handlePatchTodo(
       status?: "open" | "in_progress" | "done" | "cancelled";
       daily_priority?: string | null;
       monthly_priority?: string | null;
+      position?: string | null;
       done_on?: string | null;
       is_adhoc?: "true" | "false";
       title?: string;
@@ -72,6 +73,7 @@ export async function handlePatchTodo(
         status?: "open" | "in_progress" | "done" | "cancelled";
         daily_priority?: string | null;
         monthly_priority?: string | null;
+        position?: string | null;
         done_on?: string | null;
         is_adhoc?: "true" | "false";
         title?: string;
@@ -87,6 +89,7 @@ export async function handlePatchTodo(
     const customFields: Record<string, string | string[] | null> = {};
     if ("daily_priority" in body) customFields.daily_priority = body.daily_priority ?? null;
     if ("monthly_priority" in body) customFields.monthly_priority = body.monthly_priority ?? null;
+    if ("position" in body) customFields.position = body.position ?? null;
     if ("done_on" in body) customFields.done_on = body.done_on ?? null;
     if ("is_adhoc" in body) customFields.is_adhoc = body.is_adhoc ?? null;
     if ("scheduled_dates" in body && body.scheduled_dates) customFields.scheduled_dates = body.scheduled_dates;
