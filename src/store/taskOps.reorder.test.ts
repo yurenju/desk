@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { reorderPriority } from "./taskOps";
+import { reorderPriority, reorderInPool } from "./taskOps";
 import type { Task } from "@/lib/types";
 
 function dayTask(id: string, date: string, p?: string, pos?: string): Task {
@@ -58,5 +58,19 @@ describe("reorderPriority (daily)", () => {
     const next = reorderPriority(tasks, "x", "2", "daily", D);
     expect(next.find((t) => t.id === "x")!.custom_fields.daily_priority).toBe("2");
     expect(next.find((t) => t.id === "a")!.custom_fields.daily_priority).toBe("1");
+  });
+});
+
+describe("reorderInPool", () => {
+  it("sets position between prev and next neighbours", () => {
+    const tasks = [dayTask("a", D, undefined, "a"), dayTask("b", D, undefined, "c"), dayTask("x", D, undefined, "z")];
+    const next = reorderInPool(tasks, "x", "a", "b");
+    const pos = next.find((t) => t.id === "x")!.custom_fields.position!;
+    expect(pos > "a" && pos < "c").toBe(true);
+  });
+  it("moving to head uses null prev", () => {
+    const tasks = [dayTask("a", D, undefined, "m"), dayTask("x", D, undefined, "z")];
+    const next = reorderInPool(tasks, "x", null, "a");
+    expect(next.find((t) => t.id === "x")!.custom_fields.position! < "m").toBe(true);
   });
 });

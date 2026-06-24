@@ -346,3 +346,17 @@ export function reorderPriority(
   });
 }
 
+export function reorderInPool(
+  tasks: Task[],
+  id: string,
+  prevId: string | null,
+  nextId: string | null,
+): Task[] {
+  const target = tasks.find((t) => t.id === id);
+  if (!target) return tasks;
+  const prevPos = prevId ? (tasks.find((t) => t.id === prevId)?.custom_fields.position ?? null) : null;
+  const nextPos = nextId ? (tasks.find((t) => t.id === nextId)?.custom_fields.position ?? null) : null;
+  const pos = midpoint(prevPos, nextPos);
+  return tasks.map((t) => (t.id === id ? patch(t, { position: pos }) : t));
+}
+
