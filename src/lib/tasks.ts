@@ -119,6 +119,18 @@ export function tasksInBacklog(all: Task[]): Task[] {
   );
 }
 
+/** Sort comparator for manually-ordered pools. Tasks with a `position` come
+ * first (ascending string); tasks without keep their incoming relative order
+ * (Array.prototype.sort is stable), so unset tasks fall back to store order. */
+export function byPosition(a: Task, b: Task): number {
+  const pa = a.custom_fields.position;
+  const pb = b.custom_fields.position;
+  if (pa && pb) return pa < pb ? -1 : pa > pb ? 1 : 0;
+  if (pa && !pb) return -1;
+  if (!pa && pb) return 1;
+  return 0;
+}
+
 /**
  * The first free daily_priority slot (1→2→3) among tasks primary on `date`.
  * Returns "3" when all three are taken, so the caller's setDailyPriority can

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { Task } from "@/lib/types";
-import { tasksOnDate } from "@/lib/tasks";
+import { tasksOnDate, byPosition } from "@/lib/tasks";
 import { dayOfMonth, shortWeekday } from "@/lib/date";
 import { useTasksStore } from "@/store/tasks";
 import { useDroppableZone } from "@/features/plan-view/useDroppableZone";
@@ -32,15 +32,15 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
     )
     .map((e) => e.task);
 
-  const otherPlanned = primary.filter(
-    (e) => !e.task.custom_fields.daily_priority && e.task.custom_fields.is_adhoc !== "true",
-  );
+  const otherPlanned = primary
+    .filter((e) => !e.task.custom_fields.daily_priority && e.task.custom_fields.is_adhoc !== "true")
+    .sort((a, b) => byPosition(a.task, b.task));
 
   // Exclude tasks already promoted to Top3 (mirrors otherPlanned) so a
   // prioritised adhoc task isn't rendered in both sections.
-  const adhoc = primary.filter(
-    (e) => !e.task.custom_fields.daily_priority && e.task.custom_fields.is_adhoc === "true",
-  );
+  const adhoc = primary
+    .filter((e) => !e.task.custom_fields.daily_priority && e.task.custom_fields.is_adhoc === "true")
+    .sort((a, b) => byPosition(a.task, b.task));
 
   const trails = entries.filter((e) => e.kind !== "primary");
 

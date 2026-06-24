@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import type { Task } from "@/lib/types";
-import { tasksOnMonth, dayInWeek, primaryDate } from "@/lib/tasks";
+import { tasksOnMonth, dayInWeek, primaryDate, byPosition } from "@/lib/tasks";
 import { formatMonth, addMonths, weekOf, weekdayZh, shortDate } from "@/lib/date";
 import { isAdhocOf } from "@/lib/entryMode";
 import { useTasksStore } from "@/store/tasks";
@@ -46,14 +46,14 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
   const doneOther = remaining.filter((e) => e.task.status === "done");
   const undone = remaining.filter((e) => e.task.status !== "done");
   const movedAway = undone.filter((e) => e.kind !== "primary");
-  // 計劃外 (adhoc) sinks below 計劃內; Array.sort is stable so order is preserved.
+  // 計劃外 (adhoc) sinks below 計劃內; tiebreak by position for manual ordering.
   const others = undone
     .filter((e) => e.kind === "primary")
-    .sort(
-      (a, b) =>
-        Number(a.task.custom_fields.is_adhoc === "true") -
-        Number(b.task.custom_fields.is_adhoc === "true"),
-    );
+    .sort((a, b) => {
+      const adhocDelta =
+        Number(a.task.custom_fields.is_adhoc === "true") - Number(b.task.custom_fields.is_adhoc === "true");
+      return adhocDelta !== 0 ? adhocDelta : byPosition(a.task, b.task);
+    });
 
   const nothing =
     top3.length === 0 &&

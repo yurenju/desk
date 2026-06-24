@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Task } from "@/lib/types";
-import { tasksInBacklog } from "@/lib/tasks";
+import { tasksInBacklog, byPosition } from "@/lib/tasks";
 import { BacklogRow } from "./BacklogRow";
 import { AddTaskBar } from "@/ui/AddTaskBar";
 import { useTasksStore } from "@/store/tasks";
@@ -15,7 +15,7 @@ export interface BacklogSectionProps {
 export function BacklogSection({ allTasks, focusDate, defaultOpen = false }: BacklogSectionProps) {
   const [open, setOpen] = useState(defaultOpen);
   const addBacklogTask = useTasksStore((s) => s.addBacklogTask);
-  const items = tasksInBacklog(allTasks);
+  const items = tasksInBacklog(allTasks).sort((a, b) => byPosition(a, b));
 
   return (
     <section className={styles.root}>
