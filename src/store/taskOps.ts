@@ -1,6 +1,7 @@
 import type { Task, TaskCustomFields, Priority } from "@/lib/types";
 import { primaryDate, primaryMonth, nextFreeDailySlot } from "@/lib/tasks";
 import { monthOf, addMonths } from "@/lib/date";
+import { midpoint } from "@/lib/order";
 
 function patch(t: Task, cf: Partial<TaskCustomFields>, now?: string): Task {
   const newCustomFields = { ...t.custom_fields, ...cf };
@@ -269,5 +270,79 @@ export function demoteToBacklog(tasks: Task[], id: string, today: string): Task[
         })
       : t,
   );
+}
+
+type Axis = "daily" | "monthly";
+
+function priorityField(axis: Axis): "daily_priority" | "monthly_priority" {
+  return axis === "daily" ? "daily_priority" : "monthly_priority";
+}
+
+function isPrimaryOnScope(t: Task, axis: Axis, scope: string): boolean {
+  return axis === "daily" ? primaryDate(t) === scope : primaryMonth(t) === scope;
+}
+
+/**
+ * Insert `id` at `targetRank` among the scope's top-3, cascading lower ranks
+ * down by one. If that pushes a task past rank 3, it overflows: its priority is
+ * cleared and it gets a `position` sorting before the scope's current "other"
+ * pool (lands in the first "其他" slot). Single source of truth for both drag
+ * and menu/ring rank assignment.
+ */
+export function reorderPriority(
+  tasks: Task[],
+  id: string,
+  targetRank: Priority,
+  axis: Axis,
+  scope: string,
+): Task[] {
+  const field = priorityField(axis);
+  const target = tasks.find((t) => t.id === id);
+  if (!target) return tasks;
+
+  // Current ranked members on this scope (excluding the task being placed).
+  const ranked = tasks
+    .filter((t) => t.id !== id && isPrimaryOnScope(t, axis, scope) && t.custom_fields[field])
+    .sort((a, b) => Number(a.custom_fields[field]) - Number(b.custom_fields[field]));
+
+  // Build the new ordered list of ids: insert `id` at (targetRank-1).
+  const order = ranked.map((t) => t.id);
+  const insertAt = Math.min(Number(targetRank) - 1, order.length);
+  order.splice(insertAt, 0, id);
+
+  // First three keep ranks 1/2/3; anything past index 2 overflows.
+  const newRank = new Map<string, Priority>();
+  order.slice(0, 3).forEach((tid, i) => newRank.set(tid, String(i + 1) as Priority));
+  const overflowId = order.length > 3 ? order[3] : null;
+
+  // Overflow position = before the scope's current "other" pool min.
+  let overflowPos: string | null = null;
+  if (overflowId) {
+    const poolMin = tasks
+      .filter(
+        (t) =>
+          t.id !== overflowId &&
+          isPrimaryOnScope(t, axis, scope) &&
+          !t.custom_fields[field] &&
+          t.custom_fields.position,
+      )
+      .map((t) => t.custom_fields.position!)
+      .sort()[0];
+    overflowPos = midpoint(null, poolMin ?? null);
+  }
+
+  return tasks.map((t) => {
+    if (t.id === overflowId) {
+      return patch(t, { [field]: undefined, position: overflowPos ?? undefined });
+    }
+    const r = newRank.get(t.id);
+    if (r) return patch(t, { [field]: r });
+    // A previously-ranked task that fell out of the top-3 set but is not the
+    // single tracked overflow (shouldn't happen with cap 3, but stay safe):
+    if (isPrimaryOnScope(t, axis, scope) && t.custom_fields[field] && !newRank.has(t.id) && t.id !== overflowId) {
+      return patch(t, { [field]: undefined });
+    }
+    return t;
+  });
 }
 
