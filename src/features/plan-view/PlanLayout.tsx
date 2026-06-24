@@ -26,6 +26,7 @@ import { DragEnabledProvider, WeekDropHintProvider, type WeekDropHint } from "./
 import { DragOrderingProvider } from "./useDragOrdering";
 import { parseDropId } from "./dnd";
 import {
+  buildBacklogContainer,
   buildDayContainers,
   buildMonthContainers,
   buildWeekContainers,
@@ -57,23 +58,43 @@ function isSortableHit(id: string, members: Set<string>): boolean {
 // base container map. A row id (e.g. "month:<id>") is a sortable surface ONLY
 // when it's a member — a Slice-4 month/week row that isn't in any container must
 // fall through to the coarse drop:* zones.
+// Backlog sortable ids: "backlog:<taskId>" + the pool container "pool:backlog".
+// These belong to BOTH the backlog SortableContext AND can be dragged cross-column
+// onto day/week zones. We treat a backlog active row specially in collision detection.
+function isBacklogSortableId(id: string): boolean {
+  return id.startsWith("backlog:") || id === "pool:backlog";
+}
+
 function makeCollisionDetection(sortableMembers: Set<string>): CollisionDetection {
   return (args) => {
     const within = pointerWithin(args);
     const hits = within.length > 0 ? within : rectIntersection(args);
+    const activeId = String(args.active.id);
+    const activeIsSortableRow = sortableMembers.has(activeId);
+
+    // Backlog rows: sortable within pool:backlog, but also support cross-column
+    // drops onto day/week zones. Prefer the backlog sortable surface when hovering
+    // over it; otherwise fall through to coarse drop:* zones.
+    if (activeIsSortableRow && activeId.startsWith("backlog:")) {
+      const backlogSortableHits = hits.filter((h) => isBacklogSortableId(String(h.id)));
+      if (backlogSortableHits.length > 0) return backlogSortableHits;
+      // Not hovering over pool:backlog — allow Slice-4 coarse zones to take over.
+      const zoneHits = hits.filter((h) => !isSortableHit(String(h.id), sortableMembers));
+      return zoneHits.length > 0 ? zoneHits : hits;
+    }
+
     // A sortable row is both a sortable (container + item ids) AND sits inside the
     // Slice-4 free-form drop zones (drop:day:<date>:* / drop:month). When an
     // in-column sortable row is the active drag, prefer the sortable hits so the
     // live reorder/overflow preview drives, not the coarse zone. The zones still
     // win for Slice-4 cross-column drags (backlog/trail rows), whose active id
     // isn't a sortable container member.
-    const activeIsSortableRow = sortableMembers.has(String(args.active.id));
     if (activeIsSortableRow) {
       const sortableHits = hits.filter((h) => isSortableHit(String(h.id), sortableMembers));
       if (sortableHits.length > 0) return sortableHits;
       return hits;
     }
-    // Slice-4 cross-column drag (backlog / trail row): the sortable container +
+    // Slice-4 cross-column drag (trail row): the sortable container +
     // item droppables must NOT intercept — the coarse free-form drop:* zones own
     // these drops. Drop the sortable hits so the zone wins.
     const zoneHits = hits.filter((h) => !isSortableHit(String(h.id), sortableMembers));
@@ -126,14 +147,15 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
 
   const activeTask = activeId ? allTasks.find((t) => t.id === activeId) : null;
 
-  // Base (pre-preview) sortable order for the Day + Month + Week columns the Plan
-  // view renders. Rebuilt on every render from the live task list, so it always
-  // reflects the committed state the columns derive from.
+  // Base (pre-preview) sortable order for the Day + Month + Week + Backlog columns
+  // the Plan view renders. Rebuilt on every render from the live task list, so it
+  // always reflects the committed state the columns derive from.
   const weekDates = weekOf(selectedDate);
   const baseContainers: ContainerMap = new Map([
     ...buildDayContainers(allTasks, selectedDate),
     ...buildMonthContainers(allTasks, month, selectedDate),
     ...buildWeekContainers(allTasks, weekDates),
+    ...buildBacklogContainer(allTasks),
   ]);
 
   // The set of sortable row ids currently registered (members of any container).
@@ -164,6 +186,7 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
     }
     if (activeId.startsWith("month:")) return activeId.slice("month:".length);
     if (activeId.startsWith("day:")) return activeId.slice("day:".length);
+    if (activeId.startsWith("backlog:")) return activeId.slice("backlog:".length);
     return activeId;
   }
 

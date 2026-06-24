@@ -1,7 +1,7 @@
 import type { Task } from "@/lib/types";
 import { Checkbox } from "@/ui/Checkbox";
 import { Menu } from "@/ui/Menu";
-import { useDraggableRow } from "@/features/plan-view/useDraggableRow";
+import { useSortableRow } from "@/features/plan-view/useSortableRow";
 import { TaskDetailTrigger } from "@/features/task-detail/TaskDetailTrigger";
 import { useBacklogRow } from "./useBacklogRow";
 import styles from "./BacklogRow.module.css";
@@ -14,12 +14,13 @@ export interface BacklogRowProps {
 export function BacklogRow({ task, focusDate }: BacklogRowProps) {
   const isDone = task.status === "done";
   const row = useBacklogRow(task.id, { focusDate });
-  const { ref: dragRef, isDragging, handleProps } = useDraggableRow(task.id);
+  const { ref: dragRef, isDragging, handleProps, style } = useSortableRow(`backlog:${task.id}`);
   const day = focusDate.slice(8);
 
   return (
     <div
       ref={dragRef}
+      style={style}
       className={[styles.row, isDone && styles.done, isDragging && styles.dragging]
         .filter(Boolean)
         .join(" ")}

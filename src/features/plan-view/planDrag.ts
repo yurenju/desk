@@ -7,7 +7,7 @@
 
 import { arrayMove } from "@dnd-kit/sortable";
 import type { Task } from "@/lib/types";
-import { tasksOnDate, tasksOnMonth, dayInWeek, byPosition } from "@/lib/tasks";
+import { tasksOnDate, tasksOnMonth, tasksInBacklog, dayInWeek, byPosition } from "@/lib/tasks";
 import { weekOf } from "@/lib/date";
 
 // Sortable item ids reuse the existing day-row namespace: "day:<taskId>".
@@ -16,6 +16,7 @@ import { weekOf } from "@/lib/date";
 export function rowTaskId(sortableId: string): string {
   if (sortableId.startsWith("day:")) return sortableId.slice("day:".length);
   if (sortableId.startsWith("month:")) return sortableId.slice("month:".length);
+  if (sortableId.startsWith("backlog:")) return sortableId.slice("backlog:".length);
   // week:<YYYY-MM-DD>:<taskId> — strip the first two colon-separated segments.
   if (sortableId.startsWith("week:")) {
     const afterDate = sortableId.indexOf(":", "week:".length);
@@ -364,7 +365,38 @@ export function planCommit(args: {
     };
   }
 
+  if (container.kind === "poolBacklog") {
+    const prevId = idx > 0 ? rowTaskId(finalOrder[idx - 1]) : null;
+    const nextId = idx >= 0 && idx < finalOrder.length - 1 ? rowTaskId(finalOrder[idx + 1]) : null;
+    // Backlog tasks have no date, no priority, no scheduling — pure position reorder.
+    return {
+      kind: "pool",
+      taskId,
+      // axis/scope are not meaningful for backlog, but the CommitPlan type requires
+      // them. Use "daily" + empty string as sentinel; commitPlan checks hadPriority +
+      // crossColumn first and skips the scheduling/demotion branches for backlog.
+      axis: "daily",
+      scope: "",
+      prevId,
+      nextId,
+      hadPriority: false,
+      crossColumn: false,
+    };
+  }
+
   return { kind: "none" };
+}
+
+/**
+ * Derive the Backlog pool sortable container from the task list, mirroring
+ * BacklogSection's own derivation (tasksInBacklog sorted by byPosition). Ids are
+ * namespaced "backlog:<taskId>".
+ */
+export function buildBacklogContainer(allTasks: Task[]): ContainerMap {
+  const items = tasksInBacklog(allTasks).sort((a, b) => byPosition(a, b));
+  const map: ContainerMap = new Map();
+  map.set(containerId({ kind: "poolBacklog" }), items.map((t) => `backlog:${t.id}`));
+  return map;
 }
 
 // Local primaryDate (avoid importing the whole tasks module surface twice).

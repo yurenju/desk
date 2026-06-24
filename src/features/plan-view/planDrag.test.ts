@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { Task } from "@/lib/types";
 import {
+  buildBacklogContainer,
   buildDayContainers,
   buildMonthContainers,
   buildWeekContainers,
@@ -246,8 +247,87 @@ describe("rowTaskId — week namespace", () => {
     expect(rowTaskId("month:xyz")).toBe("xyz");
   });
 
+  it("strips backlog: prefix", () => {
+    expect(rowTaskId("backlog:task-abc")).toBe("task-abc");
+  });
+
   it("returns unknown ids unchanged", () => {
     expect(rowTaskId("some-random-id")).toBe("some-random-id");
+  });
+});
+
+// A backlog task: no scheduled_dates, no scheduled_months.
+function backlogTask(id: string, cf: Partial<Task["custom_fields"]> = {}): Task {
+  return {
+    id,
+    title: id,
+    status: "open",
+    created_at: "2026-06-01T00:00:00Z",
+    updated_at: "2026-06-01T00:00:00Z",
+    custom_fields: { is_adhoc: "false", ...cf },
+  };
+}
+
+describe("buildBacklogContainer", () => {
+  it("builds pool:backlog from backlog tasks sorted by position", () => {
+    const tasks: Task[] = [
+      backlogTask("b2", { position: "b" }),
+      backlogTask("b1", { position: "a" }),
+      // Month-scheduled task should be excluded from backlog
+      { ...backlogTask("m1"), custom_fields: { scheduled_months: [MONTH], is_adhoc: "false" } },
+    ];
+    const map = buildBacklogContainer(tasks);
+    expect(map.get("pool:backlog")).toEqual(["backlog:b1", "backlog:b2"]);
+  });
+
+  it("returns empty pool:backlog when there are no backlog tasks", () => {
+    const map = buildBacklogContainer([]);
+    expect(map.get("pool:backlog")).toEqual([]);
+  });
+});
+
+describe("planCommit — poolBacklog", () => {
+  const pool = "pool:backlog";
+
+  it("returns a pool plan with hadPriority:false and crossColumn:false for backlog reorder", () => {
+    const plan = planCommit({
+      over: { container: pool, index: 1 },
+      finalOrder: ["backlog:b1", "backlog:b2", "backlog:b3"],
+      activeId: "backlog:b2",
+      activeTask: backlogTask("b2", { position: "b" }),
+    });
+    expect(plan).toEqual({
+      kind: "pool",
+      taskId: "b2",
+      axis: "daily",
+      scope: "",
+      prevId: "b1",
+      nextId: "b3",
+      hadPriority: false,
+      crossColumn: false,
+    });
+  });
+
+  it("handles head position (prevId null)", () => {
+    const plan = planCommit({
+      over: { container: pool, index: 0 },
+      finalOrder: ["backlog:b2", "backlog:b1"],
+      activeId: "backlog:b2",
+      activeTask: backlogTask("b2"),
+    });
+    expect(plan.kind === "pool" && plan.prevId).toBeNull();
+    expect(plan.kind === "pool" && plan.nextId).toBe("b1");
+  });
+
+  it("handles tail position (nextId null)", () => {
+    const plan = planCommit({
+      over: { container: pool, index: 1 },
+      finalOrder: ["backlog:b1", "backlog:b2"],
+      activeId: "backlog:b2",
+      activeTask: backlogTask("b2"),
+    });
+    expect(plan.kind === "pool" && plan.prevId).toBe("b1");
+    expect(plan.kind === "pool" && plan.nextId).toBeNull();
   });
 });
 
