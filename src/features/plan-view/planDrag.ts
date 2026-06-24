@@ -16,6 +16,11 @@ import { weekOf } from "@/lib/date";
 export function rowTaskId(sortableId: string): string {
   if (sortableId.startsWith("day:")) return sortableId.slice("day:".length);
   if (sortableId.startsWith("month:")) return sortableId.slice("month:".length);
+  // week:<YYYY-MM-DD>:<taskId> — strip the first two colon-separated segments.
+  if (sortableId.startsWith("week:")) {
+    const afterDate = sortableId.indexOf(":", "week:".length);
+    if (afterDate >= 0) return sortableId.slice(afterDate + 1);
+  }
   return sortableId;
 }
 
@@ -142,6 +147,31 @@ export function buildMonthContainers(
   const map: ContainerMap = new Map();
   map.set(containerId({ kind: "monthTop3", month }), top3.map((t) => `month:${t.id}`));
   map.set(containerId({ kind: "poolMonth", month }), others.map((t) => `month:${t.id}`));
+  return map;
+}
+
+/**
+ * Derive the Week column's top-3 sortable containers — one per day in the given
+ * week. For each date, container id `week:<date>:top3` maps to the day's top-3
+ * sortable ids `week:<date>:<taskId>`. Mirrors WeekColumn's own top3 derivation
+ * exactly (primary on date, has daily_priority, sorted by it, sliced to 3).
+ * Only top-3 is sortable; the "other" zone is NOT included.
+ */
+export function buildWeekContainers(allTasks: Task[], weekDates: string[]): ContainerMap {
+  const map: ContainerMap = new Map();
+  for (const date of weekDates) {
+    const primary = tasksOnDate(allTasks, date)
+      .filter((e) => e.kind === "primary")
+      .map((e) => e.task);
+    const top3 = primary
+      .filter((t) => t.custom_fields.daily_priority)
+      .sort(
+        (a, b) =>
+          Number(a.custom_fields.daily_priority) - Number(b.custom_fields.daily_priority),
+      )
+      .slice(0, 3);
+    map.set(containerId({ kind: "weekTop3", date }), top3.map((t) => `week:${date}:${t.id}`));
+  }
   return map;
 }
 

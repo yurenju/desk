@@ -3,11 +3,13 @@ import type { Task } from "@/lib/types";
 import {
   buildDayContainers,
   buildMonthContainers,
+  buildWeekContainers,
   computePreview,
   containerId,
   parseContainerId,
   planCommit,
   resolveOver,
+  rowTaskId,
 } from "./planDrag";
 
 const DATE = "2026-06-24";
@@ -227,5 +229,68 @@ describe("resolveOver", () => {
 
   it("resolves a row hit to its container + index", () => {
     expect(resolveOver("day:p2", base)).toEqual({ container: top3, index: 1 });
+  });
+});
+
+describe("rowTaskId — week namespace", () => {
+  it("strips week:<date>: prefix, returning the task id", () => {
+    expect(rowTaskId(`week:${DATE}:abc-123`)).toBe("abc-123");
+  });
+
+  it("handles task ids that contain colons (future-proof)", () => {
+    expect(rowTaskId(`week:${DATE}:foo:bar`)).toBe("foo:bar");
+  });
+
+  it("day: and month: prefixes still work", () => {
+    expect(rowTaskId("day:xyz")).toBe("xyz");
+    expect(rowTaskId("month:xyz")).toBe("xyz");
+  });
+
+  it("returns unknown ids unchanged", () => {
+    expect(rowTaskId("some-random-id")).toBe("some-random-id");
+  });
+});
+
+describe("buildWeekContainers", () => {
+  const DATES = ["2026-06-22", "2026-06-23", "2026-06-24"];
+
+  it("builds a weekTop3 container for each date, sorted by daily_priority, sliced to 3", () => {
+    const tasks: Task[] = [
+      // Date 0: 3 tasks with priorities
+      task("a", { scheduled_dates: [DATES[0]], daily_priority: "2" }),
+      task("b", { scheduled_dates: [DATES[0]], daily_priority: "1" }),
+      task("c", { scheduled_dates: [DATES[0]], daily_priority: "3" }),
+      // Date 0: a "4th" task with no priority — should be excluded (not in top3)
+      task("d", { scheduled_dates: [DATES[0]] }),
+      // Date 1: no top3 tasks
+      task("e", { scheduled_dates: [DATES[1]] }), // no daily_priority → other
+      // Date 2: 1 top3 task
+      task("f", { scheduled_dates: [DATES[2]], daily_priority: "1" }),
+    ];
+    const map = buildWeekContainers(tasks, DATES);
+
+    // date 0: sorted by priority, sliced to 3
+    expect(map.get(containerId({ kind: "weekTop3", date: DATES[0] }))).toEqual([
+      `week:${DATES[0]}:b`,
+      `week:${DATES[0]}:a`,
+      `week:${DATES[0]}:c`,
+    ]);
+    // date 1: empty (no priority tasks)
+    expect(map.get(containerId({ kind: "weekTop3", date: DATES[1] }))).toEqual([]);
+    // date 2: single top3 task
+    expect(map.get(containerId({ kind: "weekTop3", date: DATES[2] }))).toEqual([
+      `week:${DATES[2]}:f`,
+    ]);
+  });
+
+  it("does NOT include other-zone tasks in the container", () => {
+    const tasks: Task[] = [
+      task("p", { scheduled_dates: [DATES[0]], daily_priority: "1" }),
+      task("o", { scheduled_dates: [DATES[0]] }), // no priority → other zone
+    ];
+    const map = buildWeekContainers(tasks, DATES);
+    const ids = map.get(containerId({ kind: "weekTop3", date: DATES[0] })) ?? [];
+    expect(ids).toContain(`week:${DATES[0]}:p`);
+    expect(ids).not.toContain(`week:${DATES[0]}:o`);
   });
 });

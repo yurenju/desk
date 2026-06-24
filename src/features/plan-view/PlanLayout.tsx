@@ -28,6 +28,7 @@ import { parseDropId } from "./dnd";
 import {
   buildDayContainers,
   buildMonthContainers,
+  buildWeekContainers,
   computePreview,
   isSortableContainerId,
   planCommit,
@@ -35,6 +36,7 @@ import {
   rowTaskId,
   type ContainerMap,
 } from "./planDrag";
+import { weekOf } from "@/lib/date";
 import styles from "./PlanLayout.module.css";
 
 const ACTIVATION = { distance: 8 };
@@ -124,12 +126,14 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
 
   const activeTask = activeId ? allTasks.find((t) => t.id === activeId) : null;
 
-  // Base (pre-preview) sortable order for the Day + Month columns the Plan view
-  // renders. Rebuilt on every render from the live task list, so it always
+  // Base (pre-preview) sortable order for the Day + Month + Week columns the Plan
+  // view renders. Rebuilt on every render from the live task list, so it always
   // reflects the committed state the columns derive from.
+  const weekDates = weekOf(selectedDate);
   const baseContainers: ContainerMap = new Map([
     ...buildDayContainers(allTasks, selectedDate),
     ...buildMonthContainers(allTasks, month, selectedDate),
+    ...buildWeekContainers(allTasks, weekDates),
   ]);
 
   // The set of sortable row ids currently registered (members of any container).
