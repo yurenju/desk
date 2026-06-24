@@ -30,7 +30,8 @@ describe("useTaskRow", () => {
     ).toBe("1");
   });
 
-  it("setPriority evicts the previous occupant of the chosen slot", async () => {
+  // reorderPriority cascades: d1 (was rank 1) is pushed to rank 2 when d5 takes rank 1.
+  it("setPriority cascades the previous occupant of the chosen slot", async () => {
     await act(async () => {
       const s = useTasksStore.getState();
       await s.setDailyPriority("d1", "1", useTasksStore.getState().today);
@@ -39,7 +40,8 @@ describe("useTaskRow", () => {
     await act(async () => result.current.setPriority("1"));
     const tasks = useTasksStore.getState().tasks;
     expect(tasks.find((t) => t.id === "d5")!.custom_fields.daily_priority).toBe("1");
-    expect(tasks.find((t) => t.id === "d1")!.custom_fields.daily_priority).toBeUndefined();
+    // cascade: d1 is pushed down to rank 2, not evicted
+    expect(tasks.find((t) => t.id === "d1")!.custom_fields.daily_priority).toBe("2");
   });
 
   it("setPriority(null) removes the priority", async () => {

@@ -23,7 +23,8 @@ it("sets monthly priority via the ring menu and evicts the collider", async () =
   await userEvent.click(await screen.findByRole("menuitemradio", { name: "① 本月第一" }));
   const s = useTasksStore.getState();
   expect(s.tasks.find((t) => t.id === "b")!.custom_fields.monthly_priority).toBe("1");
-  expect(s.tasks.find((t) => t.id === "a")!.custom_fields.monthly_priority).toBeUndefined();
+  // cascade: a (was rank 1) is pushed to rank 2, not evicted
+  expect(s.tasks.find((t) => t.id === "a")!.custom_fields.monthly_priority).toBe("2");
 });
 
 it("promotes a hero task into the day's top-3", async () => {
@@ -40,5 +41,6 @@ it("promotes a hero task into the day's top-3", async () => {
   await userEvent.click(await screen.findByRole("menuitem", { name: /22 日 · ② 三件事/ }));
   const t = useTasksStore.getState().tasks.find((x) => x.id === "h1")!;
   expect(t.custom_fields.scheduled_dates).toEqual(["2026-05-22"]);
-  expect(t.custom_fields.daily_priority).toBe("2");
+  // reorderPriority compresses rank 2 → rank 1 when no prior rank-1 exists
+  expect(t.custom_fields.daily_priority).toBe("1");
 });
