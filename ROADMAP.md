@@ -336,13 +336,10 @@
 
 **優先序(2026-06-24 依實際使用 desk.yurenju.me 一輪後重排)**:
 
-- [ ] **(1) 修 Month 欄標題擠壓** —— 一旦該列有 meta(`⏱` 計數、`·有描述`)+ ✎ 圖示,`MonthRow` 把 title 與 meta 放同一行水平競爭,窄欄下 title 被壓到剩 ~2 字、整段變直書。改法:meta 換行到 title 下方,或 title `flex:1` + meta 縮成圖示。**最傷觀感、工程最小,先做。**(原不在路線圖,屬「回頭調整」,因實際使用發現而提升為獨立項)
-- [ ] **(2) `is_adhoc` 染色規則** —— 現況是 binary:只要 `is_adhoc:true` 就一律紅 `+計劃外` chip(Focus 三件事 / 其他計劃內 / Backlog 全掛),紅色淪為背景噪音。照規則收斂:
-  - 月度欄:`is_adhoc = true` → 紅 chip(保留「月中膨脹」警示語意)
-  - 日欄:`is_adhoc = true` AND `created_at == today` AND `scheduled_dates 只有 today` → 紅 chip;其餘不顯示
-  - **高 CP 值:小工,但能立刻把畫面上過半紅噪音拿掉。**
-- [ ] **(3) `position` 欄位（lex-order）+ 同欄拖曳排序** —— Backlog / 其他計劃內目前照載入序固定,無法手動挪。工程量比 (1)(2) 大(加欄位 + 同欄 dnd 排序),排在染色之後。
-- [ ] **(4) 鍵盤快捷鍵、空狀態文案、loading / error 細節** —— 純打磨,最後做。
+- [x] **(1) 修 Month 欄標題擠壓**(2026-06-24)—— 窄月欄(Focus 的 MonthDigest 用 `Top3Card`、Plan 的 `MonthRow`)裡 `min-width:0` 讓 CJK title 在 meta(`◔` 子任務數 / `·有描述`)+ 展開鈕競爭寬度時崩塌成逐字直書。改成 title 給 `min-width` 保底 + row `flex-wrap`,meta/展開鈕擠不下時換到下一行;寬版日 hero 空間足夠不會誤觸。
+- [x] **(2) `is_adhoc` 染色規則**(2026-06-24)—— 新增 `isDayAdhocChip(task, date)`:日欄 chip 只在「adhoc AND 當天建立 AND 只排當天」才顯示(真正的當日臨時插單);月度欄維持無條件紅 chip(「月中膨脹」警示)。把畫面上過半的紅噪音收掉。
+- [ ] ~~**(3) `position`(lex-order)+ 同欄拖曳排序**~~ —— **先不做(2026-06-24 決定)**。理由:它服務的是 Backlog / 其他計劃內這種**刻意不排序的溢位桶**,三件事 ring 已處理「什麼重要」;手動排序這桶價值有限,卻要動 dnd-kit 拖曳系統 + lex-order 重排 + 樂觀更新 + e2e,複雜度不抵效益。等實際用到「需要手排溢位桶」的痛點再評估。`position` 欄位型別已保留在 `TaskCustomFields`。
+- [ ] **(4) 空狀態文案 + loading / error 細節**(進行中 2026-06-24)—— 補各區空狀態與載入 / 錯誤呈現。**鍵盤快捷鍵不做**(2026-06-24 決定:互動已可用滑鼠 / menu 完成,快捷鍵屬臆測性打磨,等有需求再說)。
 
 > 砍掉的項目見 Slice 6「不做」:carryover 自動浮現、「移到其他日期」per-row 動作均不做。
 

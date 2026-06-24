@@ -3,27 +3,7 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useTasksStore } from "@/store/tasks";
 import { TodayLayout } from "@/features/plan-view/TodayLayout";
 import { currentMonthISO } from "@/lib/date";
-import { Button } from "@/ui/Button/Button";
-
-// ─── Skeleton ────────────────────────────────────────────────────────────────
-
-function TodaySkeleton() {
-  return (
-    <main aria-busy="true" style={{ padding: "1.5rem" }}>
-      {[1, 2, 3, 4].map((i) => (
-        <div
-          key={i}
-          style={{
-            height: "2.5rem",
-            borderRadius: "0.5rem",
-            background: "var(--color-paper-alt)",
-            marginBottom: "0.75rem",
-          }}
-        />
-      ))}
-    </main>
-  );
-}
+import { LoadSkeleton, LoadError } from "@/features/plan-view/LoadStates";
 
 // ─── TodayView (exported for tests) ──────────────────────────────────────────
 
@@ -36,15 +16,10 @@ export function TodayView({ date }: { date: string }) {
     useTasksStore.getState().loadTasks();
   }, []);
 
-  if (status === "loading" || status === "idle") return <TodaySkeleton />;
+  if (status === "loading" || status === "idle") return <LoadSkeleton />;
 
   if (status === "error") {
-    return (
-      <div role="alert" style={{ padding: "1.5rem" }}>
-        載入失敗
-        <Button variant="ghost" size="sm" onClick={() => useTasksStore.getState().reload()}>重試</Button>
-      </div>
-    );
+    return <LoadError onRetry={() => useTasksStore.getState().reload()} />;
   }
 
   // status === "ready"

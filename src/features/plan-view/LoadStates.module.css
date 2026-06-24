@@ -1,0 +1,31 @@
+.skeleton {
+  padding: var(--space-6);
+}
+.bar {
+  height: 2.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-alt);
+  margin-bottom: var(--space-3);
+}
+
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  max-width: 32rem;
+  margin: var(--space-8) auto;
+  padding: var(--space-6);
+  font-family: var(--font-sans);
+}
+.errorTitle {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.errorSub {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-ink-soft);
+}
