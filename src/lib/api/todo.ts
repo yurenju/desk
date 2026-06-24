@@ -33,6 +33,7 @@ export interface TodoPatch {
   status?: TaskStatus;
   daily_priority?: string | null;
   monthly_priority?: string | null;
+  position?: string | null;
   done_on?: string | null;
   is_adhoc?: "true" | "false";
   title?: string;
