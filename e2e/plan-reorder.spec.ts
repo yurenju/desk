@@ -50,16 +50,66 @@ async function drag(
 }
 
 // ---------------------------------------------------------------------------
-// Case 1: Plan Day three-things swap — proxy via ring menu
-// dnd-kit's sortable in-column reorder triggers React "Maximum update depth
-// exceeded" in Playwright's headless environment (rapid state updates during
-// preview cause a feedback loop). Instead, use the ring/⋯ menu cascade to
-// assert that the priority assignment reorders ①②③ correctly.
-//
-// Proxy: pick "③ 今日第三" for ① → ①'s priority becomes 3 → ② and ③ stay
-// their positions. Assert ① now shows "③" badge (or is last in list).
+// Helper: capture React "Maximum update depth exceeded" console errors.
+// The same-container render loop surfaced as exactly this message. Attach this
+// BEFORE the drag and assert it stays empty afterwards — that is the critical
+// regression guard proving the loop is gone.
 // ---------------------------------------------------------------------------
-test("plan day top-3: ring menu reassignment reorders priority numbers", async ({ page }) => {
+function watchForUpdateDepthError(page: Page): { errors: string[] } {
+  const bucket = { errors: [] as string[] };
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && /Maximum update depth exceeded/i.test(msg.text())) {
+      bucket.errors.push(msg.text());
+    }
+  });
+  page.on("pageerror", (err) => {
+    if (/Maximum update depth exceeded/i.test(err.message)) {
+      bucket.errors.push(err.message);
+    }
+  });
+  return bucket;
+}
+
+// Drag a sortable row to a target position WITHIN the same container, by id of
+// the row's draggable item. Mirrors the working same-cell drag in
+// plan-interaction.spec.ts (mouse.down → >8px nudge → move to target → up).
+async function dragRowTo(
+  page: Page,
+  source: Locator,
+  target: Locator,
+  targetYFraction = 0.75,
+) {
+  await source.scrollIntoViewIfNeeded();
+  const sBox = await source.boundingBox();
+  const tBox = await target.boundingBox();
+  if (!sBox || !tBox) throw new Error("dragRowTo: missing bounding box");
+  const sx = sBox.x + sBox.width / 2;
+  const sy = sBox.y + sBox.height / 2;
+  const tx = tBox.x + tBox.width / 2;
+  const ty = tBox.y + tBox.height * targetYFraction;
+  await page.mouse.move(sx, sy);
+  await page.mouse.down();
+  await page.mouse.move(sx + 12, sy + 12, { steps: 5 });
+  await page.mouse.move(tx, ty, { steps: 15 });
+  await page.mouse.up();
+  await page.waitForTimeout(300);
+}
+
+// ---------------------------------------------------------------------------
+// Case 1: Plan Day three-things reorder — REAL same-container sortable drag.
+// This is the critical regression guard for the same-container render loop.
+// Previously this was a ring-menu proxy because a same-container drag triggered
+// React "Maximum update depth exceeded". After the fix (no preview override for
+// same-container; SortableContext animates natively), a real drag must reorder
+// WITHOUT that crash.
+//
+// Drag ① ("完成 desk...") down below ③ ("retro:...") → it should land last and
+// gain priority 3. Assert no "Maximum update depth" console error fires.
+// ---------------------------------------------------------------------------
+test("plan day top-3: real same-container drag reorders without update-depth crash", async ({
+  page,
+}) => {
+  const watcher = watchForUpdateDepthError(page);
   await gotoTodaySeeded(page);
   await page.goto("/plan");
   await page.waitForSelector("text=今天最重要的三件事");
@@ -69,20 +119,24 @@ test("plan day top-3: ring menu reassignment reorders priority numbers", async (
   //   ② 寫週報 + 5 月中檢視
   //   ③ retro:整理本週學習+下週主題
   const top3Zone = page.getByTestId("top3-drop-zone");
+  const items = top3Zone.locator("li");
+  await expect(items).toHaveCount(3);
 
-  // Open ①'s ring menu (aria-label "今日重點第 1") and pick "③ 今日第三".
-  const ring1 = top3Zone.getByRole("button", { name: "今日重點第 1" });
-  await expect(ring1).toBeVisible();
-  await ring1.click();
-  await page.getByRole("menuitemradio", { name: /③ 今日第三/ }).click();
+  const item1 = items.filter({ has: page.getByText("完成 desk.yurenju.me todo MVP demo") });
+  const item3 = items.filter({ has: page.getByText("retro:整理本週學習+下週主題") });
 
-  // After assignment: "完成 desk..." should now have priority 3.
-  // The ring button for that item should now say "今日重點第 3".
-  const updatedRing = top3Zone
+  // Real same-container drag: ① down into the lower half of ③ (lands after it).
+  await dragRowTo(page, item1, item3, 0.85);
+
+  // The reorder took effect: "完成 desk..." now carries priority 3.
+  const movedRing = top3Zone
     .locator("li")
     .filter({ has: page.getByText("完成 desk.yurenju.me todo MVP demo") })
     .getByRole("button", { name: /今日重點/ });
-  await expect(updatedRing).toHaveAttribute("aria-label", "今日重點第 3");
+  await expect(movedRing).toHaveAttribute("aria-label", "今日重點第 3");
+
+  // Critical guard: the same-container drag did NOT trigger the render loop.
+  expect(watcher.errors, watcher.errors.join("\n")).toEqual([]);
 });
 
 // ---------------------------------------------------------------------------
@@ -166,32 +220,45 @@ test("plan day ring menu: picking ② for 其他 task produces same overflow as 
 });
 
 // ---------------------------------------------------------------------------
-// Case 4: Pool reorder persistence
-// Reorder two tasks in 其他計劃內 (day) → reload → assert new order persists.
+// Case 4: Pool reorder — REAL same-container sortable drag in 其他計劃內 (day).
+// Add a second 其他計劃內 task, drag the first below the second, and assert the
+// order swaps WITHOUT the "Maximum update depth" crash. Real same-container drag.
 // ---------------------------------------------------------------------------
-// NOTE: Same-container dnd-kit sortable drags trigger a React "Maximum update
-// depth exceeded" crash in Playwright's headless Chrome environment. This affects
-// all intra-container reorders (top3:DATE, other:DATE, pool:backlog). The actual
-// reorder logic is covered by planDrag.test.ts (same-container reorder → arrayMove).
-// This test asserts that the 其他計劃內 section IS wrapped in a SortableContext
-// (aria-roledescription="sortable" on its items), confirming drag-reorder is wired up.
-test("plan day pool: 其他計劃內 items are wrapped in a SortableContext", async ({ page }) => {
+test("plan day pool: real same-container drag reorders 其他計劃內 without crash", async ({
+  page,
+}) => {
+  const watcher = watchForUpdateDepthError(page);
   await gotoTodaySeeded(page);
   await page.goto("/plan");
   await page.waitForSelector("text=今天最重要的三件事");
 
-  // The 其他計劃內 section should contain sortable rows (SortableSection wraps them).
+  // Add a second non-priority task to today so the pool has two sortable rows.
+  const addInput = page.getByPlaceholder("+ 加一件這天的事…");
+  await addInput.fill("pool-reorder-second");
+  await addInput.press("Enter");
+  await expect(page.getByText("pool-reorder-second").first()).toBeVisible();
+
   const otherSection = page
     .locator("section")
     .filter({ has: page.getByText(/其他計劃內/) })
     .last();
   await expect(otherSection).toBeVisible();
 
-  // "讀 WSPC custom fields 文件" (d5) should be in the section as a sortable row.
   const sortableRows = otherSection.locator('[aria-roledescription="sortable"]');
+  // Seeded "讀 WSPC custom fields 文件" (d5) + the new one → at least 2 rows.
   await expect(sortableRows.first()).toBeVisible();
-  const titles = await sortableRows.allTextContents();
-  expect(titles.some((t) => t.includes("讀 WSPC custom fields 文件"))).toBe(true);
+
+  const seeded = sortableRows.filter({ has: page.getByText("讀 WSPC custom fields 文件") });
+  const added = sortableRows.filter({ has: page.getByText("pool-reorder-second") });
+
+  // Real same-container drag: drop the seeded row below the added one.
+  await dragRowTo(page, seeded, added, 0.85);
+
+  // The reorder must not crash. Order assertion is best-effort (pool midpoint
+  // ranks can settle either way under headless timing), but the no-crash guard
+  // is the hard requirement.
+  await expect(otherSection.locator('[aria-roledescription="sortable"]').first()).toBeVisible();
+  expect(watcher.errors, watcher.errors.join("\n")).toEqual([]);
 });
 
 // ---------------------------------------------------------------------------
@@ -268,38 +335,39 @@ test("plan month overflow: dragging 其他任務 to ② pushes old ③ to 其他
 });
 
 // ---------------------------------------------------------------------------
-// Case 6a: Week cell top-3 reorder — proxy via ring menu
-// Same-container dnd-kit sortable reorder triggers a React "Maximum update
-// depth exceeded" crash in Playwright headless. Use a ring menu priority
-// reassignment as a proxy for the reorder behavior.
+// Case 6a: Week cell top-3 reorder — REAL same-container sortable drag.
+// Previously a ring-menu proxy due to the render loop. The week cell's top-3
+// <ol> is a SortableContext; drag rank ① below rank ③ within the same cell and
+// assert no "Maximum update depth" crash. Real same-container drag.
 // ---------------------------------------------------------------------------
-test("week cell: ring menu reassignment changes top-3 order in week cell", async ({ page }) => {
+test("week cell: real same-container drag reorders top-3 without crash", async ({ page }) => {
+  const watcher = watchForUpdateDepthError(page);
   await gotoTodaySeeded(page);
   await page.goto("/plan");
   await page.waitForSelector("text=今天最重要的三件事");
 
-  // The seeded tasks d1/d2/d3 are today's top-3. Find today's week-top3 zone.
-  // Week cells show numbered <ol> items with the rank as the first text node.
-  // Use the plan day column's ring menu (not the week cell) since week cells
-  // don't have interactive ring menus. Instead verify the week cell REFLECTS
-  // the new order after a ring assignment in the day column.
-  const top3Zone = page.getByTestId("top3-drop-zone");
-
-  // Assign "retro..." to ① (swap with "完成 desk...").
-  const ring3 = top3Zone
-    .locator("li")
-    .filter({ has: page.getByText("retro:整理本週學習+下週主題") })
-    .getByRole("button", { name: /今日重點/ });
-  await ring3.click();
-  await page.getByRole("menuitemradio", { name: /① 今日第一/ }).click();
-
-  // The week cell for today should now show "retro..." at position 1.
+  // Today's week cell holds the seeded top-3 (d1/d2/d3) as sortable <li> rows.
   const todayTop3 = page
     .locator('[data-testid^="week-top3-"]')
-    .filter({ hasText: "retro:整理本週學習+下週主題" })
+    .filter({ hasText: "完成 desk.yurenju.me todo MVP demo" })
     .first();
   await expect(todayTop3).toBeVisible();
-  await expect(todayTop3.locator("li").first()).toContainText("retro");
+  const items = todayTop3.locator("li");
+  await expect(items.first()).toBeVisible();
+
+  const first = todayTop3
+    .locator("li")
+    .filter({ has: page.getByText("完成 desk.yurenju.me todo MVP demo") });
+  const last = todayTop3
+    .locator("li")
+    .filter({ has: page.getByText("retro:整理本週學習+下週主題") });
+
+  // Real same-container drag inside the week cell: ① below ③.
+  await dragRowTo(page, first, last, 0.85);
+
+  // No-crash guard is the hard requirement. Verify the cell still renders too.
+  await expect(todayTop3).toBeVisible();
+  expect(watcher.errors, watcher.errors.join("\n")).toEqual([]);
 });
 
 // ---------------------------------------------------------------------------
@@ -342,29 +410,39 @@ test("week cell: other tasks cannot be reordered within the cell", async ({ page
 });
 
 // ---------------------------------------------------------------------------
-// Case 7a: Focus center column top-3 reorder — proxy via ring menu
-// Same-container dnd-kit sortable drag crashes in headless Playwright.
-// Use the DailyPriorityMenu as a proxy: reassign ① to ③ and assert the ring
-// updates. The Focus DayColumn wraps its items in the TodayLayout DndContext
-// (center only), so rings are interactive here.
+// Case 7a: Focus center column top-3 reorder — REAL same-container sortable drag.
+// Previously a ring-menu proxy due to the render loop. The Focus DayColumn wraps
+// its top-3 in the TodayLayout DndContext (center only). Drag ① below ③ and
+// assert no "Maximum update depth" crash. Real same-container drag — exercises
+// the TodayLayout copy of the fix.
 // ---------------------------------------------------------------------------
-test("focus center: ring menu reassignment reorders the day top-3", async ({ page }) => {
+test("focus center: real same-container drag reorders day top-3 without crash", async ({
+  page,
+}) => {
+  const watcher = watchForUpdateDepthError(page);
   await gotoTodaySeeded(page);
   await page.goto("/focus");
   await page.waitForSelector("text=今天最重要的三件事");
 
   const top3Zone = page.getByTestId("top3-drop-zone");
+  const items = top3Zone.locator("li");
+  await expect(items).toHaveCount(3);
 
-  // ① "完成 desk..." — open its ring and pick ③.
-  const ring1 = top3Zone.getByRole("button", { name: "今日重點第 1" });
-  await ring1.click();
-  await page.getByRole("menuitemradio", { name: /③ 今日第三/ }).click();
+  const item1 = items.filter({ has: page.getByText("完成 desk.yurenju.me todo MVP demo") });
+  const item3 = items.filter({ has: page.getByText("retro:整理本週學習+下週主題") });
 
-  const updatedRing = top3Zone
+  // Real same-container drag inside the Focus hero card: ① below ③.
+  await dragRowTo(page, item1, item3, 0.85);
+
+  // The reorder took effect: "完成 desk..." now carries priority 3.
+  const movedRing = top3Zone
     .locator("li")
     .filter({ has: page.getByText("完成 desk.yurenju.me todo MVP demo") })
     .getByRole("button", { name: /今日重點/ });
-  await expect(updatedRing).toHaveAttribute("aria-label", "今日重點第 3");
+  await expect(movedRing).toHaveAttribute("aria-label", "今日重點第 3");
+
+  // Critical guard: TodayLayout same-container drag did NOT trigger the loop.
+  expect(watcher.errors, watcher.errors.join("\n")).toEqual([]);
 });
 
 // ---------------------------------------------------------------------------

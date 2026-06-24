@@ -5,8 +5,11 @@ import {
   buildDayContainers,
   buildMonthContainers,
   buildWeekContainers,
+  commitFinalOrder,
   computePreview,
   containerId,
+  dragOverPreview,
+  isSameContainerDrag,
   parseContainerId,
   planCommit,
   resolveOver,
@@ -80,10 +83,84 @@ describe("computePreview overflow", () => {
     expect(pv.get(other)).toEqual(["day:p3", "day:o2"]);
   });
 
-  it("same-container reorder is a plain arrayMove", () => {
+  it("same-container reorder produces NO preview override (would loop otherwise)", () => {
+    // SortableContext animates same-container reorders natively; a preview here
+    // fights its transforms → "Maximum update depth exceeded". computePreview
+    // must return an empty map for a same-container move.
     const pv = computePreview(base, "day:p1", top3, top3, 2);
-    expect(pv.get(top3)).toEqual(["day:p2", "day:p3", "day:p1"]);
+    expect(pv.size).toBe(0);
+    expect(pv.has(top3)).toBe(false);
     expect(pv.has(other)).toBe(false);
+  });
+});
+
+describe("dragOverPreview — same vs cross container", () => {
+  const top3 = containerId({ kind: "top3", date: DATE });
+  const other = containerId({ kind: "other", date: DATE });
+  const base = new Map<string, string[]>([
+    [top3, ["day:p1", "day:p2", "day:p3"]],
+    [other, ["day:o1", "day:o2"]],
+  ]);
+
+  it("returns null for a same-container move (caller skips setPreview)", () => {
+    const src = { sortableId: "day:p1", container: top3 };
+    expect(isSameContainerDrag(src, top3)).toBe(true);
+    const pv = dragOverPreview(base, src, { container: top3, index: 2 });
+    expect(pv).toBeNull();
+  });
+
+  it("returns the cross-container overflow preview unchanged", () => {
+    const src = { sortableId: "day:o1", container: other };
+    expect(isSameContainerDrag(src, top3)).toBe(false);
+    const pv = dragOverPreview(base, src, { container: top3, index: 1 });
+    expect(pv).not.toBeNull();
+    // Same result computePreview produced before the refactor.
+    expect(pv?.get(top3)).toEqual(["day:p1", "day:o1", "day:p2"]);
+    expect(pv?.get(other)).toEqual(["day:p3", "day:o2"]);
+  });
+});
+
+describe("commitFinalOrder — drop index handling", () => {
+  const top3 = containerId({ kind: "top3", date: DATE });
+  const other = containerId({ kind: "other", date: DATE });
+  const base = new Map<string, string[]>([
+    [top3, ["day:p1", "day:p2", "day:p3"]],
+    [other, ["day:o1", "day:o2"]],
+  ]);
+
+  it("same-container drop computes arrayMove(base, oldIndex, newIndex)", () => {
+    // Drag day:p1 (index 0) to index 2 — no preview exists for same-container.
+    const src = { sortableId: "day:p1", container: top3 };
+    const order = commitFinalOrder(base, new Map(), src, { container: top3, index: 2 });
+    expect(order).toEqual(["day:p2", "day:p3", "day:p1"]);
+    // planCommit then reads the NEW index (rank 3), not the old one.
+    const plan = planCommit({
+      over: { container: top3, index: 2 },
+      finalOrder: order,
+      activeId: "day:p1",
+      activeTask: task("p1", { daily_priority: "1" }),
+    });
+    expect(plan).toEqual({ kind: "rank", taskId: "p1", rank: 3, axis: "daily", scope: DATE });
+  });
+
+  it("same-container drop to head computes the right order", () => {
+    const src = { sortableId: "day:p3", container: top3 };
+    const order = commitFinalOrder(base, new Map(), src, { container: top3, index: 0 });
+    expect(order).toEqual(["day:p3", "day:p1", "day:p2"]);
+  });
+
+  it("cross-container drop uses the live preview order", () => {
+    const src = { sortableId: "day:o1", container: other };
+    const preview = computePreview(base, "day:o1", other, top3, 1);
+    const order = commitFinalOrder(base, preview, src, { container: top3, index: 1 });
+    expect(order).toEqual(["day:p1", "day:o1", "day:p2"]);
+  });
+
+  it("cross-container drop with no preview inserts active at the resolved index", () => {
+    // Hovering an unchanged container (no preview entry) → insert into base order.
+    const src = { sortableId: "day:o1", container: other };
+    const order = commitFinalOrder(base, new Map(), src, { container: top3, index: 0 });
+    expect(order).toEqual(["day:o1", "day:p1", "day:p2", "day:p3"]);
   });
 });
 

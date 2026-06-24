@@ -288,6 +288,15 @@ export function resolveOver(
  * the active item is not already in it, inserting displaces the 3rd member into
  * the over-day's "other" container HEAD — previewed live.
  *
+ * IMPORTANT — same-container is intentionally a no-op here. A SAME-container
+ * reorder must NOT produce a preview override: SortableContext already animates
+ * the reorder natively via per-item transforms. If we ALSO reordered its
+ * rendered children through a preview override, the two fight — the reordered
+ * DOM makes dnd-kit re-fire onDragOver with a new index → setPreview again →
+ * "Maximum update depth exceeded" (infinite render loop). So callers gate on
+ * `isSameContainerDrag` and skip computePreview for same-container; the drop
+ * commit (see `commitFinalOrder`) computes the new index via arrayMove instead.
+ *
  * Returns only the containers whose order changed.
  */
 export function computePreview(
@@ -302,10 +311,8 @@ export function computePreview(
   const overIds = base.get(overContainer) ?? [];
 
   if (fromContainer === overContainer) {
-    // Same-container reorder: plain arrayMove.
-    const oldIndex = fromIds.indexOf(activeId);
-    if (oldIndex < 0) return preview;
-    preview.set(overContainer, arrayMove(fromIds, oldIndex, overIndex));
+    // Same-container reorder: NO preview override (would loop — see doc above).
+    // The drop commit derives the new index from arrayMove in `commitFinalOrder`.
     return preview;
   }
 
@@ -348,6 +355,72 @@ export function computePreview(
   inserted.splice(Math.min(overIndex, inserted.length), 0, activeId);
   preview.set(overContainer, inserted);
   return preview;
+}
+
+// ---------------------------------------------------------------------------
+// Shared same-vs-cross drag decision. PlanLayout and TodayLayout both call these
+// from onDragOver / onDragEnd so the logic can't drift between the two surfaces.
+// ---------------------------------------------------------------------------
+
+/** The active row's source container while an in-column drag is in flight. */
+export interface DragSource {
+  sortableId: string;
+  container: string;
+}
+
+/**
+ * Is this drag staying inside its source container? Same-container reorders are
+ * the ones that must NOT get a preview override (they loop — see computePreview).
+ */
+export function isSameContainerDrag(src: DragSource, overContainer: string): boolean {
+  return src.container === overContainer;
+}
+
+/**
+ * onDragOver: decide the preview override for the current hover. Returns `null`
+ * for a SAME-container move (caller must clear any stale preview and let
+ * SortableContext animate natively) — or the cross-container preview map
+ * otherwise. Keeps the loop-prone same-container branch out of every caller.
+ */
+export function dragOverPreview(
+  base: ContainerMap,
+  src: DragSource,
+  resolved: { container: string; index: number },
+): ContainerMap | null {
+  if (isSameContainerDrag(src, resolved.container)) return null;
+  return computePreview(base, src.sortableId, src.container, resolved.container, resolved.index);
+}
+
+/**
+ * onDragEnd: compute the over-container's final sortable order (WITH the active
+ * row inserted), to hand to `planCommit`.
+ *
+ * - SAME-container drop: there is NO preview (we suppressed it), so derive the
+ *   new order from `arrayMove(base, oldIndex, newIndex)`. Feeding the base order
+ *   straight through would make planCommit read the OLD index → wrong rank /
+ *   neighbours. `newIndex` is `resolved.index` (where the pointer released).
+ * - CROSS-container drop: use the live preview the drag built (it already has
+ *   the active row inserted, plus any overflow displacement), or fall back to
+ *   inserting the active row into the base order at `resolved.index`.
+ */
+export function commitFinalOrder(
+  base: ContainerMap,
+  preview: ContainerMap,
+  src: DragSource,
+  resolved: { container: string; index: number },
+): string[] {
+  if (isSameContainerDrag(src, resolved.container)) {
+    const ids = base.get(resolved.container) ?? [];
+    const oldIndex = ids.indexOf(src.sortableId);
+    if (oldIndex < 0) return ids;
+    const newIndex = Math.min(resolved.index, ids.length - 1);
+    return arrayMove(ids, oldIndex, newIndex);
+  }
+  const order = preview.get(resolved.container) ?? base.get(resolved.container) ?? [];
+  if (order.includes(src.sortableId)) return order;
+  const without = order.filter((id) => id !== src.sortableId);
+  without.splice(Math.min(resolved.index, without.length), 0, src.sortableId);
+  return without;
 }
 
 // The action the DndContext should commit on drop. The handler maps these to

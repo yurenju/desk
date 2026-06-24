@@ -22,9 +22,10 @@ import { DragEnabledProvider } from "./dragContext";
 import { DragOrderingProvider } from "./useDragOrdering";
 import {
   buildDayContainers,
+  commitFinalOrder,
   commitPlan,
-  computePreview,
-  isSortableContainerId,
+  dragOverPreview,
+  isSortableHit,
   makeCollisionDetection,
   planCommit,
   resolveOver,
@@ -90,28 +91,25 @@ export function TodayLayout({ allTasks, selectedDate, today, month }: TodayLayou
     const src = dragSource.current;
     if (!src) return;
     const overId = e.over ? String(e.over.id) : null;
-    if (!overId || !isSortableContainerId(overId)) {
+    // over.id is either a container droppable (top3:DATE) OR a sortable member
+    // row (day:<id>) when hovering directly over a sibling. Both are valid
+    // sortable hits; isSortableContainerId alone would miss the row case and
+    // wrongly clear the preview, dropping the reorder.
+    if (!overId || !isSortableHit(overId, sortableMembers)) {
       setPreview((prev) => (prev.size ? new Map() : prev));
       return;
     }
     const resolved = resolveOver(overId, baseContainers);
     if (!resolved) return;
-    const next = computePreview(
-      baseContainers,
-      src.sortableId,
-      src.container,
-      resolved.container,
-      resolved.index,
-    );
+    // Same-container moves return null: clear any stale preview and let
+    // SortableContext animate the reorder natively (a preview override here
+    // would fight the native transforms → infinite render loop).
+    const next = dragOverPreview(baseContainers, src, resolved);
+    if (next === null) {
+      setPreview((prev) => (prev.size ? new Map() : prev));
+      return;
+    }
     setPreview(next);
-  }
-
-  // Insert `activeId` into `order` at `index` (used when the drop lands on a
-  // container the preview never touched — e.g. dropping straight back).
-  function insertActive(order: string[], activeId: string, index: number): string[] {
-    const without = order.filter((id) => id !== activeId);
-    without.splice(Math.min(index, without.length), 0, activeId);
-    return without;
   }
 
   function handleDragEnd(e: DragEndEvent) {
@@ -121,17 +119,17 @@ export function TodayLayout({ allTasks, selectedDate, today, month }: TodayLayou
 
     // In-column sortable drop: commit via the shared planner, then clear preview.
     // Focus has no Slice-4 cross-column zones, so this is the only drop path.
-    if (src && e.over && isSortableContainerId(String(e.over.id))) {
+    // Accept both a container droppable and a sortable member row as the over id.
+    if (src && e.over && isSortableHit(String(e.over.id), sortableMembers)) {
       const resolved = resolveOver(String(e.over.id), baseContainers);
       const droppedTask = allTasks.find((t) => t.id === rowTaskId(src.sortableId));
       if (resolved && droppedTask) {
-        const finalOrder =
-          preview.get(resolved.container) ?? baseContainers.get(resolved.container) ?? [];
+        // Same-container: arrayMove(base, oldIndex, newIndex) (no preview exists).
+        // Cross-container: the live preview order (active already inserted).
+        const finalOrder = commitFinalOrder(baseContainers, preview, src, resolved);
         const plan = planCommit({
           over: resolved,
-          finalOrder: finalOrder.includes(src.sortableId)
-            ? finalOrder
-            : insertActive(finalOrder, src.sortableId, resolved.index),
+          finalOrder,
           activeId: src.sortableId,
           activeTask: droppedTask,
         });
