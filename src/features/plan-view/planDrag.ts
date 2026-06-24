@@ -7,7 +7,8 @@
 
 import { arrayMove } from "@dnd-kit/sortable";
 import type { Task } from "@/lib/types";
-import { tasksOnDate, byPosition } from "@/lib/tasks";
+import { tasksOnDate, tasksOnMonth, dayInWeek, byPosition } from "@/lib/tasks";
+import { weekOf } from "@/lib/date";
 
 // Sortable item ids reuse the existing day-row namespace: "day:<taskId>".
 // Recover the real task id (mirrors PlanLayout.resolveTaskId but scoped to the
@@ -25,6 +26,7 @@ export type Container =
   | { kind: "top3"; date: string }
   | { kind: "other"; date: string }
   | { kind: "adhoc"; date: string }
+  | { kind: "monthTop3"; month: string }
   | { kind: "poolBacklog" }
   | { kind: "poolMonth"; month: string }
   | { kind: "weekTop3"; date: string };
@@ -37,6 +39,8 @@ export function containerId(c: Container): string {
       return `other:${c.date}`;
     case "adhoc":
       return `adhoc:${c.date}`;
+    case "monthTop3":
+      return `mtop3:${c.month}`;
     case "poolBacklog":
       return "pool:backlog";
     case "poolMonth":
@@ -50,6 +54,8 @@ export function parseContainerId(id: string): Container | null {
   if (id === "pool:backlog") return { kind: "poolBacklog" };
   let m = /^pool:month:(\d{4}-\d{2})$/.exec(id);
   if (m) return { kind: "poolMonth", month: m[1] };
+  m = /^mtop3:(\d{4}-\d{2})$/.exec(id);
+  if (m) return { kind: "monthTop3", month: m[1] };
   m = /^week:(\d{4}-\d{2}-\d{2}):top3$/.exec(id);
   if (m) return { kind: "weekTop3", date: m[1] };
   m = /^(top3|other|adhoc):(\d{4}-\d{2}-\d{2})$/.exec(id);
@@ -89,6 +95,53 @@ export function buildDayContainers(allTasks: Task[], date: string): ContainerMap
   map.set(containerId({ kind: "top3", date }), top3.map((t) => `day:${t.id}`));
   map.set(containerId({ kind: "other", date }), other.map((t) => `day:${t.id}`));
   map.set(containerId({ kind: "adhoc", date }), adhoc.map((t) => `day:${t.id}`));
+  return map;
+}
+
+/**
+ * Derive the Month column's two sortable containers (monthTop3 / poolMonth "其他
+ * 任務") from the task list, mirroring MonthColumn's own derivation so the
+ * DndContext's base map matches what the column renders. Ids are namespaced
+ * "month:<taskId>". `selectedDate` fixes the viewed week, which MonthColumn uses
+ * to carve "已排入本週" out of the 其他任務 pool.
+ */
+export function buildMonthContainers(
+  allTasks: Task[],
+  month: string,
+  selectedDate: string,
+): ContainerMap {
+  const week = weekOf(selectedDate);
+  const entries = tasksOnMonth(allTasks, month);
+
+  const top3 = entries
+    .filter((e) => e.kind === "primary" && e.task.custom_fields.monthly_priority)
+    .sort(
+      (a, b) =>
+        Number(a.task.custom_fields.monthly_priority) -
+        Number(b.task.custom_fields.monthly_priority),
+    )
+    .map((e) => e.task);
+
+  // 其他任務: outside top3, not scheduled in the viewed week, undone, primary;
+  // adhoc sinks below 計劃內, tiebreak byPosition. Mirrors MonthColumn exactly.
+  const rest = entries.filter(
+    (e) => !(e.kind === "primary" && e.task.custom_fields.monthly_priority),
+  );
+  const remaining = rest.filter((e) => dayInWeek(e.task, week) === null);
+  const undone = remaining.filter((e) => e.task.status !== "done");
+  const others = undone
+    .filter((e) => e.kind === "primary")
+    .sort((a, b) => {
+      const adhocDelta =
+        Number(a.task.custom_fields.is_adhoc === "true") -
+        Number(b.task.custom_fields.is_adhoc === "true");
+      return adhocDelta !== 0 ? adhocDelta : byPosition(a.task, b.task);
+    })
+    .map((e) => e.task);
+
+  const map: ContainerMap = new Map();
+  map.set(containerId({ kind: "monthTop3", month }), top3.map((t) => `month:${t.id}`));
+  map.set(containerId({ kind: "poolMonth", month }), others.map((t) => `month:${t.id}`));
   return map;
 }
 
@@ -159,7 +212,8 @@ export function computePreview(
   preview.set(fromContainer, nextFrom);
 
   const over = parseContainerId(overContainer);
-  const isTop3 = over?.kind === "top3" || over?.kind === "weekTop3";
+  const isTop3 =
+    over?.kind === "top3" || over?.kind === "weekTop3" || over?.kind === "monthTop3";
 
   // Overflow: top3 already full and active isn't already a member.
   if (isTop3 && overIds.length >= 3 && !overIds.includes(activeId)) {
@@ -169,13 +223,20 @@ export function computePreview(
     const displaced = inserted[3]; // the 4th now overflows
     const keep = inserted.slice(0, 3);
     preview.set(overContainer, keep);
-    if (over.kind === "top3") {
-      // Displaced lands at the HEAD of this day's "other".
-      const otherCid = containerId({ kind: "other", date: over.date });
-      const otherIds = (preview.get(otherCid) ?? base.get(otherCid) ?? []).filter(
+    // Displaced lands at the HEAD of this column's pool: the day's "other" for a
+    // day top3, the month's poolMonth ("其他任務") for a month top3. weekTop3 has
+    // no in-column pool, so the displaced row simply leaves the visible set.
+    const poolCid =
+      over.kind === "top3"
+        ? containerId({ kind: "other", date: over.date })
+        : over.kind === "monthTop3"
+          ? containerId({ kind: "poolMonth", month: over.month })
+          : null;
+    if (poolCid) {
+      const poolIds = (preview.get(poolCid) ?? base.get(poolCid) ?? []).filter(
         (id) => id !== displaced,
       );
-      preview.set(otherCid, [displaced, ...otherIds]);
+      preview.set(poolCid, [displaced, ...poolIds]);
     }
     return preview;
   }
@@ -194,15 +255,21 @@ export type CommitPlan =
   // Land in a three-things container at 1-based `rank`.
   | { kind: "rank"; taskId: string; rank: 1 | 2 | 3; axis: "daily" | "monthly"; scope: string }
   // Land in a pool between prev/next neighbours (real task ids, or null at ends).
+  // The demotion axis + scope distinguish the day "other"/"adhoc" pools (daily,
+  // scope = date) from the month "其他任務" pool (monthly, scope = month).
   | {
       kind: "pool";
       taskId: string;
-      date: string;
+      /** "daily" → day other/adhoc; "monthly" → month 其他任務. */
+      axis: "daily" | "monthly";
+      /** date (daily) or month (monthly). */
+      scope: string;
       prevId: string | null;
       nextId: string | null;
-      /** true when the task carried a priority and must be demoted first. */
+      /** true when the task carried a priority on this axis and must be demoted first. */
       hadPriority: boolean;
-      /** true when the task came from another column and must be scheduled first. */
+      /** true when the task came from another column and must be scheduled first.
+       *  Only ever set for the daily axis; month-pool reorder never schedules a day. */
       crossColumn: boolean;
     };
 
@@ -228,6 +295,11 @@ export function planCommit(args: {
     return { kind: "rank", taskId, rank, axis: "daily", scope: container.date };
   }
 
+  if (container.kind === "monthTop3") {
+    const rank = (Math.min(idx < 0 ? over.index : idx, 2) + 1) as 1 | 2 | 3;
+    return { kind: "rank", taskId, rank, axis: "monthly", scope: container.month };
+  }
+
   if (container.kind === "other" || container.kind === "adhoc") {
     const prevId = idx > 0 ? rowTaskId(finalOrder[idx - 1]) : null;
     const nextId = idx >= 0 && idx < finalOrder.length - 1 ? rowTaskId(finalOrder[idx + 1]) : null;
@@ -236,11 +308,29 @@ export function planCommit(args: {
     return {
       kind: "pool",
       taskId,
-      date: container.date,
+      axis: "daily",
+      scope: container.date,
       prevId,
       nextId,
       hadPriority,
       crossColumn,
+    };
+  }
+
+  if (container.kind === "poolMonth") {
+    const prevId = idx > 0 ? rowTaskId(finalOrder[idx - 1]) : null;
+    const nextId = idx >= 0 && idx < finalOrder.length - 1 ? rowTaskId(finalOrder[idx + 1]) : null;
+    const hadPriority = Boolean(activeTask.custom_fields.monthly_priority);
+    // Month-pool reorder stays within the month column — never schedules a day.
+    return {
+      kind: "pool",
+      taskId,
+      axis: "monthly",
+      scope: container.month,
+      prevId,
+      nextId,
+      hadPriority,
+      crossColumn: false,
     };
   }
 

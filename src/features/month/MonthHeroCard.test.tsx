@@ -17,7 +17,10 @@ it("sets monthly priority via the ring menu and evicts the collider", async () =
     today: "2026-05-22", status: "ready", error: null,
   });
   const top3 = useTasksStore.getState().tasks;
-  render(<MonthHeroCard top3={top3} month="2026-05" selectedDate="2026-05-22" />);
+  const taskById = new Map(top3.map((t) => [`month:${t.id}`, t]));
+  render(
+    <MonthHeroCard top3={top3} month="2026-05" selectedDate="2026-05-22" taskById={taskById} />,
+  );
   // open task 乙's priority ring (the one currently showing "2")
   await userEvent.click(screen.getByLabelText("本月重點第 2"));
   await userEvent.click(await screen.findByRole("menuitemradio", { name: "① 本月第一" }));
@@ -36,7 +39,13 @@ it("promotes a hero task into the day's top-3", async () => {
     ],
     today: "2026-05-22", status: "ready", error: null,
   });
-  render(<MonthHeroCard top3={useTasksStore.getState().tasks} month="2026-05" selectedDate="2026-05-22" />);
+  {
+    const tasks = useTasksStore.getState().tasks;
+    const taskById = new Map(tasks.map((t) => [`month:${t.id}`, t]));
+    render(
+      <MonthHeroCard top3={tasks} month="2026-05" selectedDate="2026-05-22" taskById={taskById} />,
+    );
+  }
   await userEvent.click(screen.getByLabelText("更多動作"));
   await userEvent.click(await screen.findByRole("menuitem", { name: /22 日 · ② 三件事/ }));
   const t = useTasksStore.getState().tasks.find((x) => x.id === "h1")!;

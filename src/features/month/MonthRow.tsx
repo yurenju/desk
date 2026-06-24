@@ -4,7 +4,9 @@ import { Checkbox } from "@/ui/Checkbox";
 import { UnplannedChip } from "@/ui/Chip";
 import { Menu } from "@/ui/Menu";
 import { PriorityRing } from "@/ui/PriorityRing";
+import type { CSSProperties } from "react";
 import { useDraggableRow } from "@/features/plan-view/useDraggableRow";
+import { useSortableRow } from "@/features/plan-view/useSortableRow";
 import { TaskDetailTrigger } from "@/features/task-detail/TaskDetailTrigger";
 import { useMonthRow } from "./useMonthRow";
 import { buildMonthRowMenuItems } from "./monthRowMenu";
@@ -21,7 +23,35 @@ export interface MonthRowProps {
   otherWeekDate?: string;
 }
 
-export function MonthRow({
+// dnd binding shared by both row variants: a ref, drag listeners/attributes, a
+// transform style (sortable only), and the live isDragging flag.
+interface RowDnd {
+  ref: (node: HTMLElement | null) => void;
+  isDragging: boolean;
+  handleProps: Record<string, unknown>;
+  style?: CSSProperties;
+}
+
+/**
+ * 其他任務 pool row: sortable (in-column reorder, registers a SortableContext
+ * member with id "month:<id>"). Calls exactly one dnd hook so registration is
+ * unambiguous.
+ */
+export function SortableMonthRow(props: MonthRowProps) {
+  const { ref, isDragging, handleProps, style } = useSortableRow(`month:${props.task.id}`);
+  return <MonthRowImpl {...props} dnd={{ ref, isDragging, handleProps, style }} />;
+}
+
+/**
+ * Trail / scheduled / done row: plain cross-column draggable (drops onto week
+ * cells / month zone, not a SortableContext member). Also the default `MonthRow`.
+ */
+export function MonthRow(props: MonthRowProps) {
+  const { ref, isDragging, handleProps } = useDraggableRow(`month:${props.task.id}`);
+  return <MonthRowImpl {...props} dnd={{ ref, isDragging, handleProps }} />;
+}
+
+function MonthRowImpl({
   task,
   kind,
   month,
@@ -30,7 +60,8 @@ export function MonthRow({
   showRing,
   weekdayLabel,
   otherWeekDate,
-}: MonthRowProps) {
+  dnd,
+}: MonthRowProps & { dnd: RowDnd }) {
   const isDone = task.status === "done";
   const isAdhoc = task.custom_fields.is_adhoc === "true";
   const delay = kind === "primary" && !isDone ? delayKind(task, month) : "none";
@@ -45,12 +76,13 @@ export function MonthRow({
   // Trail rows (forwarded/dismissed) stay read-only — no ring/menu/edit — but can
   // still be checked complete (same entity), so the checkbox uses `checkable`, not `editable`.
   const checkable = Boolean(interactive);
-  const { ref: dragRef, isDragging, handleProps } = useDraggableRow(`month:${task.id}`);
+  const { ref: dragRef, isDragging, handleProps, style } = dnd;
   const draggable = kind === "primary";
 
   return (
     <div
       ref={draggable ? dragRef : undefined}
+      style={draggable ? style : undefined}
       className={[styles.row, isDone && styles.done, draggable && isDragging && styles.dragging]
         .filter(Boolean)
         .join(" ")}
