@@ -66,6 +66,26 @@ describe("DayColumn copy adapts to the focus date", () => {
   });
 });
 
+describe("DayColumn other-planned ordering", () => {
+  it("renders 其他計劃內 rows in ascending position order", () => {
+    const mk = (id: string, title: string, position: string) => ({
+      id,
+      title,
+      status: "open" as const,
+      created_at: "2026-05-22T00:00:00Z",
+      updated_at: "2026-05-22T00:00:00Z",
+      custom_fields: { scheduled_dates: [MOCK_TODAY], is_adhoc: "false" as const, position },
+    });
+    // Intentionally out of order in the array; byPosition must sort them a<b<c.
+    const mockTasks = [mk("c", "丙", "c"), mk("a", "甲", "a"), mk("b", "乙", "b")];
+    useTasksStore.setState({ tasks: mockTasks, today: MOCK_TODAY, status: "ready", error: null });
+    render(<DayColumn allTasks={mockTasks} selectedDate={MOCK_TODAY} variant="today-hero" />);
+
+    const titles = screen.getAllByText(/甲|乙|丙/).map((el) => el.textContent);
+    expect(titles).toEqual(["甲", "乙", "丙"]);
+  });
+});
+
 describe("DayColumn section assignment", () => {
   it("shows a promoted adhoc task only in Top3, not also in the adhoc section", () => {
     const mockTasks = [

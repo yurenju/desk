@@ -10,6 +10,7 @@ import {
   type CollisionDetection,
   type DragEndEvent,
   type DragMoveEvent,
+  type DragOverEvent,
   type DragStartEvent,
   type Over,
 } from "@dnd-kit/core";
@@ -22,7 +23,17 @@ import { useTasksStore } from "@/store/tasks";
 import { nextFreeDailySlot } from "@/lib/tasks";
 import { useHoverCapable } from "@/lib/useHoverCapable";
 import { DragEnabledProvider, WeekDropHintProvider, type WeekDropHint } from "./dragContext";
+import { DragOrderingProvider } from "./useDragOrdering";
 import { parseDropId } from "./dnd";
+import {
+  buildDayContainers,
+  computePreview,
+  isSortableContainerId,
+  planCommit,
+  resolveOver,
+  rowTaskId,
+  type ContainerMap,
+} from "./planDrag";
 import styles from "./PlanLayout.module.css";
 
 const ACTIVATION = { distance: 8 };
@@ -34,7 +45,30 @@ const ACTIVATION = { distance: 8 };
 // which would silently drop the task; fall back to rectIntersection there.
 const collisionDetection: CollisionDetection = (args) => {
   const within = pointerWithin(args);
-  return within.length > 0 ? within : rectIntersection(args);
+  const hits = within.length > 0 ? within : rectIntersection(args);
+  // A Day-column row is both a sortable (top3/other/adhoc containers + item ids)
+  // AND sits inside the Slice-4 free-form drop zones (drop:day:<date>:*). When an
+  // in-column sortable row is the active drag, prefer the sortable hits so the
+  // live reorder/overflow preview drives, not the coarse top3/other zone. The
+  // zones still win for Slice-4 cross-column drags (backlog/month rows), whose
+  // active id isn't a sortable container member.
+  const activeIsSortableRow = String(args.active.id).startsWith("day:");
+  if (activeIsSortableRow) {
+    const sortableHits = hits.filter((h) => {
+      const id = String(h.id);
+      return isSortableContainerId(id) || id.startsWith("day:");
+    });
+    if (sortableHits.length > 0) return sortableHits;
+    return hits;
+  }
+  // Slice-4 cross-column drag (backlog / month / week row): the sortable
+  // container + item droppables must NOT intercept — the coarse free-form
+  // drop:* zones own these drops. Drop the sortable hits so the zone wins.
+  const zoneHits = hits.filter((h) => {
+    const id = String(h.id);
+    return !isSortableContainerId(id) && !id.startsWith("day:");
+  });
+  return zoneHits.length > 0 ? zoneHits : hits;
 };
 
 /**
@@ -60,6 +94,12 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
   const [tab, setTab] = useState<MobileTab>("month");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [weekHint, setWeekHint] = useState<WeekDropHint | null>(null);
+  // Live in-column sortable preview: containerId -> previewed sortable-id order.
+  const [preview, setPreview] = useState<ContainerMap>(() => new Map());
+  // The sortable id (e.g. "day:<taskId>") and source container of the active row
+  // while an in-column drag is in flight. null when the active drag is a Slice-4
+  // cross-column drag (a free draggable, not part of any SortableContext).
+  const dragSource = useRef<{ sortableId: string; container: string } | null>(null);
   const dragEnabled = useHoverCapable();
 
   // dnd-kit events don't carry the live pointer position, and deriving it from
@@ -75,6 +115,17 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: ACTIVATION }));
 
   const activeTask = activeId ? allTasks.find((t) => t.id === activeId) : null;
+
+  // Base (pre-preview) sortable order for the Day column the Plan view renders.
+  // Rebuilt on every render from the live task list, so it always reflects the
+  // committed state the columns derive from.
+  const baseContainers = buildDayContainers(allTasks, selectedDate);
+
+  // previewOrder hands each SortableContext the order to render: its preview
+  // override if a drag is rearranging it, otherwise the base ids it passed in.
+  const previewOrder = (containerId: string, baseIds: string[]): string[] => {
+    return preview.get(containerId) ?? baseIds;
+  };
 
   // The same task can render as a draggable in several columns at once (e.g. a
   // focus-day task shows in the Day column, the Month "other" list, AND the Week
@@ -98,6 +149,16 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
     const rawId = String(e.active.id);
     // For week-sourced drags, track the real task id so the overlay shows the title.
     setActiveId(resolveTaskId(rawId));
+    // If this row belongs to one of the Day column's sortable containers, record
+    // its source so onDragOver can build live previews. Day rows are namespaced
+    // "day:<taskId>"; everything else is a Slice-4 free draggable.
+    dragSource.current = null;
+    for (const [cid, ids] of baseContainers) {
+      if (ids.includes(rawId)) {
+        dragSource.current = { sortableId: rawId, container: cid };
+        break;
+      }
+    }
   }
 
   // Live "which half am I over" hint for week cells. Only updates state when the
@@ -116,9 +177,91 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
     );
   }
 
+  // Live overflow / reorder preview for the Day column's sortable sections.
+  // Runs only for in-column sortable drags (dragSource set) hovering over a
+  // sortable container; otherwise clears any stale preview so the column snaps
+  // back (e.g. when the pointer leaves the sortable area onto a week cell).
+  function handleDragOver(e: DragOverEvent) {
+    const src = dragSource.current;
+    if (!src) return;
+    const overId = e.over ? String(e.over.id) : null;
+    if (!overId || !isSortableContainerId(overId)) {
+      setPreview((prev) => (prev.size ? new Map() : prev));
+      return;
+    }
+    const resolved = resolveOver(overId, baseContainers);
+    if (!resolved) return;
+    const next = computePreview(
+      baseContainers,
+      src.sortableId,
+      src.container,
+      resolved.container,
+      resolved.index,
+    );
+    setPreview(next);
+  }
+
+  // Insert `activeId` into `order` at `index` (used when the drop lands on a
+  // container the preview never touched — e.g. dropping straight back).
+  function insertActive(order: string[], activeId: string, index: number): string[] {
+    const without = order.filter((id) => id !== activeId);
+    without.splice(Math.min(index, without.length), 0, activeId);
+    return without;
+  }
+
+  // Map a CommitPlan to store mutations. Reused by Tasks 9-12 via the same plan.
+  async function commitPlan(plan: ReturnType<typeof planCommit>) {
+    const store = useTasksStore.getState();
+    if (plan.kind === "rank") {
+      await store.reorderPriority(plan.taskId, String(plan.rank) as "1" | "2" | "3", plan.axis, plan.scope);
+      return;
+    }
+    if (plan.kind === "pool") {
+      // Cross-column source: ensure the task is scheduled on this day first.
+      if (plan.crossColumn) {
+        await store.planScheduleDay(plan.taskId, plan.date);
+        const s = useTasksStore.getState();
+        const dates = s.tasks.find((t) => t.id === plan.taskId)?.custom_fields.scheduled_dates ?? [];
+        if (dates[dates.length - 1] !== plan.date) return; // schedule rolled back
+      }
+      // Demote out of three-things if it carried a priority.
+      if (plan.hadPriority) {
+        await useTasksStore.getState().setDailyPriority(plan.taskId, null, plan.date);
+      }
+      await useTasksStore.getState().reorderInPool(plan.taskId, plan.prevId, plan.nextId);
+    }
+  }
+
   function handleDragEnd(e: DragEndEvent) {
+    const src = dragSource.current;
+    dragSource.current = null;
     setActiveId(null);
     setWeekHint(null);
+
+    // In-column sortable drop: commit via the shared planner, then clear preview.
+    if (src && e.over && isSortableContainerId(String(e.over.id))) {
+      const resolved = resolveOver(String(e.over.id), baseContainers);
+      const activeTask = allTasks.find((t) => t.id === rowTaskId(src.sortableId));
+      if (resolved && activeTask) {
+        // Final order of the over-container = current preview (which already has
+        // the active row inserted), or base when hovering an unchanged container.
+        const finalOrder =
+          preview.get(resolved.container) ?? baseContainers.get(resolved.container) ?? [];
+        const plan = planCommit({
+          over: resolved,
+          finalOrder: finalOrder.includes(src.sortableId)
+            ? finalOrder
+            : insertActive(finalOrder, src.sortableId, resolved.index),
+          activeId: src.sortableId,
+          activeTask,
+        });
+        void commitPlan(plan);
+      }
+      setPreview(new Map());
+      return;
+    }
+    setPreview(new Map());
+
     if (!e.over) return;
     const target = parseDropId(String(e.over.id));
     if (!target) return;
@@ -154,13 +297,17 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
       collisionDetection={collisionDetection}
       onDragStart={handleDragStart}
       onDragMove={handleDragMove}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={() => {
+        dragSource.current = null;
         setActiveId(null);
         setWeekHint(null);
+        setPreview(new Map());
       }}
     >
       <DragEnabledProvider value={dragEnabled}>
+        <DragOrderingProvider value={{ activeId, previewOrder }}>
         <WeekDropHintProvider value={weekHint}>
         <main className={styles.page}>
           <div className={styles.mobileTabs}>
@@ -204,6 +351,7 @@ export function PlanLayout({ allTasks, selectedDate, month }: PlanLayoutProps) {
           {activeTask ? <div className={styles.dragGhost}>{activeTask.title}</div> : null}
         </DragOverlay>
         </WeekDropHintProvider>
+        </DragOrderingProvider>
       </DragEnabledProvider>
     </DndContext>
   );
