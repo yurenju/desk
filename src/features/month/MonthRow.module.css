@@ -1,14 +1,20 @@
 .row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-3);
+  row-gap: 2px;
   padding: var(--space-2) 0;
   font-family: var(--font-sans);
   font-size: var(--text-base);
 }
 
+/* min-width keeps the title from collapsing to 1 CJK char per line in the
+   narrow month column; flex-wrap pushes meta/trigger/actions to a second line
+   when they no longer fit beside it. */
 .title {
-  flex: 1;
+  flex: 1 1 55%;
+  min-width: 55%;
   color: var(--color-ink);
 }
 

@@ -63,6 +63,20 @@ export function dayInWeek(t: Task, week: string[]): string | null {
   return d && week.includes(d) ? d : null;
 }
 
+/**
+ * Whether the "+ 計劃外" chip should show for a task in the day column on `date`.
+ * The chip flags a genuine same-day ad-hoc insertion, not any task that merely
+ * has `is_adhoc === "true"` (which by itself is noise — most tasks pass through
+ * an adhoc add at some point). Rule (ROADMAP Slice 7): adhoc AND created on
+ * `date` AND scheduled only for `date`.
+ */
+export function isDayAdhocChip(t: Task, date: string): boolean {
+  if (t.custom_fields.is_adhoc !== "true") return false;
+  if (t.created_at.slice(0, 10) !== date) return false;
+  const dates = t.custom_fields.scheduled_dates ?? [];
+  return dates.length > 0 && dates.every((d) => d === date);
+}
+
 export function layer(t: Task): Layer {
   if (primaryDate(t)) return "daily";
   if (primaryMonth(t)) return "monthly";

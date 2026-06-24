@@ -7,6 +7,7 @@ import { TaskDetailTrigger } from "@/features/task-detail/TaskDetailTrigger";
 import { useTaskRow } from "./useTaskRow";
 import { DailyPriorityMenu } from "./DailyPriorityMenu";
 import { buildTaskRowMenuItems } from "./taskRowMenu";
+import { isDayAdhocChip } from "@/lib/tasks";
 import { useTasksStore } from "@/store/tasks";
 import styles from "./Top3Card.module.css";
 
@@ -45,7 +46,7 @@ function Top3Item({
   const row = useTaskRow(t.id, date);
   const today = useTasksStore((s) => s.today);
   const { ref: dragRef, isDragging, handleProps } = useDraggableRow(`day:${t.id}`);
-  const isAdhoc = t.custom_fields.is_adhoc === "true";
+  const showAdhocChip = isDayAdhocChip(t, date);
   const order = (t.custom_fields.daily_priority ?? t.custom_fields.monthly_priority) as
     | "1"
     | "2"
@@ -87,7 +88,7 @@ function Top3Item({
           <div className={styles.itemTitle}>{t.title}</div>
         )}
       </div>
-      {isAdhoc && <UnplannedChip />}
+      {showAdhocChip && <UnplannedChip />}
       <TaskDetailTrigger task={t} />
       {interactive && !row.isEditing && (
         <div className={styles.actions}>

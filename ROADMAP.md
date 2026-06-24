@@ -321,25 +321,30 @@
 
 **本片範圍**：
 - [x] **移除 carryover banner**(2026-06-14):刪 `CarryoverBanner` 元件 + CSS Module、`TodayLayout` / `PlanLayout` 兩處使用、`MOCK_CARRYOVER_DAY` / `MOCK_CARRYOVER_MONTH` mock。隨 Slice 5 剩項一併 ship(見上節 spec / plan)。
-- [ ] **「移到其他日期」per-row 動作**(Focus 每列 `⋯` menu,補在「移到今天」旁,可挑任一天)。**仍未做。**
 
 **不做（已決定捨棄）**:
+- **「移到其他日期」per-row 動作**（原列為待做，2026-06-24 決定不做）。理由:Plan 模式的拖曳已完整覆蓋「把某任務排到本週某一天」,在 Focus 再加一個挑日子的 per-row 選單是重複動線(YAGNI)。要把 stale 任務改天做,切到 Plan 拖曳更直覺。
 - 日 / 月 carryover 自動偵測 + banner 動作(「→ 三件事 / → 計劃內 / 略過」、「→ 本月三件事 / 其他 / 丟回 backlog」)。
 - stale 任務的主動浮現機制 —— 決定靠翻日 / 翻週,不做 banner、不做 WeekRail 未完成標記、不把過去任務以軌跡列塞進今天。
 
 **待議(之後討論,不在本片)**:
 - **月底 Review 介面**。構想:一次開「任意兩個月」的雙欄面板,任務可從一欄送到另一欄(左右互送)來收束跨月未完成。等日層級的東西做完、實際用一輪後再拍板細節與要不要做。
 
-### Slice 7 — 排序、`is_adhoc` 染色、打磨
+### Slice 7 — 排序、`is_adhoc` 染色、打磨 ⏳
 
 **目標**：v1 收尾的細節調整。
 
-- [ ] `position` 欄位（lex-order）+ 同欄拖曳排序
-- [ ] `is_adhoc` 染色規則：
-  - 月度欄：`is_adhoc = true` → 紅 chip（月中膨脹提醒）
-  - 日欄：`is_adhoc = true` AND `created_at == today` AND `scheduled_dates 只有 today` → 紅 chip
-- [ ] 鍵盤快捷鍵、空狀態文案、loading / error 細節
-- [ ] 一輪整體使用後的回頭調整
+**優先序(2026-06-24 依實際使用 desk.yurenju.me 一輪後重排)**:
+
+- [ ] **(1) 修 Month 欄標題擠壓** —— 一旦該列有 meta(`⏱` 計數、`·有描述`)+ ✎ 圖示,`MonthRow` 把 title 與 meta 放同一行水平競爭,窄欄下 title 被壓到剩 ~2 字、整段變直書。改法:meta 換行到 title 下方,或 title `flex:1` + meta 縮成圖示。**最傷觀感、工程最小,先做。**(原不在路線圖,屬「回頭調整」,因實際使用發現而提升為獨立項)
+- [ ] **(2) `is_adhoc` 染色規則** —— 現況是 binary:只要 `is_adhoc:true` 就一律紅 `+計劃外` chip(Focus 三件事 / 其他計劃內 / Backlog 全掛),紅色淪為背景噪音。照規則收斂:
+  - 月度欄:`is_adhoc = true` → 紅 chip(保留「月中膨脹」警示語意)
+  - 日欄:`is_adhoc = true` AND `created_at == today` AND `scheduled_dates 只有 today` → 紅 chip;其餘不顯示
+  - **高 CP 值:小工,但能立刻把畫面上過半紅噪音拿掉。**
+- [ ] **(3) `position` 欄位（lex-order）+ 同欄拖曳排序** —— Backlog / 其他計劃內目前照載入序固定,無法手動挪。工程量比 (1)(2) 大(加欄位 + 同欄 dnd 排序),排在染色之後。
+- [ ] **(4) 鍵盤快捷鍵、空狀態文案、loading / error 細節** —— 純打磨,最後做。
+
+> 砍掉的項目見 Slice 6「不做」:carryover 自動浮現、「移到其他日期」per-row 動作均不做。
 
 ---
 

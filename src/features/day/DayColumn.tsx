@@ -128,7 +128,6 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
                 task={e.task}
                 kind={e.kind}
                 date={selectedDate}
-                showAdhocChip
                 interactive={isInteractive}
                 showRing={isInteractive}
               />
