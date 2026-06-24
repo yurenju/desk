@@ -16,7 +16,9 @@ ROADMAP Slice 4 已用 `@dnd-kit/core` 做完**跨欄拖曳**（backlog / 月 / 
 - **三件事拖曳重排**：在三件事區內拖曳改變 ①②③ 順序（日層 `daily_priority`、月層 `monthly_priority`）。
 - **滿格溢出 + 放下前預覽**：三件事已滿 3 件時，把第 4 件拖進某名次 → 插入該名次、其餘下推、被推過第 3 名者失去圈號掉回「其他」；拖曳過程中（未放下）即時預覽被擠出的那件移到「其他」第一格。
 - **活動池手動排序**：backlog、其他任務（月）、其他計劃內（日）、臨時加的（日）可在桶內拖曳重排，順序寫入 `position`、跨裝置 / 跨 reload 保留。
+- **Week 日格只排三件事**：Plan 週欄每個日格因空間侷促，**只支援該格三件事的拖曳重排**；該格的「其他」不支援排序（落到其他即可，順序不管）。
 - **Focus 中欄拖曳**：`TodayLayout` 的中間 Day 欄支援上述三件事重排與其他/臨時加的排序。
+- **名次指定共用溢出邏輯（非拖曳）**：`⋯` menu 與 ring dropdown 的「排到 ①/②/③」改與拖曳共用同一套 `reorderPriority`（插入名次 + 連鎖下推 + 尾端溢出到其他第一格），取代現有「只清掉目標名次原佔用者」的擲位。
 
 ### 本片不做
 
@@ -51,7 +53,7 @@ ROADMAP Slice 4 已用 `@dnd-kit/core` 做完**跨欄拖曳**（backlog / 月 / 
 
 ## 互動模型
 
-每個「day 欄 / month 欄 / week 日格」內，三件事區與其他區是**兩個獨立的 `SortableContext`**，共用一個 `DndContext`（Plan 既有那個；Focus 新增一個只包中欄）。
+每個「day 欄 / month 欄」內，三件事區與其他區是**兩個獨立的 `SortableContext`**，共用一個 `DndContext`（Plan 既有那個；Focus 新增一個只包中欄）。**Week 日格只有三件事區是 `SortableContext`，其他區不是**（空間侷促，僅排三件事）。
 
 ### 三件事區內重排
 
@@ -77,6 +79,12 @@ ROADMAP Slice 4 已用 `@dnd-kit/core` 做完**跨欄拖曳**（backlog / 月 / 
 
 - 桶內拖曳 → 算放下位置前後鄰居的 midpoint，寫單筆 `position`、樂觀更新 + 失敗回滾（沿用既有 patch queue）。
 
+### 名次指定（`⋯` menu / ring dropdown，非拖曳）
+
+- 現況：選「排到 ②」走 `setDailyPriority` / `setMonthlyPriority`，只把**目標名次 ② 的原佔用者**清掉，③ 不動 —— 已滿 3 件時沒有「擠下去」的連鎖，跟拖曳行為不一致。
+- 改為：所有「把某 task 排到名次 N」的入口（`⋯` menu 跨層 promote、ring dropdown 選名次、拖曳）**共用 `reorderPriority`** → 插入名次 N + 連鎖下推 + 滿格時尾端溢出到其他第一格。
+- 範圍含日層（`daily_priority`）與月層（`monthly_priority`）。Slice 3.5 的「→ N日 · ①②③」menu 也改走這條（排到該日後設名次同樣 cascade + overflow）。
+
 ## 新增 / 修改
 
 ### 新增純函式（`src/lib/` 或 `src/store/taskOps.ts`，皆附單元測試）
@@ -93,7 +101,8 @@ ROADMAP Slice 4 已用 `@dnd-kit/core` 做完**跨欄拖曳**（backlog / 月 / 
 - `src/lib/tasks.ts`：各活動池的 sort 比較子改為「有 `position` 比 `position`，否則維持現有順序」。三件事仍照 priority 取前 3。衍生區比較子不動。
 - 列元件（`TaskRow` / `MonthRow` / `BacklogRow` / `Top3Card` 內的列）：`useDraggable` → `useSortable`（保留既有跨欄 droppable 能力）。
 - `PlanLayout`：在既有 `DndContext` 內，為各區包 `SortableContext`；加 `onDragOver` 溢出預覽狀態。
-- `DayColumn` / `MonthColumn` / `WeekColumn`：三件事區與其他區各包一個 `SortableContext`。
+- `DayColumn` / `MonthColumn`：三件事區與其他區各包一個 `SortableContext`。`WeekColumn`：**只有三件事區**包 `SortableContext`，其他區不包。
+- **priority 名次指定的 callsites 改接 `reorderPriority`**：ring dropdown（`Top3Card` / `MonthHeroCard` / `TaskRow` / `MonthRow` 的 ring）、`⋯` menu 的「排到名次」（含 Slice 3.5 的 `→ N日 · ①②③`）。既有 `setDailyPriority` / `setMonthlyPriority` 的單格擲位由 `reorderPriority` 的 cascade + overflow 取代；確認無其他依賴單格擲位語意的呼叫點殘留。
 - `TodayLayout`：新增 `DndContext` + 溢出預覽，**只包中間 Day 欄**；左 WeekRail / 右 MonthDigest 不掛 sortable。
 
 ### 相依
@@ -121,7 +130,9 @@ ROADMAP Slice 4 已用 `@dnd-kit/core` 做完**跨欄拖曳**（backlog / 月 / 
 - **e2e（Playwright，必跑 —— 依 CLAUDE.md「改使用者操作流程要跑 e2e」）**：
   - 三件事互換順序。
   - 已滿三件事拖第 4 件進 ② → 原③掉到「其他」第一格。
+  - **`⋯` menu / ring 把其他任務排到已滿的名次 ② → 同樣連鎖溢出（原③掉其他第一格）**。
   - 活動池（其他任務 / backlog）桶內重排，reload 後順序保留。
+  - Week 日格只可排三件事；該格其他區不可拖。
   - Focus 中欄三件事重排。
   - 手機（窄視窗）不可拖、無排序。
   - dnd-kit 在 Playwright 用 `mouse.move` 分段模擬（非 `dragTo`）。
@@ -137,11 +148,13 @@ ROADMAP Slice 4 已用 `@dnd-kit/core` 做完**跨欄拖曳**（backlog / 月 / 
 2. 那天只設 1 件重要時，畫面只有 ①，拖曳不會逼出 ②③。
 3. 三件事已滿 3 件，把「其他」一件拖進第 ② 名次 → 插入、原②變③、原③失去圈號並出現在「其他」**第一格**。
 4. 上述拖曳**放下前**就即時預覽：被擠出者已視覺移到其他第一格、①②③ 即時重編號；取消拖曳則還原。
-5. 三件事拖到其他區 → 失去圈號、剩餘重編號。
-6. 活動池（其他任務 / backlog / 其他計劃內 / 臨時加的）桶內可拖曳重排，順序寫入 `position`；reload 後順序保留。
-7. 衍生區（已排入本週 / 其他已完成 / 已移走）不可拖曳，維持自動排序。
-8. Focus 中欄可做三件事重排與其他 / 臨時加的排序；左 WeekRail、右 MonthDigest 不可拖。
-9. 手機（窄視窗）完全不出現拖曳排序；既有 `⋯` menu 的跨層 promote 仍正常。
-10. Slice 4 既有的跨欄拖曳（backlog → 月 / 日、排到某天、week 日格落點）行為不變。
-11. 拖曳樂觀更新即時反映，失敗回滾並出 toast。
-12. `npm run build`、`npx vitest run`、`npm run test:e2e` 全綠。
+5. **`⋯` menu / ring 把一件其他任務排到已滿三件事的某名次 → 跟拖曳相同**：插入該名次、其餘下推、被擠出者落「其他」第一格（非只清掉目標名次原佔用者）。日層與月層皆然。
+6. 三件事拖到其他區 → 失去圈號、剩餘重編號。
+7. 活動池（其他任務 / backlog / 其他計劃內 / 臨時加的）桶內可拖曳重排，順序寫入 `position`；reload 後順序保留。
+8. Plan 週欄每個日格**只可拖排三件事**；該格其他區不可拖（落到其他即可、不管順序）。
+9. 衍生區（已排入本週 / 其他已完成 / 已移走）不可拖曳，維持自動排序。
+10. Focus 中欄可做三件事重排與其他 / 臨時加的排序；左 WeekRail、右 MonthDigest 不可拖。
+11. 手機（窄視窗）完全不出現拖曳排序；既有 `⋯` menu 的跨層 promote 仍正常。
+12. Slice 4 既有的跨欄拖曳（backlog → 月 / 日、排到某天、week 日格落點）行為不變。
+13. 拖曳樂觀更新即時反映，失敗回滾並出 toast。
+14. `npm run build`、`npx vitest run`、`npm run test:e2e` 全綠。
