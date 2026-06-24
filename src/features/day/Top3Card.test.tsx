@@ -81,14 +81,32 @@ describe("Top3Card (interactive)", () => {
     expect(useTasksStore.getState().tasks.find((t) => t.id === "d1")).toBeUndefined();
   });
 
-  it("shows the unplanned chip for an adhoc top-3 task", async () => {
-    await useTasksStore.getState().setAdhoc("d1", true);
+  it("shows the unplanned chip for a same-day adhoc top-3 task", async () => {
+    // Rule: chip only when adhoc AND created today AND scheduled only for today.
+    useTasksStore.setState((s) => ({
+      tasks: s.tasks.map((t) =>
+        t.id === "d1"
+          ? {
+              ...t,
+              created_at: `${MOCK_TODAY}T09:00:00Z`,
+              custom_fields: { ...t.custom_fields, is_adhoc: "true" as const },
+            }
+          : t,
+      ),
+    }));
     render(<TestComponent />);
     expect(screen.getByText(/計劃外/)).toBeInTheDocument();
   });
 
   it("hides the unplanned chip for a planned top-3 task", async () => {
     await useTasksStore.getState().setAdhoc("d1", false);
+    render(<TestComponent />);
+    expect(screen.queryByText(/計劃外/)).toBeNull();
+  });
+
+  it("hides the unplanned chip for an adhoc task not created today", async () => {
+    // d1's fixture created_at is 2026-05-01, before today → no chip even when adhoc.
+    await useTasksStore.getState().setAdhoc("d1", true);
     render(<TestComponent />);
     expect(screen.queryByText(/計劃外/)).toBeNull();
   });

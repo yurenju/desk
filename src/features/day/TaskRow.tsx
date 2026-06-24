@@ -7,6 +7,7 @@ import { TaskDetailTrigger } from "@/features/task-detail/TaskDetailTrigger";
 import { useTaskRow } from "./useTaskRow";
 import { DailyPriorityMenu } from "./DailyPriorityMenu";
 import { buildTaskRowMenuItems } from "./taskRowMenu";
+import { isDayAdhocChip } from "@/lib/tasks";
 import { useTasksStore } from "@/store/tasks";
 import styles from "./TaskRow.module.css";
 
@@ -14,14 +15,13 @@ export interface TaskRowProps {
   task: Task;
   kind: TrailKind;
   date: string;
-  showAdhocChip?: boolean;
   interactive?: boolean;
   showRing?: boolean;
 }
 
-export function TaskRow({ task, kind, date, showAdhocChip, interactive, showRing }: TaskRowProps) {
+export function TaskRow({ task, kind, date, interactive, showRing }: TaskRowProps) {
   const isDone = task.status === "done";
-  const isAdhoc = task.custom_fields.is_adhoc === "true";
+  const showAdhocChip = isDayAdhocChip(task, date);
   const row = useTaskRow(task.id, date);
   const today = useTasksStore((s) => s.today);
   const editable = Boolean(interactive) && kind === "primary";
@@ -83,7 +83,7 @@ export function TaskRow({ task, kind, date, showAdhocChip, interactive, showRing
         )}
         {task.description && <div className={styles.desc}>{task.description}</div>}
       </div>
-      {showAdhocChip && isAdhoc && <UnplannedChip />}
+      {showAdhocChip && <UnplannedChip />}
       <TaskDetailTrigger task={task} />
       {editable && !row.isEditing && (
         <div className={styles.actions}>

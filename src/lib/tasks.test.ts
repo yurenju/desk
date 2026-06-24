@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Task } from "./types";
-import { primaryDate, primaryMonth, layer, tasksOnDate, tasksOnMonth, nextFreeDailySlot, delayKind, delaySummary, dayInWeek } from "./tasks";
+import { primaryDate, primaryMonth, layer, tasksOnDate, tasksOnMonth, nextFreeDailySlot, delayKind, delaySummary, dayInWeek, isDayAdhocChip } from "./tasks";
 import { weekOf } from "./date";
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
@@ -48,6 +48,45 @@ describe("primaryMonth", () => {
       },
     });
     expect(primaryMonth(t)).toBe("2026-05");
+  });
+});
+
+describe("isDayAdhocChip", () => {
+  const day = "2026-05-22";
+  it("true when adhoc, created on the day, scheduled only that day", () => {
+    const t = makeTask({
+      id: "1",
+      created_at: `${day}T09:00:00Z`,
+      custom_fields: { is_adhoc: "true", scheduled_dates: [day] },
+    });
+    expect(isDayAdhocChip(t, day)).toBe(true);
+  });
+
+  it("false when not adhoc", () => {
+    const t = makeTask({
+      id: "1",
+      created_at: `${day}T09:00:00Z`,
+      custom_fields: { is_adhoc: "false", scheduled_dates: [day] },
+    });
+    expect(isDayAdhocChip(t, day)).toBe(false);
+  });
+
+  it("false when created on an earlier day", () => {
+    const t = makeTask({
+      id: "1",
+      created_at: "2026-05-01T09:00:00Z",
+      custom_fields: { is_adhoc: "true", scheduled_dates: [day] },
+    });
+    expect(isDayAdhocChip(t, day)).toBe(false);
+  });
+
+  it("false when scheduled for other days too (carried/rescheduled)", () => {
+    const t = makeTask({
+      id: "1",
+      created_at: `${day}T09:00:00Z`,
+      custom_fields: { is_adhoc: "true", scheduled_dates: ["2026-05-20", day] },
+    });
+    expect(isDayAdhocChip(t, day)).toBe(false);
   });
 });
 
