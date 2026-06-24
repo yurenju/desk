@@ -140,7 +140,14 @@ describe("commitFinalOrder — drop index handling", () => {
       activeId: "day:p1",
       activeTask: task("p1", { daily_priority: "1" }),
     });
-    expect(plan).toEqual({ kind: "rank", taskId: "p1", rank: 3, axis: "daily", scope: DATE });
+    expect(plan).toEqual({
+      kind: "rank",
+      taskId: "p1",
+      rank: 3,
+      axis: "daily",
+      scope: DATE,
+      crossColumn: false,
+    });
   });
 
   it("same-container drop to head computes the right order", () => {
@@ -175,7 +182,31 @@ describe("planCommit", () => {
       activeId: "day:o1",
       activeTask: task("o1", { position: "a" }),
     });
-    expect(plan).toEqual({ kind: "rank", taskId: "o1", rank: 2, axis: "daily", scope: DATE });
+    expect(plan).toEqual({
+      kind: "rank",
+      taskId: "o1",
+      rank: 2,
+      axis: "daily",
+      scope: DATE,
+      crossColumn: false,
+    });
+  });
+
+  it("flags crossColumn on a rank drop when the active task is not primary on this day", () => {
+    const plan = planCommit({
+      over: { container: top3, index: 0 },
+      finalOrder: ["day:x", "day:p1", "day:p2"],
+      activeId: "day:x",
+      activeTask: task("x", { scheduled_dates: ["2026-06-20"] }), // primary on another day
+    });
+    expect(plan).toEqual({
+      kind: "rank",
+      taskId: "x",
+      rank: 1,
+      axis: "daily",
+      scope: DATE,
+      crossColumn: true,
+    });
   });
 
   it("other drop yields a pool plan with prev/next neighbours and demote flag", () => {
@@ -274,7 +305,31 @@ describe("month overflow + commit", () => {
       activeId: "month:o1",
       activeTask: monthTask("o1", { position: "a" }),
     });
-    expect(plan).toEqual({ kind: "rank", taskId: "o1", rank: 2, axis: "monthly", scope: MONTH });
+    expect(plan).toEqual({
+      kind: "rank",
+      taskId: "o1",
+      rank: 2,
+      axis: "monthly",
+      scope: MONTH,
+      crossColumn: false,
+    });
+  });
+
+  it("flags crossColumn on a monthTop3 drop when the active task is not primary on this month", () => {
+    const plan = planCommit({
+      over: { container: mtop3, index: 0 },
+      finalOrder: ["month:x", "month:m1", "month:m2"],
+      activeId: "month:x",
+      activeTask: monthTask("x", { scheduled_months: ["2026-05"] }), // primary on another month
+    });
+    expect(plan).toEqual({
+      kind: "rank",
+      taskId: "x",
+      rank: 1,
+      axis: "monthly",
+      scope: MONTH,
+      crossColumn: true,
+    });
   });
 
   it("poolMonth drop yields a monthly pool plan, never crossColumn, demoting prior priority", () => {

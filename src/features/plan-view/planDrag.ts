@@ -427,8 +427,19 @@ export function commitFinalOrder(
 // store calls. Reusable across Day / Month / Week / Focus.
 export type CommitPlan =
   | { kind: "none" }
-  // Land in a three-things container at 1-based `rank`.
-  | { kind: "rank"; taskId: string; rank: 1 | 2 | 3; axis: "daily" | "monthly"; scope: string }
+  // Land in a three-things container at 1-based `rank`. `crossColumn` is true
+  // when the active row came from another scope (not primary on the target
+  // date/month): the commit must SCHEDULE it onto the scope before assigning the
+  // rank, mirroring the pool path — otherwise the task gets a stray priority but
+  // never appears on the target day/month.
+  | {
+      kind: "rank";
+      taskId: string;
+      rank: 1 | 2 | 3;
+      axis: "daily" | "monthly";
+      scope: string;
+      crossColumn: boolean;
+    }
   // Land in a pool between prev/next neighbours (real task ids, or null at ends).
   // The demotion axis + scope distinguish the day "other"/"adhoc" pools (daily,
   // scope = date) from the month "其他任務" pool (monthly, scope = month).
@@ -467,12 +478,14 @@ export function planCommit(args: {
 
   if (container.kind === "top3" || container.kind === "weekTop3") {
     const rank = (Math.min(idx < 0 ? over.index : idx, 2) + 1) as 1 | 2 | 3;
-    return { kind: "rank", taskId, rank, axis: "daily", scope: container.date };
+    const crossColumn = primaryDateOf(activeTask) !== container.date;
+    return { kind: "rank", taskId, rank, axis: "daily", scope: container.date, crossColumn };
   }
 
   if (container.kind === "monthTop3") {
     const rank = (Math.min(idx < 0 ? over.index : idx, 2) + 1) as 1 | 2 | 3;
-    return { kind: "rank", taskId, rank, axis: "monthly", scope: container.month };
+    const crossColumn = primaryMonthOf(activeTask) !== container.month;
+    return { kind: "rank", taskId, rank, axis: "monthly", scope: container.month, crossColumn };
   }
 
   if (container.kind === "other" || container.kind === "adhoc") {
@@ -539,7 +552,29 @@ export function planCommit(args: {
 export async function commitPlan(plan: CommitPlan): Promise<void> {
   const store = useTasksStore.getState();
   if (plan.kind === "rank") {
-    await store.reorderPriority(plan.taskId, String(plan.rank) as "1" | "2" | "3", plan.axis, plan.scope);
+    // Cross-column drop: schedule the task onto the target scope FIRST so it
+    // becomes primary there, then assign the rank. Without this the task gets a
+    // stray priority but never appears on the target day/month (the live preview
+    // already shows it scheduled, so this matches what the user saw). Mirror the
+    // pool path's rollback guard: re-read and bail if the schedule rolled back.
+    if (plan.crossColumn) {
+      if (plan.axis === "daily") {
+        await store.planScheduleDay(plan.taskId, plan.scope);
+        const s = useTasksStore.getState();
+        const dates =
+          s.tasks.find((t) => t.id === plan.taskId)?.custom_fields.scheduled_dates ?? [];
+        if (dates[dates.length - 1] !== plan.scope) return; // schedule rolled back
+      } else {
+        await store.promoteToMonth(plan.taskId, plan.scope);
+        const s = useTasksStore.getState();
+        const months =
+          s.tasks.find((t) => t.id === plan.taskId)?.custom_fields.scheduled_months ?? [];
+        if (months[months.length - 1] !== plan.scope) return; // promote rolled back
+      }
+    }
+    await useTasksStore
+      .getState()
+      .reorderPriority(plan.taskId, String(plan.rank) as "1" | "2" | "3", plan.axis, plan.scope);
     return;
   }
   if (plan.kind === "pool") {
@@ -581,5 +616,14 @@ function primaryDateOf(t: Task): string | null {
   if (arr.length === 0) return null;
   const last = arr[arr.length - 1];
   const u = t.custom_fields.unscheduled_at ?? "";
+  return last > u ? last : null;
+}
+
+// Local primaryMonth (mirrors primaryDateOf for the monthly axis).
+function primaryMonthOf(t: Task): string | null {
+  const arr = t.custom_fields.scheduled_months ?? [];
+  if (arr.length === 0) return null;
+  const last = arr[arr.length - 1];
+  const u = t.custom_fields.unscheduled_month ?? "";
   return last > u ? last : null;
 }
