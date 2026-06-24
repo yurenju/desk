@@ -6,9 +6,15 @@
 // behaviour stays identical across Day / Month / Week / Focus.
 
 import { arrayMove } from "@dnd-kit/sortable";
+import {
+  pointerWithin,
+  rectIntersection,
+  type CollisionDetection,
+} from "@dnd-kit/core";
 import type { Task } from "@/lib/types";
 import { tasksOnDate, tasksOnMonth, tasksInBacklog, dayInWeek, byPosition } from "@/lib/tasks";
 import { weekOf } from "@/lib/date";
+import { useTasksStore } from "@/store/tasks";
 
 // Sortable item ids reuse the existing day-row namespace: "day:<taskId>".
 // Recover the real task id (mirrors PlanLayout.resolveTaskId but scoped to the
@@ -73,6 +79,71 @@ export function parseContainerId(id: string): Container | null {
 // branch away from the Slice-4 cross-column (month/weekday) drop logic.
 export function isSortableContainerId(id: string): boolean {
   return parseContainerId(id) !== null;
+}
+
+// Whether a dnd-kit hit id is one of our sortable surfaces: a container droppable
+// (top3/other/adhoc/mtop3/poolMonth/...) or a sortable row member ("day:"/"month:").
+export function isSortableHit(id: string, members: Set<string>): boolean {
+  return isSortableContainerId(id) || members.has(id);
+}
+
+// Backlog sortable ids: "backlog:<taskId>" + the pool container "pool:backlog".
+// These belong to BOTH the backlog SortableContext AND can be dragged cross-column
+// onto day/week zones. We treat a backlog active row specially in collision detection.
+export function isBacklogSortableId(id: string): boolean {
+  return id.startsWith("backlog:") || id === "pool:backlog";
+}
+
+/**
+ * Collision detection shared by PlanLayout (Day/Month/Week/Backlog) and
+ * TodayLayout (Focus center only).
+ *
+ * pointerWithin keeps the over-cell exactly under the cursor (rectIntersection
+ * would pick a neighbour via the drag ghost's larger rect, making the week hint
+ * jump). But pointerWithin returns nothing when the pointer is in a gap between
+ * droppables (e.g. the space between the Day column's top-3 and other zones),
+ * which would silently drop the task; fall back to rectIntersection there.
+ *
+ * `sortableMembers` is the set of sortable row ids currently registered in the
+ * base container map. A row id (e.g. "month:<id>") is a sortable surface ONLY
+ * when it's a member — a Slice-4 month/week row that isn't in any container must
+ * fall through to the coarse drop:* zones.
+ */
+export function makeCollisionDetection(sortableMembers: Set<string>): CollisionDetection {
+  return (args) => {
+    const within = pointerWithin(args);
+    const hits = within.length > 0 ? within : rectIntersection(args);
+    const activeId = String(args.active.id);
+    const activeIsSortableRow = sortableMembers.has(activeId);
+
+    // Backlog rows: sortable within pool:backlog, but also support cross-column
+    // drops onto day/week zones. Prefer the backlog sortable surface when hovering
+    // over it; otherwise fall through to coarse drop:* zones.
+    if (activeIsSortableRow && activeId.startsWith("backlog:")) {
+      const backlogSortableHits = hits.filter((h) => isBacklogSortableId(String(h.id)));
+      if (backlogSortableHits.length > 0) return backlogSortableHits;
+      // Not hovering over pool:backlog — allow Slice-4 coarse zones to take over.
+      const zoneHits = hits.filter((h) => !isSortableHit(String(h.id), sortableMembers));
+      return zoneHits.length > 0 ? zoneHits : hits;
+    }
+
+    // A sortable row is both a sortable (container + item ids) AND sits inside the
+    // Slice-4 free-form drop zones (drop:day:<date>:* / drop:month). When an
+    // in-column sortable row is the active drag, prefer the sortable hits so the
+    // live reorder/overflow preview drives, not the coarse zone. The zones still
+    // win for Slice-4 cross-column drags (backlog/trail rows), whose active id
+    // isn't a sortable container member.
+    if (activeIsSortableRow) {
+      const sortableHits = hits.filter((h) => isSortableHit(String(h.id), sortableMembers));
+      if (sortableHits.length > 0) return sortableHits;
+      return hits;
+    }
+    // Slice-4 cross-column drag (trail row): the sortable container +
+    // item droppables must NOT intercept — the coarse free-form drop:* zones own
+    // these drops. Drop the sortable hits so the zone wins.
+    const zoneHits = hits.filter((h) => !isSortableHit(String(h.id), sortableMembers));
+    return zoneHits.length > 0 ? zoneHits : hits;
+  };
 }
 
 /**
@@ -385,6 +456,38 @@ export function planCommit(args: {
   }
 
   return { kind: "none" };
+}
+
+/**
+ * Map a CommitPlan to store mutations. Shared by PlanLayout (Day/Month/Week/
+ * Backlog) and TodayLayout (Focus center) so the commit behaviour stays identical.
+ * Reads the store via getState() internally, so it's a plain async function.
+ */
+export async function commitPlan(plan: CommitPlan): Promise<void> {
+  const store = useTasksStore.getState();
+  if (plan.kind === "rank") {
+    await store.reorderPriority(plan.taskId, String(plan.rank) as "1" | "2" | "3", plan.axis, plan.scope);
+    return;
+  }
+  if (plan.kind === "pool") {
+    // Cross-column source (daily axis only): ensure the task is scheduled on
+    // this day first. Month-pool reorder never schedules a day.
+    if (plan.crossColumn && plan.axis === "daily") {
+      await store.planScheduleDay(plan.taskId, plan.scope);
+      const s = useTasksStore.getState();
+      const dates = s.tasks.find((t) => t.id === plan.taskId)?.custom_fields.scheduled_dates ?? [];
+      if (dates[dates.length - 1] !== plan.scope) return; // schedule rolled back
+    }
+    // Demote out of three-things if it carried a priority on this axis.
+    if (plan.hadPriority) {
+      if (plan.axis === "monthly") {
+        await useTasksStore.getState().setMonthlyPriority(plan.taskId, null, plan.scope);
+      } else {
+        await useTasksStore.getState().setDailyPriority(plan.taskId, null, plan.scope);
+      }
+    }
+    await useTasksStore.getState().reorderInPool(plan.taskId, plan.prevId, plan.nextId);
+  }
 }
 
 /**
