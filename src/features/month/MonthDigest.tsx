@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { Task } from "@/lib/types";
-import { tasksOnMonth } from "@/lib/tasks";
+import { tasksOnMonth, monthlyRankOn } from "@/lib/tasks";
 import { formatMonth, dayOfMonth } from "@/lib/date";
 import { ProgressBar } from "@/ui/ProgressBar";
 import { Top3Card } from "@/features/day/Top3Card";
@@ -19,11 +19,11 @@ export function MonthDigest({ allTasks, month, today, selectedDate }: MonthDiges
   const primary = entries.filter((e) => e.kind === "primary");
 
   const top3 = primary
-    .filter((e) => e.task.custom_fields.monthly_priority)
+    .filter((e) => monthlyRankOn(e.task, month))
     .sort(
       (a, b) =>
-        Number(a.task.custom_fields.monthly_priority) -
-        Number(b.task.custom_fields.monthly_priority),
+        Number(monthlyRankOn(a.task, month)) -
+        Number(monthlyRankOn(b.task, month)),
     );
 
   const daysInMonth = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();

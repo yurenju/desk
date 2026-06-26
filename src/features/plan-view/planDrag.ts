@@ -12,7 +12,7 @@ import {
   type CollisionDetection,
 } from "@dnd-kit/core";
 import type { Task } from "@/lib/types";
-import { tasksOnDate, tasksOnMonth, tasksInBacklog, dayInWeek, byPosition, dailyRankOn } from "@/lib/tasks";
+import { tasksOnDate, tasksOnMonth, tasksInBacklog, dayInWeek, byPosition, dailyRankOn, monthlyRankOn } from "@/lib/tasks";
 import { weekOf } from "@/lib/date";
 import { useTasksStore } from "@/store/tasks";
 
@@ -189,18 +189,18 @@ export function buildMonthContainers(
   const entries = tasksOnMonth(allTasks, month);
 
   const top3 = entries
-    .filter((e) => e.kind === "primary" && e.task.custom_fields.monthly_priority)
+    .filter((e) => e.kind === "primary" && monthlyRankOn(e.task, month))
     .sort(
       (a, b) =>
-        Number(a.task.custom_fields.monthly_priority) -
-        Number(b.task.custom_fields.monthly_priority),
+        Number(monthlyRankOn(a.task, month)) -
+        Number(monthlyRankOn(b.task, month)),
     )
     .map((e) => e.task);
 
   // 其他任務: outside top3, not scheduled in the viewed week, undone, primary;
   // adhoc sinks below 計劃內, tiebreak byPosition. Mirrors MonthColumn exactly.
   const rest = entries.filter(
-    (e) => !(e.kind === "primary" && e.task.custom_fields.monthly_priority),
+    (e) => !(e.kind === "primary" && monthlyRankOn(e.task, month)),
   );
   const remaining = rest.filter((e) => dayInWeek(e.task, week) === null);
   const undone = remaining.filter((e) => e.task.status !== "done");

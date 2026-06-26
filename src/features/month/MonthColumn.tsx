@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import type { Task } from "@/lib/types";
-import { tasksOnMonth, dayInWeek, primaryDate, byPosition } from "@/lib/tasks";
+import { tasksOnMonth, dayInWeek, primaryDate, byPosition, monthlyRankOn } from "@/lib/tasks";
 import { formatMonth, addMonths, weekOf, weekdayZh, shortDate } from "@/lib/date";
 import { isAdhocOf } from "@/lib/entryMode";
 import { useTasksStore } from "@/store/tasks";
@@ -28,11 +28,11 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
   const entries = useMemo(() => tasksOnMonth(allTasks, month), [allTasks, month]);
 
   const top3 = entries
-    .filter((e) => e.kind === "primary" && e.task.custom_fields.monthly_priority)
+    .filter((e) => e.kind === "primary" && monthlyRankOn(e.task, month))
     .sort(
       (a, b) =>
-        Number(a.task.custom_fields.monthly_priority) -
-        Number(b.task.custom_fields.monthly_priority),
+        Number(monthlyRankOn(a.task, month)) -
+        Number(monthlyRankOn(b.task, month)),
     )
     .map((e) => e.task);
 
@@ -40,7 +40,7 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
   // 1) placed on a day in the viewed week (incl. done), 2) done elsewhere,
   // 3) moved away (undone, forwarded/dismissed), 4) the live "other tasks" pool.
   const rest = entries.filter(
-    (e) => !(e.kind === "primary" && e.task.custom_fields.monthly_priority),
+    (e) => !(e.kind === "primary" && monthlyRankOn(e.task, month)),
   );
   const scheduledThisWeek = rest
     .filter((e) => dayInWeek(e.task, week) !== null)
