@@ -290,6 +290,9 @@ const server = createServer(async (req, res) => {
   // ── Bootstrap fallbacks (normally pre-seeded via test-login) ────────────
   if (path === "/todo/projects" && method === "POST") return send(res, 201, { id: PROJECT_ID });
   if (path === "/todo/types" && method === "POST") return send(res, 201, { id: TYPE_ID });
+  // Schema reconcile: bootstrap PATCHes the type to add newly-declared fields.
+  // The fake doesn't enforce a schema, so just acknowledge.
+  if (/^\/todo\/types\/[^/]+$/.test(path) && method === "PATCH") return send(res, 200, { id: TYPE_ID });
 
   send(res, 404, { error: { code: "NOT_FOUND", message: `${method} ${path}` } });
 });
