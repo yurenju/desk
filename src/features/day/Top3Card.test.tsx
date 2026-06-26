@@ -129,9 +129,11 @@ describe("Top3Card (interactive)", () => {
     await user.click(await screen.findByRole("menuitem", { name: /丟回月度/ }));
 
     const task = useTasksStore.getState().tasks.find((t) => t.id === "d1")!;
-    // daily_priority is kept on purpose so the dismissed row stays in its Top3
-    // slot (greyed). It's the unscheduled_at stamp that removes it from "primary".
-    expect(task.custom_fields.daily_priority).toBe("1");
+    // The day's rank is folded into daily_ranks (history) so the dismissed row
+    // stays in its Top3 slot (greyed); the legacy single field is cleared. It's
+    // the unscheduled_at stamp that removes it from "primary".
+    expect(dailyRankOn(task, MOCK_TODAY)).toBe("1");
+    expect(task.custom_fields.daily_priority).toBeUndefined();
     expect(task.custom_fields.unscheduled_at).toBe(MOCK_TODAY);
   });
 

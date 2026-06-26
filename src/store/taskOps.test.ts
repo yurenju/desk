@@ -390,30 +390,47 @@ describe("moveToToday", () => {
     expect(next[0].custom_fields.scheduled_dates).toEqual(["2026-05-20", today]);
   });
 
-  it("keeps the task a priority, reassigning it to a free slot on today", () => {
+  it("keeps the source day's rank and assigns today a free slot", () => {
     const tasks = [
-      makeTask({ id: "a", custom_fields: { scheduled_dates: ["2026-05-20"], daily_priority: "2" } }),
+      makeTask({
+        id: "a",
+        custom_fields: { scheduled_dates: ["2026-05-20"], daily_ranks: ["2026-05-20:2"] },
+      }),
     ];
     const next = moveToToday(tasks, "a", today);
-    expect(next[0].custom_fields.daily_priority).toBe("1");
+    const cf = next[0].custom_fields;
+    // source day's rank preserved as history
+    expect(cf.daily_ranks).toContain("2026-05-20:2");
+    // today gets a fresh free slot (first free is "1")
+    expect(dailyRankOn(next[0], today)).toBe("1");
+    // legacy single field cleared
+    expect(cf.daily_priority).toBeUndefined();
   });
 
-  it("drops to no priority when today's three-things is already full", () => {
+  it("drops to no priority on today when today's three-things is already full", () => {
     const onToday = (id: string, p: "1" | "2" | "3") =>
-      makeTask({ id, custom_fields: { scheduled_dates: [today], daily_priority: p } });
+      makeTask({ id, custom_fields: { scheduled_dates: [today], daily_ranks: [`${today}:${p}`] } });
     const tasks = [
       onToday("x", "1"),
       onToday("y", "2"),
       onToday("z", "3"),
-      makeTask({ id: "a", custom_fields: { scheduled_dates: ["2026-05-20"], daily_priority: "1" } }),
+      makeTask({
+        id: "a",
+        custom_fields: { scheduled_dates: ["2026-05-20"], daily_ranks: ["2026-05-20:1"] },
+      }),
     ];
     const next = moveToToday(tasks, "a", today);
-    expect(next.find((t) => t.id === "a")!.custom_fields.daily_priority).toBeUndefined();
+    const moved = next.find((t) => t.id === "a")!;
+    // source day rank still there; today gets no rank because all three slots are taken by OTHERS
+    expect(moved.custom_fields.daily_ranks).toContain("2026-05-20:1");
+    expect(dailyRankOn(moved, today)).toBeNull();
+    expect(moved.custom_fields.daily_priority).toBeUndefined();
   });
 
-  it("leaves a non-priority task without priority", () => {
+  it("leaves a non-priority task without a rank on today", () => {
     const tasks = [makeTask({ id: "a", custom_fields: { scheduled_dates: ["2026-05-20"] } })];
     const next = moveToToday(tasks, "a", today);
+    expect(dailyRankOn(next[0], today)).toBeNull();
     expect(next[0].custom_fields.daily_priority).toBeUndefined();
   });
 
@@ -462,19 +479,23 @@ describe("demoteToMonth", () => {
     expect(next[0].custom_fields.is_adhoc).toBe("true"); // preserved
   });
 
-  it("preserves daily_priority so the dismissed row stays in its Top3 slot", () => {
+  it("dismisses the day but keeps that day's rank entry (no daily_priority)", () => {
     const tasks = [
       makeTask({
         id: "a",
         custom_fields: {
           scheduled_months: ["2026-05"],
           scheduled_dates: ["2026-05-21"],
-          daily_priority: "1",
+          daily_ranks: ["2026-05-21:1"],
         },
       }),
     ];
     const next = demoteToMonth(tasks, "a", "2026-05");
-    expect(next[0].custom_fields.daily_priority).toBe("1");
+    // the day's rank entry is the preserved history
+    expect(next[0].custom_fields.daily_ranks).toContain("2026-05-21:1");
+    // the legacy single field is never written/kept
+    expect(next[0].custom_fields.daily_priority).toBeUndefined();
+    expect(next[0].custom_fields.unscheduled_at).toBe("2026-05-21");
     // but it is no longer the day's primary, so it can't collide with a ring elsewhere
     expect(primaryDate(next[0])).toBeNull();
   });
