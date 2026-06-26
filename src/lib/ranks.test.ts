@@ -49,4 +49,18 @@ describe("writeRank", () => {
       "2026-06-26:2",
     ]);
   });
+  it("folds legacy value on first write when array is empty", () => {
+    const out = writeRank([], "2026-06-26", "2", {
+      value: "1",
+      key: "2026-06-25",
+    });
+    expect(out).toEqual(["2026-06-25:1", "2026-06-26:2"]);
+  });
+  it("does not fold legacy when legacy key is null", () => {
+    const out = writeRank(undefined, "2026-06-26", "2", {
+      value: "1",
+      key: null,
+    });
+    expect(out).toEqual(["2026-06-26:2"]);
+  });
 });

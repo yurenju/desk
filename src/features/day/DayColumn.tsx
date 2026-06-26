@@ -27,9 +27,8 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
 
   // A moved-out task (forwarded / dismissed) stays in the section it belonged to,
   // greyed with a "moved to where" label, instead of being banished to a separate
-  // trail list at the bottom. So sectioning runs over ALL entries (primary +
-  // trail) by the same daily_priority / is_adhoc keys — demoteToMonth keeps the
-  // dismissed row's daily_priority precisely so it lands back in its Top3 slot.
+  // trail list at the bottom. Sectioning by dailyRankOn(...) and is_adhoc; demoteToMonth
+  // preserves the per-date rank entry so it lands back in its Top3 slot on the original date.
   const top3 = entries
     .filter((e) => dailyRankOn(e.task, selectedDate))
     .sort(
