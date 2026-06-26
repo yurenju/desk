@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { Task } from "@/lib/types";
-import { tasksOnDate, byPosition } from "@/lib/tasks";
+import { tasksOnDate, byPosition, dailyRankOn } from "@/lib/tasks";
 import { dayOfMonth, shortWeekday } from "@/lib/date";
 import { useTasksStore } from "@/store/tasks";
 import { useDroppableZone } from "@/features/plan-view/useDroppableZone";
@@ -31,20 +31,20 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
   // trail) by the same daily_priority / is_adhoc keys — demoteToMonth keeps the
   // dismissed row's daily_priority precisely so it lands back in its Top3 slot.
   const top3 = entries
-    .filter((e) => e.task.custom_fields.daily_priority)
+    .filter((e) => dailyRankOn(e.task, selectedDate))
     .sort(
       (a, b) =>
-        Number(a.task.custom_fields.daily_priority) - Number(b.task.custom_fields.daily_priority),
+        Number(dailyRankOn(a.task, selectedDate)) - Number(dailyRankOn(b.task, selectedDate)),
     );
 
   const otherPlanned = entries
-    .filter((e) => !e.task.custom_fields.daily_priority && e.task.custom_fields.is_adhoc !== "true")
+    .filter((e) => !dailyRankOn(e.task, selectedDate) && e.task.custom_fields.is_adhoc !== "true")
     .sort((a, b) => byPosition(a.task, b.task));
 
   // Exclude tasks already promoted to Top3 (mirrors otherPlanned) so a
   // prioritised adhoc task isn't rendered in both sections.
   const adhoc = entries
-    .filter((e) => !e.task.custom_fields.daily_priority && e.task.custom_fields.is_adhoc === "true")
+    .filter((e) => !dailyRankOn(e.task, selectedDate) && e.task.custom_fields.is_adhoc === "true")
     .sort((a, b) => byPosition(a.task, b.task));
 
   // Live drag preview: re-order each section by the DndContext's preview map.

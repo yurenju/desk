@@ -7,7 +7,7 @@ import { TaskDetailTrigger } from "@/features/task-detail/TaskDetailTrigger";
 import { useTaskRow } from "./useTaskRow";
 import { DailyPriorityMenu } from "./DailyPriorityMenu";
 import { buildTaskRowMenuItems } from "./taskRowMenu";
-import { isDayAdhocChip, trailLabel } from "@/lib/tasks";
+import { isDayAdhocChip, trailLabel, dailyRankOn } from "@/lib/tasks";
 import { useTasksStore } from "@/store/tasks";
 import { SortableSection } from "@/features/plan-view/SortableSection";
 import { containerId } from "@/features/plan-view/planDrag";
@@ -98,6 +98,7 @@ function Top3Item({
   // Trail rows: greyed, in place, checkable, no drag handle, no overflow menu,
   // no priority menu. They carry a "moved to where" label instead.
   if (isTrail) {
+    const trailRank = dailyRankOn(t, date);
     return (
       <li className={[styles.item, styles.trail].join(" ")}>
         <Checkbox
@@ -107,7 +108,7 @@ function Top3Item({
           onCheckedChange={interactive ? row.toggle : undefined}
           aria-label={t.title}
         />
-        {order && <span className={[styles.ring, styles.ringMuted].join(" ")}>{order}</span>}
+        {trailRank && <span className={[styles.ring, styles.ringMuted].join(" ")}>{trailRank}</span>}
         <div className={styles.itemBody}>
           <div className={styles.itemTitle}>{t.title}</div>
         </div>

@@ -7,7 +7,7 @@ import { TaskDetailTrigger } from "@/features/task-detail/TaskDetailTrigger";
 import { useTaskRow } from "./useTaskRow";
 import { DailyPriorityMenu } from "./DailyPriorityMenu";
 import { buildTaskRowMenuItems } from "./taskRowMenu";
-import { isDayAdhocChip, trailLabel } from "@/lib/tasks";
+import { isDayAdhocChip, trailLabel, dailyRankOn } from "@/lib/tasks";
 import { useTasksStore } from "@/store/tasks";
 import styles from "./TaskRow.module.css";
 
@@ -53,7 +53,7 @@ export function TaskRow({ task, kind, date, interactive, showRing }: TaskRowProp
       />
       {showRing && editable && (
         <DailyPriorityMenu
-          value={task.custom_fields.daily_priority ?? null}
+          value={dailyRankOn(task, date)}
           onSelect={row.setPriority}
         />
       )}
