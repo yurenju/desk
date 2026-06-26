@@ -67,6 +67,8 @@ export async function handlePatchTodo(
       scheduled_months?: string[];
       unscheduled_at?: string;
       unscheduled_month?: string;
+      daily_ranks?: string[];
+      monthly_ranks?: string[];
     };
     try {
       body = (await request.json()) as {
@@ -82,6 +84,8 @@ export async function handlePatchTodo(
         scheduled_months?: string[];
         unscheduled_at?: string;
         unscheduled_month?: string;
+        daily_ranks?: string[];
+        monthly_ranks?: string[];
       };
     } catch {
       return json({ error: "invalid_json" }, 400);
@@ -97,6 +101,8 @@ export async function handlePatchTodo(
     if ("unscheduled_at" in body && body.unscheduled_at) customFields.unscheduled_at = body.unscheduled_at;
     if ("unscheduled_month" in body && body.unscheduled_month)
       customFields.unscheduled_month = body.unscheduled_month;
+    if ("daily_ranks" in body && body.daily_ranks) customFields.daily_ranks = body.daily_ranks;
+    if ("monthly_ranks" in body && body.monthly_ranks) customFields.monthly_ranks = body.monthly_ranks;
     const todo = await patchTodo(accessToken, id, {
       status: body.status,
       customFields: Object.keys(customFields).length ? customFields : undefined,
