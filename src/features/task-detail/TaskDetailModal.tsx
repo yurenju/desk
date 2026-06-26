@@ -1,7 +1,7 @@
 import { Dialog } from "@base-ui/react/dialog";
 import { useTasksStore } from "@/store/tasks";
 import { todayISO } from "@/lib/date";
-import { primaryMonth, delaySummary } from "@/lib/tasks";
+import { primaryDate, primaryMonth, dailyRankOn, delaySummary } from "@/lib/tasks";
 import { Checkbox } from "@/ui/Checkbox";
 import { useTaskDetailStore } from "./store";
 import { useTaskDetail } from "./useTaskDetail";
@@ -56,11 +56,7 @@ export function TaskDetailModal() {
               </div>
 
               <div className={styles.chips}>
-                {task.custom_fields.daily_priority && (
-                  <span className={`${styles.chip} ${styles.pri}`}>
-                    {PRIORITY_LABEL[task.custom_fields.daily_priority]}
-                  </span>
-                )}
+                {(() => { const pd = primaryDate(task); const rank = pd ? dailyRankOn(task, pd) : null; return rank ? <span className={`${styles.chip} ${styles.pri}`}>{PRIORITY_LABEL[rank]}</span> : null; })()}
                 {task.custom_fields.scheduled_dates?.length ? (
                   <span className={styles.chip}>
                     排到 {task.custom_fields.scheduled_dates[task.custom_fields.scheduled_dates.length - 1].slice(5)}
