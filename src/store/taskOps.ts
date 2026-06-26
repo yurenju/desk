@@ -218,21 +218,34 @@ export function moveToToday(tasks: Task[], id: string, today: string): Task[] {
 
   const nextDates = [...dates, today]; // append-only: origin day stays as a trail
 
-  // Preserve "is a priority", but the exact slot doesn't matter — reassign to a
-  // non-colliding slot on today. If today's three-things is already full, drop
-  // the priority (land in "其他計劃內") rather than evict a deliberate pick.
-  let nextPriority = target.custom_fields.daily_priority;
-  if (nextPriority) {
+  // The source day's rank stays in `daily_ranks` untouched (preserved history).
+  // For TODAY, if the task actually had a rank on its source day, reassign it a
+  // fresh non-colliding slot. If today's three-things is already full (all 3
+  // slots taken by OTHERS), set no rank on today (land in "其他計劃內") rather
+  // than evict a deliberate pick. Always clear the legacy single field.
+  const sourceDay = primaryDate(target);
+  const hadSourceRank = sourceDay !== null && dailyRankOn(target, sourceDay) !== null;
+
+  let nextRanks = target.custom_fields.daily_ranks;
+  if (hadSourceRank) {
     const takenByOthers = new Set(
       tasks
-        .filter((t) => t.id !== id && primaryDate(t) === today && t.custom_fields.daily_priority)
-        .map((t) => t.custom_fields.daily_priority),
+        .filter((t) => t.id !== id && dailyRankOn(t, today) !== null)
+        .map((t) => dailyRankOn(t, today)),
     );
-    nextPriority = takenByOthers.size >= 3 ? undefined : nextFreeDailySlot(tasks, today, id);
+    if (takenByOthers.size < 3) {
+      const slot = nextFreeDailySlot(tasks, today, id);
+      nextRanks = writeRank(target.custom_fields.daily_ranks, today, slot, {
+        value: target.custom_fields.daily_priority,
+        key: primaryDate(target),
+      });
+    }
   }
 
   return tasks.map((t) =>
-    t.id === id ? patch(t, { scheduled_dates: nextDates, daily_priority: nextPriority }) : t,
+    t.id === id
+      ? patch(t, { scheduled_dates: nextDates, daily_ranks: nextRanks, daily_priority: undefined })
+      : t,
   );
 }
 
@@ -246,15 +259,25 @@ export function demoteToMonth(tasks: Task[], id: string, currentMonth: string): 
   // Land in the current month (今天所在月), unless it's already the active month.
   const nextMonths = primaryMonth(target) === currentMonth ? months : [...months, currentMonth];
 
+  // The day's rank entry IS the preserved history, so the dismissed row stays in
+  // place in the day's Top3 card (greyed, "↩ 已退回本月") instead of vanishing.
+  // Fold any legacy single value into daily_ranks[day] first — once primaryDate
+  // becomes null the legacy read-fallback no longer fires, so the rank must live
+  // in the array to survive. This is a no-op write when daily_ranks already
+  // carries the day's rank. Clear the legacy single field afterwards.
+  const dayRank = dailyRankOn(target, day);
+  const nextRanks = writeRank(target.custom_fields.daily_ranks, day, dayRank, {
+    value: target.custom_fields.daily_priority,
+    key: day,
+  });
+
   return tasks.map((t) =>
     t.id === id
       ? patch(t, {
           unscheduled_at: day, // dismiss the day (= last scheduled date); scheduled_dates trail stays
           scheduled_months: nextMonths,
-          // Keep daily_priority on purpose: the dismissed row stays in place in
-          // the day's Top3 card (greyed, "↩ 已退回本月") instead of vanishing.
-          // It no longer counts as primary (primaryDate is null), so it won't
-          // collide with another day's ring.
+          daily_ranks: nextRanks,
+          daily_priority: undefined,
         })
       : t,
   );
@@ -267,6 +290,9 @@ export function moveToNextMonth(tasks: Task[], id: string): Task[] {
   if (months.length === 0) return tasks; // not a month task
   const last = months[months.length - 1];
   const nextMonth = monthOf(addMonths(`${last}-01`, 1));
+  // Leave monthly_ranks untouched: the source month's rank entry is preserved
+  // history; the new month simply has no rank. Clear the legacy single field so
+  // the read fallback can't resurrect a stale value on the new primary month.
   return tasks.map((t) =>
     t.id === id
       ? patch(t, { scheduled_months: [...months, nextMonth], monthly_priority: undefined })
@@ -284,6 +310,9 @@ export function demoteToBacklog(tasks: Task[], id: string, today: string): Task[
   // Dismiss any residual day scheduling — including a day in the future — so the
   // task truly lands in backlog. Stamp the later of `today` and the last scheduled day.
   const dismissAt = lastDate && lastDate > today ? lastDate : today;
+  // Leave daily_ranks/monthly_ranks untouched (preserved history); backlog has
+  // no rank entry of its own. Clear the legacy single fields so the read
+  // fallback can't resurrect a stale value.
   return tasks.map((t) =>
     t.id === id
       ? patch(t, {
