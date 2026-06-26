@@ -486,7 +486,7 @@ export function planCommit(args: {
   if (container.kind === "other" || container.kind === "adhoc") {
     const prevId = idx > 0 ? rowTaskId(finalOrder[idx - 1]) : null;
     const nextId = idx >= 0 && idx < finalOrder.length - 1 ? rowTaskId(finalOrder[idx + 1]) : null;
-    const hadPriority = Boolean(activeTask.custom_fields.daily_priority);
+    const hadPriority = Boolean(dailyRankOn(activeTask, container.date));
     const crossColumn = primaryDateOf(activeTask) !== container.date;
     return {
       kind: "pool",
@@ -503,7 +503,7 @@ export function planCommit(args: {
   if (container.kind === "poolMonth") {
     const prevId = idx > 0 ? rowTaskId(finalOrder[idx - 1]) : null;
     const nextId = idx >= 0 && idx < finalOrder.length - 1 ? rowTaskId(finalOrder[idx + 1]) : null;
-    const hadPriority = Boolean(activeTask.custom_fields.monthly_priority);
+    const hadPriority = Boolean(monthlyRankOn(activeTask, container.month));
     // Month-pool reorder stays within the month column — never schedules a day.
     return {
       kind: "pool",
