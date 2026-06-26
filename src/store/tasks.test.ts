@@ -6,6 +6,7 @@ import { resetTodoQueue } from "@/lib/api/todoQueue";
 import * as queue from "@/lib/api/todoQueue";
 import type { Task } from "@/lib/types";
 import { todayISO } from "@/lib/date";
+import { dailyRankOn, monthlyRankOn } from "@/lib/tasks";
 
 // Silence unhandled floating-promise warnings from fire-and-forget store actions
 // by ensuring all API calls are mocked by default.
@@ -45,8 +46,9 @@ describe("useTasksStore (local behaviour)", () => {
     vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
     await useTasksStore.getState().setDailyPriority("d5", "1", useTasksStore.getState().today);
     const s = useTasksStore.getState();
-    expect(s.tasks.find((t) => t.id === "d5")!.custom_fields.daily_priority).toBe("1");
-    expect(s.tasks.find((t) => t.id === "d1")!.custom_fields.daily_priority).toBeUndefined();
+    const today = useTasksStore.getState().today;
+    expect(dailyRankOn(s.tasks.find((t) => t.id === "d5")!, today)).toBe("1");
+    expect(dailyRankOn(s.tasks.find((t) => t.id === "d1")!, today)).toBeNull();
   });
 
   it("deleteTask removes the task optimistically and sets recentlyDeleted", async () => {
@@ -250,8 +252,8 @@ describe("server-backed tasks store", () => {
     vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
     await useTasksStore.getState().setMonthlyPriority("b", "1", "2026-05");
     const s = useTasksStore.getState();
-    expect(s.tasks.find((t) => t.id === "b")!.custom_fields.monthly_priority).toBe("1");
-    expect(s.tasks.find((t) => t.id === "a")!.custom_fields.monthly_priority).toBeUndefined();
+    expect(monthlyRankOn(s.tasks.find((t) => t.id === "b")!, "2026-05")).toBe("1");
+    expect(monthlyRankOn(s.tasks.find((t) => t.id === "a")!, "2026-05")).toBeNull();
   });
 
   it("addMonthTask adds a month-scoped task", async () => {

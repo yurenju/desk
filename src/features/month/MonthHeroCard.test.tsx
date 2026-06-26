@@ -4,6 +4,7 @@ import { it, expect, vi } from "vitest";
 import { MonthHeroCard } from "./MonthHeroCard";
 import { useTasksStore } from "@/store/tasks";
 import * as api from "@/lib/api/todo";
+import { dailyRankOn, monthlyRankOn } from "@/lib/tasks";
 
 it("sets monthly priority via the ring menu and evicts the collider", async () => {
   vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
@@ -25,9 +26,9 @@ it("sets monthly priority via the ring menu and evicts the collider", async () =
   await userEvent.click(screen.getByLabelText("本月重點第 2"));
   await userEvent.click(await screen.findByRole("menuitemradio", { name: "① 本月第一" }));
   const s = useTasksStore.getState();
-  expect(s.tasks.find((t) => t.id === "b")!.custom_fields.monthly_priority).toBe("1");
+  expect(monthlyRankOn(s.tasks.find((t) => t.id === "b")!, "2026-05")).toBe("1");
   // cascade: a (was rank 1) is pushed to rank 2, not evicted
-  expect(s.tasks.find((t) => t.id === "a")!.custom_fields.monthly_priority).toBe("2");
+  expect(monthlyRankOn(s.tasks.find((t) => t.id === "a")!, "2026-05")).toBe("2");
 });
 
 it("promotes a hero task into the day's top-3", async () => {
@@ -51,5 +52,5 @@ it("promotes a hero task into the day's top-3", async () => {
   const t = useTasksStore.getState().tasks.find((x) => x.id === "h1")!;
   expect(t.custom_fields.scheduled_dates).toEqual(["2026-05-22"]);
   // reorderPriority compresses rank 2 → rank 1 when no prior rank-1 exists
-  expect(t.custom_fields.daily_priority).toBe("1");
+  expect(dailyRankOn(t, "2026-05-22")).toBe("1");
 });

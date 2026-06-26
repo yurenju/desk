@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Task } from "./types";
-import { primaryDate, primaryMonth, layer, tasksOnDate, tasksOnMonth, nextFreeDailySlot, delayKind, delaySummary, dayInWeek, isDayAdhocChip, byPosition } from "./tasks";
+import { primaryDate, primaryMonth, layer, tasksOnDate, tasksOnMonth, nextFreeDailySlot, delayKind, delaySummary, dayInWeek, isDayAdhocChip, byPosition, trailLabel, dailyRankOn, monthlyRankOn } from "./tasks";
 import { weekOf } from "./date";
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
@@ -352,5 +352,66 @@ describe("byPosition", () => {
   });
   it("a positioned task sorts before an unpositioned one", () => {
     expect(byPosition(mk("a", "m"), mk("b"))).toBeLessThan(0);
+  });
+});
+
+describe("trailLabel", () => {
+  const TODAY = "2026-05-22";
+
+  it("forwarded to today reads 已移到今天", () => {
+    const t = makeTask({ id: "a", custom_fields: { scheduled_dates: ["2026-05-20", TODAY] } });
+    expect(trailLabel(t, "forwarded", TODAY)).toBe("↪ 已移到今天");
+  });
+
+  it("forwarded to another day reads the target M/D", () => {
+    const t = makeTask({ id: "a", custom_fields: { scheduled_dates: ["2026-05-20", "2026-05-27"] } });
+    expect(trailLabel(t, "forwarded", TODAY)).toBe("↪ 已移到 5/27");
+  });
+
+  it("dismissed into the current month reads 已退回本月", () => {
+    const t = makeTask({
+      id: "a",
+      custom_fields: { scheduled_dates: ["2026-05-20"], unscheduled_at: "2026-05-20", scheduled_months: ["2026-05"] },
+    });
+    expect(trailLabel(t, "dismissed", TODAY)).toBe("↩ 已退回本月");
+  });
+
+  it("dismissed into another month names that month", () => {
+    const t = makeTask({
+      id: "a",
+      custom_fields: { scheduled_dates: ["2026-05-20"], unscheduled_at: "2026-05-20", scheduled_months: ["2026-07"] },
+    });
+    expect(trailLabel(t, "dismissed", TODAY)).toBe("↩ 已退回 7 月");
+  });
+
+  it("dismissed with no active month reads 已退回待辦", () => {
+    const t = makeTask({
+      id: "a",
+      custom_fields: { scheduled_dates: ["2026-05-20"], unscheduled_at: "2026-05-20" },
+    });
+    expect(trailLabel(t, "dismissed", TODAY)).toBe("↩ 已退回待辦");
+  });
+});
+
+describe("dailyRankOn / monthlyRankOn", () => {
+  it("reads from the per-date array first", () => {
+    const t = makeTask({ id: "a", custom_fields: { scheduled_dates: ["2026-05-22"], daily_ranks: ["2026-05-22:2"] } });
+    expect(dailyRankOn(t, "2026-05-22")).toBe("2");
+    expect(dailyRankOn(t, "2026-05-21")).toBeNull();
+  });
+  it("falls back to legacy daily_priority only on the current primary day", () => {
+    const t = makeTask({ id: "a", custom_fields: { scheduled_dates: ["2026-05-20", "2026-05-22"], daily_priority: "1" } });
+    expect(dailyRankOn(t, "2026-05-22")).toBe("1"); // primaryDate
+    expect(dailyRankOn(t, "2026-05-20")).toBeNull(); // trail day — no fallback
+  });
+  it("does not fall back once the per-date array is non-empty", () => {
+    const t = makeTask({ id: "a", custom_fields: { scheduled_dates: ["2026-05-22"], daily_priority: "1", daily_ranks: ["2026-05-23:2"] } });
+    expect(dailyRankOn(t, "2026-05-22")).toBeNull();
+  });
+  it("monthlyRankOn mirrors the behaviour for months", () => {
+    const t = makeTask({ id: "a", custom_fields: { scheduled_months: ["2026-05"], monthly_priority: "3" } });
+    expect(monthlyRankOn(t, "2026-05")).toBe("3");
+    const t2 = makeTask({ id: "b", custom_fields: { scheduled_months: ["2026-05"], monthly_ranks: ["2026-05:1"] } });
+    expect(monthlyRankOn(t2, "2026-05")).toBe("1");
   });
 });

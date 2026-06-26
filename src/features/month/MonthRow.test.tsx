@@ -4,6 +4,7 @@ import { it, expect, vi } from "vitest";
 import { MonthRow } from "./MonthRow";
 import { useTasksStore } from "@/store/tasks";
 import * as api from "@/lib/api/todo";
+import { dailyRankOn, monthlyRankOn } from "@/lib/tasks";
 
 it("sets monthly priority via the ring", async () => {
   vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
@@ -16,7 +17,7 @@ it("sets monthly priority via the ring", async () => {
     month="2026-05" selectedDate="2026-05-22" interactive showRing />);
   await userEvent.click(screen.getByLabelText("設為本月重點"));
   await userEvent.click(await screen.findByRole("menuitemradio", { name: "① 本月第一" }));
-  expect(useTasksStore.getState().tasks[0].custom_fields.monthly_priority).toBe("1");
+  expect(monthlyRankOn(useTasksStore.getState().tasks[0], "2026-05")).toBe("1");
 });
 
 it("promotes into the day's other-planned via the overflow menu", async () => {
@@ -48,7 +49,7 @@ it("promotes into the day's top-3 via the overflow menu", async () => {
   await userEvent.click(await screen.findByRole("menuitem", { name: /22 日 · ① 三件事/ }));
   const t = useTasksStore.getState().tasks[0];
   expect(t.custom_fields.scheduled_dates).toEqual(["2026-05-22"]);
-  expect(t.custom_fields.daily_priority).toBe("1");
+  expect(dailyRankOn(t, "2026-05-22")).toBe("1");
 });
 
 it("month row menu includes 移到下月 and 丟回 Backlog", async () => {

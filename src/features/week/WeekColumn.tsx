@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { Task } from "@/lib/types";
-import { tasksOnDate } from "@/lib/tasks";
+import { tasksOnDate, dailyRankOn } from "@/lib/tasks";
 import { weekOf, shortWeekday, dayOfMonth, isoWeek, addDays } from "@/lib/date";
 import { useDroppableZone } from "@/features/plan-view/useDroppableZone";
 import { useDraggableRow } from "@/features/plan-view/useDraggableRow";
@@ -76,11 +76,8 @@ function WeekDayCell({ date, allTasks, selectedDate }: WeekDayCellProps) {
   const entries = tasksOnDate(allTasks, date);
   const primary = entries.filter((e) => e.kind === "primary");
   const top3 = primary
-    .filter((e) => e.task.custom_fields.daily_priority)
-    .sort(
-      (a, b) =>
-        Number(a.task.custom_fields.daily_priority) - Number(b.task.custom_fields.daily_priority),
-    )
+    .filter((e) => dailyRankOn(e.task, date))
+    .sort((a, b) => Number(dailyRankOn(a.task, date)) - Number(dailyRankOn(b.task, date)))
     .slice(0, 3);
   // Tasks scheduled on this day that aren't one of the top-3
   // (planned-without-priority + adhoc). Rendered as draggable items too so the

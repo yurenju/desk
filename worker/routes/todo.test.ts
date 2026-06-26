@@ -15,7 +15,9 @@ async function seedSession(env: { DESK_KV: KVNamespace }) {
     accessExp: Math.floor(Date.now() / 1000) + 600,
     userId: "usr_a",
   });
-  await putBootstrap(env.DESK_KV, "usr_a", { projectId: "prj_1", typeId: "typ_1" });
+  // schemaVersion: 2 marks the type as already reconciled, so ensureBootstrap
+  // doesn't fire updateTodoType during these route tests.
+  await putBootstrap(env.DESK_KV, "usr_a", { projectId: "prj_1", typeId: "typ_1", schemaVersion: 2 });
 }
 
 const cookie = { Cookie: "__Host-Session=sid" };

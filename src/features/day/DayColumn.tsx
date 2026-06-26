@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { Task } from "@/lib/types";
-import { tasksOnDate, byPosition } from "@/lib/tasks";
+import { tasksOnDate, byPosition, dailyRankOn } from "@/lib/tasks";
 import { dayOfMonth, shortWeekday } from "@/lib/date";
 import { useTasksStore } from "@/store/tasks";
 import { useDroppableZone } from "@/features/plan-view/useDroppableZone";
@@ -25,55 +25,47 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
   const addTodayTask = useTasksStore((s) => s.addTodayTask);
   const entries = useMemo(() => tasksOnDate(allTasks, selectedDate), [allTasks, selectedDate]);
 
-  const primary = entries.filter((e) => e.kind === "primary");
-
-  const top3 = primary
-    .filter((e) => e.task.custom_fields.daily_priority)
+  // A moved-out task (forwarded / dismissed) stays in the section it belonged to,
+  // greyed with a "moved to where" label, instead of being banished to a separate
+  // trail list at the bottom. Sectioning by dailyRankOn(...) and is_adhoc; demoteToMonth
+  // preserves the per-date rank entry so it lands back in its Top3 slot on the original date.
+  const top3 = entries
+    .filter((e) => dailyRankOn(e.task, selectedDate))
     .sort(
       (a, b) =>
-        Number(a.task.custom_fields.daily_priority) - Number(b.task.custom_fields.daily_priority),
-    )
-    .map((e) => e.task);
+        Number(dailyRankOn(a.task, selectedDate)) - Number(dailyRankOn(b.task, selectedDate)),
+    );
 
-  const otherPlanned = primary
-    .filter((e) => !e.task.custom_fields.daily_priority && e.task.custom_fields.is_adhoc !== "true")
+  const otherPlanned = entries
+    .filter((e) => !dailyRankOn(e.task, selectedDate) && e.task.custom_fields.is_adhoc !== "true")
     .sort((a, b) => byPosition(a.task, b.task));
 
   // Exclude tasks already promoted to Top3 (mirrors otherPlanned) so a
   // prioritised adhoc task isn't rendered in both sections.
-  const adhoc = primary
-    .filter((e) => !e.task.custom_fields.daily_priority && e.task.custom_fields.is_adhoc === "true")
+  const adhoc = entries
+    .filter((e) => !dailyRankOn(e.task, selectedDate) && e.task.custom_fields.is_adhoc === "true")
     .sort((a, b) => byPosition(a.task, b.task));
 
-  const trails = entries.filter((e) => e.kind !== "primary");
-
   // Live drag preview: re-order each section by the DndContext's preview map.
-  // `taskById` spans every primary task so an overflow preview (which pulls a
-  // task from "other" into top3, or pushes top3's 3rd into "other") can resolve
-  // tasks that aren't in the section's own base list.
+  // `entryById` spans every entry so an overflow preview (which pulls a task from
+  // "other" into top3, or pushes top3's 3rd into "other") can resolve entries
+  // that aren't in the section's own base list.
   const { previewOrder } = useDragOrdering();
-  // Lookup over every primary task on the day. Left un-memoized on purpose: the
-  // React Compiler handles memoization, and a manual useMemo over the
-  // non-memoized `primary` array trips react-hooks/preserve-manual-memoization.
-  const taskById = new Map(primary.map((e) => [`day:${e.task.id}`, e.task]));
-  const orderSection = (cid: string, base: Task[]): Task[] => {
-    const baseIds = base.map((t) => `day:${t.id}`);
+  // Lookup over every entry on the day. Left un-memoized on purpose: the React
+  // Compiler handles memoization, and a manual useMemo over the non-memoized
+  // arrays trips react-hooks/preserve-manual-memoization.
+  const entryById = new Map(entries.map((e) => [`day:${e.task.id}`, e]));
+  const orderSection = (cid: string, base: typeof entries): typeof entries => {
+    const baseIds = base.map((e) => `day:${e.task.id}`);
     const ids = previewOrder(cid, baseIds);
-    return ids.map((id) => taskById.get(id)).filter((t): t is Task => Boolean(t));
+    return ids.map((id) => entryById.get(id)).filter((e): e is (typeof entries)[number] => Boolean(e));
   };
   const otherCid = containerId({ kind: "other", date: selectedDate });
   const adhocCid = containerId({ kind: "adhoc", date: selectedDate });
-  const otherOrdered = orderSection(
-    otherCid,
-    otherPlanned.map((e) => e.task),
-  );
-  const adhocOrdered = orderSection(
-    adhocCid,
-    adhoc.map((e) => e.task),
-  );
+  const otherOrdered = orderSection(otherCid, otherPlanned);
+  const adhocOrdered = orderSection(adhocCid, adhoc);
 
-  const isEmpty =
-    top3.length === 0 && otherPlanned.length === 0 && adhoc.length === 0 && trails.length === 0;
+  const isEmpty = top3.length === 0 && otherPlanned.length === 0 && adhoc.length === 0;
 
   const isInteractive = interactive ?? variant === "today-hero";
   const { ref: top3Ref, isOver: top3IsOver } = useDroppableZone({
@@ -110,12 +102,12 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
       >
         {top3.length > 0 ? (
           <Top3Card
-            tasks={top3}
+            entries={top3}
             title={isToday ? "今天最重要的三件事" : "最重要的三件事"}
             variant="accent"
             date={selectedDate}
             interactive={isInteractive}
-            taskById={taskById}
+            entryById={entryById}
           />
         ) : (
           isInteractive &&
@@ -130,14 +122,20 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
         {otherOrdered.length > 0 && (
           <section className={styles.section}>
             <header className={styles.sectionHead}>
-              其他計劃內 <span className={styles.count}>{otherOrdered.length}</span>
+              其他計劃內{" "}
+              <span className={styles.count}>
+                {otherOrdered.filter((e) => e.kind === "primary").length}
+              </span>
             </header>
-            <SortableSection id={otherCid} items={otherOrdered.map((t) => `day:${t.id}`)}>
-              {otherOrdered.map((t) => (
+            <SortableSection
+              id={otherCid}
+              items={otherOrdered.filter((e) => e.kind === "primary").map((e) => `day:${e.task.id}`)}
+            >
+              {otherOrdered.map((e) => (
                 <TaskRow
-                  key={t.id}
-                  task={t}
-                  kind="primary"
+                  key={e.task.id}
+                  task={e.task}
+                  kind={e.kind}
                   date={selectedDate}
                   interactive={isInteractive}
                   showRing={isInteractive}
@@ -151,14 +149,19 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
           <section className={styles.section}>
             <header className={[styles.sectionHead, styles.adhocHead].join(" ")}>
               {isToday ? "今天臨時加的" : "臨時加的"}{" "}
-              <span className={styles.count}>{adhocOrdered.length}</span>
+              <span className={styles.count}>
+                {adhocOrdered.filter((e) => e.kind === "primary").length}
+              </span>
             </header>
-            <SortableSection id={adhocCid} items={adhocOrdered.map((t) => `day:${t.id}`)}>
-              {adhocOrdered.map((t) => (
+            <SortableSection
+              id={adhocCid}
+              items={adhocOrdered.filter((e) => e.kind === "primary").map((e) => `day:${e.task.id}`)}
+            >
+              {adhocOrdered.map((e) => (
                 <TaskRow
-                  key={t.id}
-                  task={t}
-                  kind="primary"
+                  key={e.task.id}
+                  task={e.task}
+                  kind={e.kind}
                   date={selectedDate}
                   interactive={isInteractive}
                   showRing={isInteractive}
@@ -172,20 +175,6 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
           <div className={styles.dropHint}>拖到這裡 → 其他計劃內</div>
         )}
       </div>
-
-      {trails.length > 0 && (
-        <section className={styles.section}>
-          {trails.map((e) => (
-            <TaskRow
-              key={e.task.id}
-              task={e.task}
-              kind={e.kind}
-              date={selectedDate}
-              interactive={isInteractive}
-            />
-          ))}
-        </section>
-      )}
 
       {isInteractive && isEmpty && (
         <div className={styles.empty}>

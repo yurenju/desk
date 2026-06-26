@@ -12,7 +12,7 @@ import {
   type CollisionDetection,
 } from "@dnd-kit/core";
 import type { Task } from "@/lib/types";
-import { tasksOnDate, tasksOnMonth, tasksInBacklog, dayInWeek, byPosition } from "@/lib/tasks";
+import { tasksOnDate, tasksOnMonth, tasksInBacklog, dayInWeek, byPosition, dailyRankOn, monthlyRankOn } from "@/lib/tasks";
 import { weekOf } from "@/lib/date";
 import { useTasksStore } from "@/store/tasks";
 
@@ -157,15 +157,13 @@ export function buildDayContainers(allTasks: Task[], date: string): ContainerMap
     .map((e) => e.task);
 
   const top3 = primary
-    .filter((t) => t.custom_fields.daily_priority)
-    .sort(
-      (a, b) => Number(a.custom_fields.daily_priority) - Number(b.custom_fields.daily_priority),
-    );
+    .filter((t) => dailyRankOn(t, date))
+    .sort((a, b) => Number(dailyRankOn(a, date)) - Number(dailyRankOn(b, date)));
   const other = primary
-    .filter((t) => !t.custom_fields.daily_priority && t.custom_fields.is_adhoc !== "true")
+    .filter((t) => !dailyRankOn(t, date) && t.custom_fields.is_adhoc !== "true")
     .sort(byPosition);
   const adhoc = primary
-    .filter((t) => !t.custom_fields.daily_priority && t.custom_fields.is_adhoc === "true")
+    .filter((t) => !dailyRankOn(t, date) && t.custom_fields.is_adhoc === "true")
     .sort(byPosition);
 
   const map: ContainerMap = new Map();
@@ -191,18 +189,18 @@ export function buildMonthContainers(
   const entries = tasksOnMonth(allTasks, month);
 
   const top3 = entries
-    .filter((e) => e.kind === "primary" && e.task.custom_fields.monthly_priority)
+    .filter((e) => e.kind === "primary" && monthlyRankOn(e.task, month))
     .sort(
       (a, b) =>
-        Number(a.task.custom_fields.monthly_priority) -
-        Number(b.task.custom_fields.monthly_priority),
+        Number(monthlyRankOn(a.task, month)) -
+        Number(monthlyRankOn(b.task, month)),
     )
     .map((e) => e.task);
 
   // 其他任務: outside top3, not scheduled in the viewed week, undone, primary;
   // adhoc sinks below 計劃內, tiebreak byPosition. Mirrors MonthColumn exactly.
   const rest = entries.filter(
-    (e) => !(e.kind === "primary" && e.task.custom_fields.monthly_priority),
+    (e) => !(e.kind === "primary" && monthlyRankOn(e.task, month)),
   );
   const remaining = rest.filter((e) => dayInWeek(e.task, week) === null);
   const undone = remaining.filter((e) => e.task.status !== "done");
@@ -236,11 +234,8 @@ export function buildWeekContainers(allTasks: Task[], weekDates: string[]): Cont
       .filter((e) => e.kind === "primary")
       .map((e) => e.task);
     const top3 = primary
-      .filter((t) => t.custom_fields.daily_priority)
-      .sort(
-        (a, b) =>
-          Number(a.custom_fields.daily_priority) - Number(b.custom_fields.daily_priority),
-      )
+      .filter((t) => dailyRankOn(t, date))
+      .sort((a, b) => Number(dailyRankOn(a, date)) - Number(dailyRankOn(b, date)))
       .slice(0, 3);
     map.set(containerId({ kind: "weekTop3", date }), top3.map((t) => `week:${date}:${t.id}`));
   }
@@ -491,7 +486,7 @@ export function planCommit(args: {
   if (container.kind === "other" || container.kind === "adhoc") {
     const prevId = idx > 0 ? rowTaskId(finalOrder[idx - 1]) : null;
     const nextId = idx >= 0 && idx < finalOrder.length - 1 ? rowTaskId(finalOrder[idx + 1]) : null;
-    const hadPriority = Boolean(activeTask.custom_fields.daily_priority);
+    const hadPriority = Boolean(dailyRankOn(activeTask, container.date));
     const crossColumn = primaryDateOf(activeTask) !== container.date;
     return {
       kind: "pool",
@@ -508,7 +503,7 @@ export function planCommit(args: {
   if (container.kind === "poolMonth") {
     const prevId = idx > 0 ? rowTaskId(finalOrder[idx - 1]) : null;
     const nextId = idx >= 0 && idx < finalOrder.length - 1 ? rowTaskId(finalOrder[idx + 1]) : null;
-    const hadPriority = Boolean(activeTask.custom_fields.monthly_priority);
+    const hadPriority = Boolean(monthlyRankOn(activeTask, container.month));
     // Month-pool reorder stays within the month column — never schedules a day.
     return {
       kind: "pool",

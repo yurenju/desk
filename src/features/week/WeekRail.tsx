@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import type { Task } from "@/lib/types";
-import { tasksOnDate } from "@/lib/tasks";
+import { tasksOnDate, dailyRankOn } from "@/lib/tasks";
 import { weekOf, shortWeekday, dayOfMonth, isoWeek, addDays } from "@/lib/date";
 import styles from "./WeekRail.module.css";
 
@@ -54,12 +54,8 @@ export function WeekRail({ allTasks, selectedDate, today }: WeekRailProps) {
           const entries = tasksOnDate(allTasks, date);
           const primary = entries.filter((e) => e.kind === "primary");
           const top3 = primary
-            .filter((e) => e.task.custom_fields.daily_priority)
-            .sort(
-              (a, b) =>
-                Number(a.task.custom_fields.daily_priority) -
-                Number(b.task.custom_fields.daily_priority),
-            )
+            .filter((e) => dailyRankOn(e.task, date))
+            .sort((a, b) => Number(dailyRankOn(a.task, date)) - Number(dailyRankOn(b.task, date)))
             .slice(0, 3);
           return (
             <li key={date} className={styles.dayItem}>

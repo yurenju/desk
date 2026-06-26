@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { reorderPriority, reorderInPool } from "./taskOps";
+import { dailyRankOn } from "@/lib/tasks";
 import type { Task } from "@/lib/types";
 
 function dayTask(id: string, date: string, p?: string, pos?: string): Task {
@@ -11,7 +12,7 @@ function dayTask(id: string, date: string, p?: string, pos?: string): Task {
     updated_at: "2026-06-01T00:00:00Z",
     custom_fields: {
       scheduled_dates: [date],
-      ...(p ? { daily_priority: p as Task["custom_fields"]["daily_priority"] } : {}),
+      ...(p ? { daily_ranks: [`${date}:${p}`] } : {}),
       ...(pos ? { position: pos } : {}),
     },
   };
@@ -23,7 +24,7 @@ describe("reorderPriority (daily)", () => {
   it("swaps order within an existing top-3", () => {
     const tasks = [dayTask("a", D, "1"), dayTask("b", D, "2"), dayTask("c", D, "3")];
     const next = reorderPriority(tasks, "c", "1", "daily", D);
-    const p = (id: string) => next.find((t) => t.id === id)!.custom_fields.daily_priority;
+    const p = (id: string) => dailyRankOn(next.find((t) => t.id === id)!, D);
     expect(p("c")).toBe("1");
     expect(p("a")).toBe("2");
     expect(p("b")).toBe("3");
@@ -37,27 +38,27 @@ describe("reorderPriority (daily)", () => {
       dayTask("x", D, undefined, "m"), // an existing other-pool task
     ];
     const next = reorderPriority(tasks, "x", "2", "daily", D);
-    const cf = (id: string) => next.find((t) => t.id === id)!.custom_fields;
-    expect(cf("x").daily_priority).toBe("2");
-    expect(cf("a").daily_priority).toBe("1");
-    expect(cf("b").daily_priority).toBe("3");
+    const t = (id: string) => next.find((tt) => tt.id === id)!;
+    expect(dailyRankOn(t("x"), D)).toBe("2");
+    expect(dailyRankOn(t("a"), D)).toBe("1");
+    expect(dailyRankOn(t("b"), D)).toBe("3");
     // old 3 (c) overflowed: priority cleared, position sorts before the pool min ("m")
-    expect(cf("c").daily_priority).toBeUndefined();
-    expect(cf("c").position! < "m").toBe(true);
+    expect(dailyRankOn(t("c"), D)).toBeNull();
+    expect(t("c").custom_fields.position! < "m").toBe(true);
   });
 
   it("keeps a single ① without forcing ②③", () => {
     const tasks = [dayTask("a", D, "1"), dayTask("x", D, undefined, "m")];
     const next = reorderPriority(tasks, "a", "1", "daily", D);
-    expect(next.find((t) => t.id === "a")!.custom_fields.daily_priority).toBe("1");
-    expect(next.find((t) => t.id === "x")!.custom_fields.daily_priority).toBeUndefined();
+    expect(dailyRankOn(next.find((t) => t.id === "a")!, D)).toBe("1");
+    expect(dailyRankOn(next.find((t) => t.id === "x")!, D)).toBeNull();
   });
 
   it("promoting into a non-full top-3 does not overflow", () => {
     const tasks = [dayTask("a", D, "1"), dayTask("x", D, undefined, "m")];
     const next = reorderPriority(tasks, "x", "2", "daily", D);
-    expect(next.find((t) => t.id === "x")!.custom_fields.daily_priority).toBe("2");
-    expect(next.find((t) => t.id === "a")!.custom_fields.daily_priority).toBe("1");
+    expect(dailyRankOn(next.find((t) => t.id === "x")!, D)).toBe("2");
+    expect(dailyRankOn(next.find((t) => t.id === "a")!, D)).toBe("1");
   });
 });
 

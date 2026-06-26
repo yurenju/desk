@@ -1,5 +1,5 @@
 import type { Task, TrailKind } from "@/lib/types";
-import { delayKind } from "@/lib/tasks";
+import { delayKind, monthlyRankOn } from "@/lib/tasks";
 import { Checkbox } from "@/ui/Checkbox";
 import { UnplannedChip } from "@/ui/Chip";
 import { Menu } from "@/ui/Menu";
@@ -97,13 +97,13 @@ function MonthRowImpl({
       {showRing && editable && (
         <Menu
           ariaLabel="本月重點"
-          selectedKey={task.custom_fields.monthly_priority ?? "none"}
+          selectedKey={monthlyRankOn(task, month) ?? "none"}
           trigger={
             <PriorityRing
-              value={task.custom_fields.monthly_priority ?? null}
+              value={monthlyRankOn(task, month) ?? null}
               aria-label={
-                task.custom_fields.monthly_priority
-                  ? `本月重點第 ${task.custom_fields.monthly_priority}`
+                monthlyRankOn(task, month)
+                  ? `本月重點第 ${monthlyRankOn(task, month)}`
                   : "設為本月重點"
               }
             />

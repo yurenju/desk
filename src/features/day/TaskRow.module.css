@@ -30,10 +30,9 @@
 }
 
 .trail {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  white-space: nowrap;
   color: var(--color-ink-faint);
 }
 
@@ -51,9 +50,6 @@
 .k_forwarded .title,
 .k_dismissed .title {
   color: var(--color-ink-faint);
-}
-.k_dismissed .title {
-  text-decoration: line-through;
 }
 
 .actions {

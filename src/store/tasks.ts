@@ -188,12 +188,19 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     set({ tasks: next, error: null });
     const changed = next.filter((t) => {
       const before = prev.find((p) => p.id === t.id);
-      return before && before.custom_fields.daily_priority !== t.custom_fields.daily_priority;
+      return (
+        before &&
+        JSON.stringify(before.custom_fields.daily_ranks ?? []) !==
+          JSON.stringify(t.custom_fields.daily_ranks ?? [])
+      );
     });
     try {
       await Promise.all(
         changed.map((t) =>
-          enqueuePatch(t.id, { daily_priority: t.custom_fields.daily_priority ?? null }),
+          enqueuePatch(t.id, {
+            daily_ranks: t.custom_fields.daily_ranks ?? [],
+            daily_priority: null,
+          }),
         ),
       );
     } catch {
@@ -227,12 +234,19 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     set({ tasks: next, error: null });
     const changed = next.filter((t) => {
       const before = prev.find((p) => p.id === t.id);
-      return before && before.custom_fields.monthly_priority !== t.custom_fields.monthly_priority;
+      return (
+        before &&
+        JSON.stringify(before.custom_fields.monthly_ranks ?? []) !==
+          JSON.stringify(t.custom_fields.monthly_ranks ?? [])
+      );
     });
     try {
       await Promise.all(
         changed.map((t) =>
-          enqueuePatch(t.id, { monthly_priority: t.custom_fields.monthly_priority ?? null }),
+          enqueuePatch(t.id, {
+            monthly_ranks: t.custom_fields.monthly_ranks ?? [],
+            monthly_priority: null,
+          }),
         ),
       );
     } catch {
@@ -314,7 +328,8 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     try {
       await enqueuePatch(id, {
         scheduled_dates: updated.custom_fields.scheduled_dates,
-        daily_priority: updated.custom_fields.daily_priority ?? null,
+        daily_ranks: updated.custom_fields.daily_ranks ?? [],
+        daily_priority: null,
       });
     } catch {
       set({ tasks: prev, error: "save_failed" });
@@ -332,6 +347,7 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
       await enqueuePatch(id, {
         unscheduled_at: updated.custom_fields.unscheduled_at,
         scheduled_months: updated.custom_fields.scheduled_months,
+        daily_ranks: updated.custom_fields.daily_ranks ?? [],
         daily_priority: null,
       });
     } catch {
@@ -378,12 +394,14 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     const next = reorderPriorityOp(prev, id, targetRank, axis, scope);
     if (next === prev) return;
     set({ tasks: next, error: null });
-    const field = axis === "daily" ? "daily_priority" : "monthly_priority";
+    const ranksField = axis === "daily" ? "daily_ranks" : "monthly_ranks";
+    const legacyField = axis === "daily" ? "daily_priority" : "monthly_priority";
     const changed = next.filter((t) => {
       const before = prev.find((p) => p.id === t.id);
       if (!before) return false;
       return (
-        before.custom_fields[field] !== t.custom_fields[field] ||
+        JSON.stringify(before.custom_fields[ranksField] ?? []) !==
+          JSON.stringify(t.custom_fields[ranksField] ?? []) ||
         before.custom_fields.position !== t.custom_fields.position
       );
     });
@@ -391,7 +409,8 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
       await Promise.all(
         changed.map((t) =>
           enqueuePatch(t.id, {
-            [field]: t.custom_fields[field] ?? null,
+            [ranksField]: t.custom_fields[ranksField] ?? [],
+            [legacyField]: null,
             ...(t.custom_fields.position !== prev.find((p) => p.id === t.id)?.custom_fields.position
               ? { position: t.custom_fields.position ?? null }
               : {}),

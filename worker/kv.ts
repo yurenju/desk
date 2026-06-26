@@ -96,6 +96,9 @@ export async function deleteDevice(kv: KVNamespace, pollingId: string): Promise<
 export interface BootstrapData {
   projectId: string;
   typeId: string;
+  // The DESK_TASK_FIELDS schema version this type was last reconciled to.
+  // Absent on records created before schema versioning (treated as 1).
+  schemaVersion?: number;
 }
 
 export async function getBootstrap(

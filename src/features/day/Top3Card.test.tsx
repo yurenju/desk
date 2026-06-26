@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { Top3Card } from "./Top3Card";
 import { useTasksStore } from "@/store/tasks";
 import { allTasks, MOCK_TODAY } from "@/mock/data";
+import { tasksOnDate, dailyRankOn } from "@/lib/tasks";
 import * as api from "@/lib/api/todo";
 
 beforeEach(() => {
@@ -14,14 +15,10 @@ beforeEach(() => {
 
 const TestComponent = ({ interactive = true }: { interactive?: boolean }) => {
   const tasks = useTasksStore((s) => s.tasks);
-  const d1Tasks = tasks.filter((t) => t.id === "d1");
+  const today = useTasksStore.getState().today;
+  const entries = tasksOnDate(tasks, today).filter((e) => e.task.id === "d1");
   return (
-    <Top3Card
-      tasks={d1Tasks}
-      title="今天最重要的三件事"
-      date={useTasksStore.getState().today}
-      interactive={interactive}
-    />
+    <Top3Card entries={entries} title="今天最重要的三件事" date={today} interactive={interactive} />
   );
 };
 
@@ -132,6 +129,10 @@ describe("Top3Card (interactive)", () => {
     await user.click(await screen.findByRole("menuitem", { name: /丟回月度/ }));
 
     const task = useTasksStore.getState().tasks.find((t) => t.id === "d1")!;
+    // The day's rank is folded into daily_ranks (history) so the dismissed row
+    // stays in its Top3 slot (greyed); the legacy single field is cleared. It's
+    // the unscheduled_at stamp that removes it from "primary".
+    expect(dailyRankOn(task, MOCK_TODAY)).toBe("1");
     expect(task.custom_fields.daily_priority).toBeUndefined();
     expect(task.custom_fields.unscheduled_at).toBe(MOCK_TODAY);
   });
@@ -149,13 +150,9 @@ describe("Top3Card (interactive)", () => {
     const carryoverDate = "2026-05-21";
     const Carryover = () => {
       const tasks = useTasksStore((s) => s.tasks);
+      const entries = tasksOnDate(tasks, carryoverDate).filter((e) => e.task.id === "w-thu");
       return (
-        <Top3Card
-          tasks={tasks.filter((t) => t.id === "w-thu")}
-          title="最重要的三件事"
-          date={carryoverDate}
-          interactive
-        />
+        <Top3Card entries={entries} title="最重要的三件事" date={carryoverDate} interactive />
       );
     };
     render(<Carryover />);
@@ -176,7 +173,7 @@ describe("Top3Card (interactive)", () => {
     await user.click(await screen.findByRole("menuitemradio", { name: /今日第二/ }));
 
     expect(
-      useTasksStore.getState().tasks.find((t) => t.id === "d1")!.custom_fields.daily_priority,
+      dailyRankOn(useTasksStore.getState().tasks.find((t) => t.id === "d1")!, MOCK_TODAY),
     ).toBe("2");
   });
 });

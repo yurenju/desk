@@ -5,6 +5,7 @@ import { useTasksStore } from "@/store/tasks";
 import { allTasks, MOCK_TODAY } from "@/mock/data";
 import * as api from "@/lib/api/todo";
 import { resetTodoQueue } from "@/lib/api/todoQueue";
+import { dailyRankOn } from "@/lib/tasks";
 
 beforeEach(() => {
   vi.restoreAllMocks();
@@ -23,36 +24,39 @@ describe("useTaskRow", () => {
       await s.setDailyPriority("d2", null, today);
       await s.setDailyPriority("d3", null, today);
     });
-    const { result } = renderHook(() => useTaskRow("d5", useTasksStore.getState().today));
+    const today = useTasksStore.getState().today;
+    const { result } = renderHook(() => useTaskRow("d5", today));
     await act(async () => result.current.setPriority("1"));
     expect(
-      useTasksStore.getState().tasks.find((t) => t.id === "d5")!.custom_fields.daily_priority,
+      dailyRankOn(useTasksStore.getState().tasks.find((t) => t.id === "d5")!, today),
     ).toBe("1");
   });
 
   // reorderPriority cascades: d1 (was rank 1) is pushed to rank 2 when d5 takes rank 1.
   it("setPriority cascades the previous occupant of the chosen slot", async () => {
+    const today = useTasksStore.getState().today;
     await act(async () => {
       const s = useTasksStore.getState();
-      await s.setDailyPriority("d1", "1", useTasksStore.getState().today);
+      await s.setDailyPriority("d1", "1", today);
     });
-    const { result } = renderHook(() => useTaskRow("d5", useTasksStore.getState().today));
+    const { result } = renderHook(() => useTaskRow("d5", today));
     await act(async () => result.current.setPriority("1"));
     const tasks = useTasksStore.getState().tasks;
-    expect(tasks.find((t) => t.id === "d5")!.custom_fields.daily_priority).toBe("1");
+    expect(dailyRankOn(tasks.find((t) => t.id === "d5")!, today)).toBe("1");
     // cascade: d1 is pushed down to rank 2, not evicted
-    expect(tasks.find((t) => t.id === "d1")!.custom_fields.daily_priority).toBe("2");
+    expect(dailyRankOn(tasks.find((t) => t.id === "d1")!, today)).toBe("2");
   });
 
   it("setPriority(null) removes the priority", async () => {
+    const today = useTasksStore.getState().today;
     await act(async () =>
-      useTasksStore.getState().setDailyPriority("d1", "1", useTasksStore.getState().today),
+      useTasksStore.getState().setDailyPriority("d1", "1", today),
     );
-    const { result } = renderHook(() => useTaskRow("d1", useTasksStore.getState().today));
+    const { result } = renderHook(() => useTaskRow("d1", today));
     await act(async () => result.current.setPriority(null));
     expect(
-      useTasksStore.getState().tasks.find((t) => t.id === "d1")!.custom_fields.daily_priority,
-    ).toBeUndefined();
+      dailyRankOn(useTasksStore.getState().tasks.find((t) => t.id === "d1")!, today),
+    ).toBeNull();
   });
 
   it("startEdit / commitEdit writes the draft via the store", async () => {

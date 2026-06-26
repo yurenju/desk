@@ -7,7 +7,7 @@ import { TaskDetailTrigger } from "@/features/task-detail/TaskDetailTrigger";
 import { useTaskRow } from "./useTaskRow";
 import { DailyPriorityMenu } from "./DailyPriorityMenu";
 import { buildTaskRowMenuItems } from "./taskRowMenu";
-import { isDayAdhocChip } from "@/lib/tasks";
+import { isDayAdhocChip, trailLabel, dailyRankOn } from "@/lib/tasks";
 import { useTasksStore } from "@/store/tasks";
 import styles from "./TaskRow.module.css";
 
@@ -53,7 +53,7 @@ export function TaskRow({ task, kind, date, interactive, showRing }: TaskRowProp
       />
       {showRing && editable && (
         <DailyPriorityMenu
-          value={task.custom_fields.daily_priority ?? null}
+          value={dailyRankOn(task, date)}
           onSelect={row.setPriority}
         />
       )}
@@ -78,8 +78,9 @@ export function TaskRow({ task, kind, date, interactive, showRing }: TaskRowProp
                 ↻
               </span>
             )}
-            {kind === "forwarded" && <span className={styles.trail}>↪ 已順延</span>}
-            {kind === "dismissed" && <span className={styles.trail}>· 退回月度</span>}
+            {kind !== "primary" && (
+              <span className={styles.trail}>{trailLabel(task, kind, today)}</span>
+            )}
           </div>
         )}
         {task.description && <div className={styles.desc}>{task.description}</div>}

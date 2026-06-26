@@ -45,8 +45,18 @@ function todayISO(): string {
   return `${y}-${m}-${d}`;
 }
 
+function yesterdayISO(): string {
+  const now = new Date();
+  now.setDate(now.getDate() - 1);
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 function seed(): void {
   const today = todayISO();
+  const yesterday = yesterdayISO();
   const base = Date.parse("2026-05-22T00:00:00Z");
   let n = 0;
   const mk = (
@@ -67,8 +77,10 @@ function seed(): void {
 
   todos = [
     // 今天最重要的三件事 (Top3)
+    // d1 carries daily_ranks to demonstrate per-day rank history:
+    // it was rank-2 yesterday and rank-1 today.
     mk("d1", "完成 desk.yurenju.me todo MVP demo", "open", {
-      daily_priority: "1",
+      daily_ranks: [`${yesterday}:2`, `${today}:1`],
       is_adhoc: "false",
     }),
     mk("d2", "寫週報 + 5 月中檢視", "open", { daily_priority: "2", is_adhoc: "false" }),
@@ -278,6 +290,9 @@ const server = createServer(async (req, res) => {
   // ── Bootstrap fallbacks (normally pre-seeded via test-login) ────────────
   if (path === "/todo/projects" && method === "POST") return send(res, 201, { id: PROJECT_ID });
   if (path === "/todo/types" && method === "POST") return send(res, 201, { id: TYPE_ID });
+  // Schema reconcile: bootstrap PATCHes the type to add newly-declared fields.
+  // The fake doesn't enforce a schema, so just acknowledge.
+  if (/^\/todo\/types\/[^/]+$/.test(path) && method === "PATCH") return send(res, 200, { id: TYPE_ID });
 
   send(res, 404, { error: { code: "NOT_FOUND", message: `${method} ${path}` } });
 });

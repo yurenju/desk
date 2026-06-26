@@ -1,5 +1,6 @@
 import type { Task, TaskCustomFields, Priority } from "@/lib/types";
-import { primaryDate, primaryMonth, nextFreeDailySlot } from "@/lib/tasks";
+import { primaryDate, primaryMonth, nextFreeDailySlot, dailyRankOn, monthlyRankOn } from "@/lib/tasks";
+import { writeRank } from "@/lib/ranks";
 import { monthOf, addMonths } from "@/lib/date";
 import { midpoint } from "@/lib/order";
 
@@ -87,10 +88,20 @@ export function setDailyPriority(
 ): Task[] {
   if (!tasks.some((t) => t.id === id)) return tasks;
   return tasks.map((t) => {
-    if (t.id === id) return patch(t, { daily_priority: n ?? undefined });
-    // 騰位:只在今天 primary 的 task 之間清掉撞號者
-    if (n !== null && primaryDate(t) === today && t.custom_fields.daily_priority === n) {
-      return patch(t, { daily_priority: undefined });
+    if (t.id === id) {
+      const ranks = writeRank(t.custom_fields.daily_ranks, today, n, {
+        value: t.custom_fields.daily_priority,
+        key: primaryDate(t),
+      });
+      return patch(t, { daily_ranks: ranks, daily_priority: undefined });
+    }
+    // eviction: clear the collider among THIS date's ranked tasks
+    if (n !== null && dailyRankOn(t, today) === n) {
+      const ranks = writeRank(t.custom_fields.daily_ranks, today, null, {
+        value: t.custom_fields.daily_priority,
+        key: primaryDate(t),
+      });
+      return patch(t, { daily_ranks: ranks, daily_priority: undefined });
     }
     return t;
   });
@@ -111,10 +122,20 @@ export function setMonthlyPriority(
 ): Task[] {
   if (!tasks.some((t) => t.id === id)) return tasks;
   return tasks.map((t) => {
-    if (t.id === id) return patch(t, { monthly_priority: n ?? undefined });
-    // eviction: clear the collider among this month's primary tasks
-    if (n !== null && primaryMonth(t) === month && t.custom_fields.monthly_priority === n) {
-      return patch(t, { monthly_priority: undefined });
+    if (t.id === id) {
+      const ranks = writeRank(t.custom_fields.monthly_ranks, month, n, {
+        value: t.custom_fields.monthly_priority,
+        key: primaryMonth(t),
+      });
+      return patch(t, { monthly_ranks: ranks, monthly_priority: undefined });
+    }
+    // eviction: clear the collider among this month's ranked tasks
+    if (n !== null && monthlyRankOn(t, month) === n) {
+      const ranks = writeRank(t.custom_fields.monthly_ranks, month, null, {
+        value: t.custom_fields.monthly_priority,
+        key: primaryMonth(t),
+      });
+      return patch(t, { monthly_ranks: ranks, monthly_priority: undefined });
     }
     return t;
   });
@@ -197,21 +218,34 @@ export function moveToToday(tasks: Task[], id: string, today: string): Task[] {
 
   const nextDates = [...dates, today]; // append-only: origin day stays as a trail
 
-  // Preserve "is a priority", but the exact slot doesn't matter — reassign to a
-  // non-colliding slot on today. If today's three-things is already full, drop
-  // the priority (land in "其他計劃內") rather than evict a deliberate pick.
-  let nextPriority = target.custom_fields.daily_priority;
-  if (nextPriority) {
+  // The source day's rank stays in `daily_ranks` untouched (preserved history).
+  // For TODAY, if the task actually had a rank on its source day, reassign it a
+  // fresh non-colliding slot. If today's three-things is already full (all 3
+  // slots taken by OTHERS), set no rank on today (land in "其他計劃內") rather
+  // than evict a deliberate pick. Always clear the legacy single field.
+  const sourceDay = primaryDate(target);
+  const hadSourceRank = sourceDay !== null && dailyRankOn(target, sourceDay) !== null;
+
+  let nextRanks = target.custom_fields.daily_ranks;
+  if (hadSourceRank) {
     const takenByOthers = new Set(
       tasks
-        .filter((t) => t.id !== id && primaryDate(t) === today && t.custom_fields.daily_priority)
-        .map((t) => t.custom_fields.daily_priority),
+        .filter((t) => t.id !== id && dailyRankOn(t, today) !== null)
+        .map((t) => dailyRankOn(t, today)),
     );
-    nextPriority = takenByOthers.size >= 3 ? undefined : nextFreeDailySlot(tasks, today, id);
+    if (takenByOthers.size < 3) {
+      const slot = nextFreeDailySlot(tasks, today, id);
+      nextRanks = writeRank(target.custom_fields.daily_ranks, today, slot, {
+        value: target.custom_fields.daily_priority,
+        key: primaryDate(target),
+      });
+    }
   }
 
   return tasks.map((t) =>
-    t.id === id ? patch(t, { scheduled_dates: nextDates, daily_priority: nextPriority }) : t,
+    t.id === id
+      ? patch(t, { scheduled_dates: nextDates, daily_ranks: nextRanks, daily_priority: undefined })
+      : t,
   );
 }
 
@@ -225,11 +259,24 @@ export function demoteToMonth(tasks: Task[], id: string, currentMonth: string): 
   // Land in the current month (今天所在月), unless it's already the active month.
   const nextMonths = primaryMonth(target) === currentMonth ? months : [...months, currentMonth];
 
+  // The day's rank entry IS the preserved history, so the dismissed row stays in
+  // place in the day's Top3 card (greyed, "↩ 已退回本月") instead of vanishing.
+  // Fold any legacy single value into daily_ranks[day] first — once primaryDate
+  // becomes null the legacy read-fallback no longer fires, so the rank must live
+  // in the array to survive. This is a no-op write when daily_ranks already
+  // carries the day's rank. Clear the legacy single field afterwards.
+  const dayRank = dailyRankOn(target, day);
+  const nextRanks = writeRank(target.custom_fields.daily_ranks, day, dayRank, {
+    value: target.custom_fields.daily_priority,
+    key: day,
+  });
+
   return tasks.map((t) =>
     t.id === id
       ? patch(t, {
           unscheduled_at: day, // dismiss the day (= last scheduled date); scheduled_dates trail stays
           scheduled_months: nextMonths,
+          daily_ranks: nextRanks,
           daily_priority: undefined,
         })
       : t,
@@ -243,6 +290,9 @@ export function moveToNextMonth(tasks: Task[], id: string): Task[] {
   if (months.length === 0) return tasks; // not a month task
   const last = months[months.length - 1];
   const nextMonth = monthOf(addMonths(`${last}-01`, 1));
+  // Leave monthly_ranks untouched: the source month's rank entry is preserved
+  // history; the new month simply has no rank. Clear the legacy single field so
+  // the read fallback can't resurrect a stale value on the new primary month.
   return tasks.map((t) =>
     t.id === id
       ? patch(t, { scheduled_months: [...months, nextMonth], monthly_priority: undefined })
@@ -260,6 +310,9 @@ export function demoteToBacklog(tasks: Task[], id: string, today: string): Task[
   // Dismiss any residual day scheduling — including a day in the future — so the
   // task truly lands in backlog. Stamp the later of `today` and the last scheduled day.
   const dismissAt = lastDate && lastDate > today ? lastDate : today;
+  // Leave daily_ranks/monthly_ranks untouched (preserved history); backlog has
+  // no rank entry of its own. Clear the legacy single fields so the read
+  // fallback can't resurrect a stale value.
   return tasks.map((t) =>
     t.id === id
       ? patch(t, {
@@ -274,8 +327,23 @@ export function demoteToBacklog(tasks: Task[], id: string, today: string): Task[
 
 type Axis = "daily" | "monthly";
 
-function priorityField(axis: Axis): "daily_priority" | "monthly_priority" {
-  return axis === "daily" ? "daily_priority" : "monthly_priority";
+function rankFieldsFor(axis: Axis): {
+  ranksField: "daily_ranks" | "monthly_ranks";
+  legacyField: "daily_priority" | "monthly_priority";
+} {
+  return axis === "daily"
+    ? { ranksField: "daily_ranks", legacyField: "daily_priority" }
+    : { ranksField: "monthly_ranks", legacyField: "monthly_priority" };
+}
+
+/** This task's rank on `scope` for the given axis (per-period array, else legacy
+ * fallback on the current primary period). */
+function rankOf(t: Task, axis: Axis, scope: string): Priority | null {
+  return axis === "daily" ? dailyRankOn(t, scope) : monthlyRankOn(t, scope);
+}
+
+function legacyKeyOf(t: Task, axis: Axis): string | null {
+  return axis === "daily" ? primaryDate(t) : primaryMonth(t);
 }
 
 function isPrimaryOnScope(t: Task, axis: Axis, scope: string): boolean {
@@ -296,14 +364,24 @@ export function reorderPriority(
   axis: Axis,
   scope: string,
 ): Task[] {
-  const field = priorityField(axis);
+  const { ranksField, legacyField } = rankFieldsFor(axis);
   const target = tasks.find((t) => t.id === id);
   if (!target) return tasks;
 
+  // Write `rank` (or null to clear) for this scope, folding any legacy single
+  // value into its primary period and clearing the legacy field.
+  const writeScopeRank = (t: Task, rank: Priority | null): Task => {
+    const ranks = writeRank(t.custom_fields[ranksField], scope, rank, {
+      value: t.custom_fields[legacyField],
+      key: legacyKeyOf(t, axis),
+    });
+    return patch(t, { [ranksField]: ranks, [legacyField]: undefined });
+  };
+
   // Current ranked members on this scope (excluding the task being placed).
   const ranked = tasks
-    .filter((t) => t.id !== id && isPrimaryOnScope(t, axis, scope) && t.custom_fields[field])
-    .sort((a, b) => Number(a.custom_fields[field]) - Number(b.custom_fields[field]));
+    .filter((t) => t.id !== id && rankOf(t, axis, scope) !== null)
+    .sort((a, b) => Number(rankOf(a, axis, scope)) - Number(rankOf(b, axis, scope)));
 
   // Build the new ordered list of ids: insert `id` at (targetRank-1).
   const order = ranked.map((t) => t.id);
@@ -323,7 +401,7 @@ export function reorderPriority(
         (t) =>
           t.id !== overflowId &&
           isPrimaryOnScope(t, axis, scope) &&
-          !t.custom_fields[field] &&
+          rankOf(t, axis, scope) === null &&
           t.custom_fields.position,
       )
       .map((t) => t.custom_fields.position!)
@@ -333,14 +411,22 @@ export function reorderPriority(
 
   return tasks.map((t) => {
     if (t.id === overflowId) {
-      return patch(t, { [field]: undefined, position: overflowPos ?? undefined });
+      const ranks = writeRank(t.custom_fields[ranksField], scope, null, {
+        value: t.custom_fields[legacyField],
+        key: legacyKeyOf(t, axis),
+      });
+      return patch(t, {
+        [ranksField]: ranks,
+        [legacyField]: undefined,
+        position: overflowPos ?? undefined,
+      });
     }
     const r = newRank.get(t.id);
-    if (r) return patch(t, { [field]: r });
+    if (r) return writeScopeRank(t, r);
     // A previously-ranked task that fell out of the top-3 set but is not the
     // single tracked overflow (shouldn't happen with cap 3, but stay safe):
-    if (isPrimaryOnScope(t, axis, scope) && t.custom_fields[field] && !newRank.has(t.id) && t.id !== overflowId) {
-      return patch(t, { [field]: undefined });
+    if (rankOf(t, axis, scope) !== null && !newRank.has(t.id)) {
+      return writeScopeRank(t, null);
     }
     return t;
   });
