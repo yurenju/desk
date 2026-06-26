@@ -176,12 +176,15 @@ export const allTasks: Task[] = [
     },
   }),
 
-  // ---- 順延軌跡範例 ----
+  // ---- 順延軌跡範例 (also demonstrates per-day ranks: rank 1 on 05-20, rank 3 on 05-22) ----
   task({
     id: "t1",
     title: "回信給設計師",
     custom_fields: {
       scheduled_dates: ["2026-05-20", "2026-05-22"],
+      // daily_ranks shows this task was rank-1 when first scheduled on 05-20,
+      // then re-ranked to 3 after being carried to 05-22.
+      daily_ranks: ["2026-05-20:1", "2026-05-22:3"],
       is_adhoc: "false",
     },
   }),
