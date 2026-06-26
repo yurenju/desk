@@ -12,7 +12,7 @@ import {
   type CollisionDetection,
 } from "@dnd-kit/core";
 import type { Task } from "@/lib/types";
-import { tasksOnDate, tasksOnMonth, tasksInBacklog, dayInWeek, byPosition } from "@/lib/tasks";
+import { tasksOnDate, tasksOnMonth, tasksInBacklog, dayInWeek, byPosition, dailyRankOn } from "@/lib/tasks";
 import { weekOf } from "@/lib/date";
 import { useTasksStore } from "@/store/tasks";
 
@@ -157,15 +157,13 @@ export function buildDayContainers(allTasks: Task[], date: string): ContainerMap
     .map((e) => e.task);
 
   const top3 = primary
-    .filter((t) => t.custom_fields.daily_priority)
-    .sort(
-      (a, b) => Number(a.custom_fields.daily_priority) - Number(b.custom_fields.daily_priority),
-    );
+    .filter((t) => dailyRankOn(t, date))
+    .sort((a, b) => Number(dailyRankOn(a, date)) - Number(dailyRankOn(b, date)));
   const other = primary
-    .filter((t) => !t.custom_fields.daily_priority && t.custom_fields.is_adhoc !== "true")
+    .filter((t) => !dailyRankOn(t, date) && t.custom_fields.is_adhoc !== "true")
     .sort(byPosition);
   const adhoc = primary
-    .filter((t) => !t.custom_fields.daily_priority && t.custom_fields.is_adhoc === "true")
+    .filter((t) => !dailyRankOn(t, date) && t.custom_fields.is_adhoc === "true")
     .sort(byPosition);
 
   const map: ContainerMap = new Map();
@@ -236,11 +234,8 @@ export function buildWeekContainers(allTasks: Task[], weekDates: string[]): Cont
       .filter((e) => e.kind === "primary")
       .map((e) => e.task);
     const top3 = primary
-      .filter((t) => t.custom_fields.daily_priority)
-      .sort(
-        (a, b) =>
-          Number(a.custom_fields.daily_priority) - Number(b.custom_fields.daily_priority),
-      )
+      .filter((t) => dailyRankOn(t, date))
+      .sort((a, b) => Number(dailyRankOn(a, date)) - Number(dailyRankOn(b, date)))
       .slice(0, 3);
     map.set(containerId({ kind: "weekTop3", date }), top3.map((t) => `week:${date}:${t.id}`));
   }
