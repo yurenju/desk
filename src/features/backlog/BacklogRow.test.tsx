@@ -5,6 +5,7 @@ import { BacklogRow } from "./BacklogRow";
 import { useTasksStore } from "@/store/tasks";
 import * as api from "@/lib/api/todo";
 import type { Task } from "@/lib/types";
+import { dailyRankOn } from "@/lib/tasks";
 
 function backlogTask(id: string): Task {
   return {
@@ -25,7 +26,7 @@ describe("BacklogRow", () => {
     await userEvent.click(await screen.findByRole("menuitem", { name: /· ① 三件事/ }));
     const t = useTasksStore.getState().tasks.find((x) => x.id === "a")!;
     expect(t.custom_fields.scheduled_dates).toEqual(["2026-06-08"]);
-    expect(t.custom_fields.daily_priority).toBe("1");
+    expect(dailyRankOn(t, "2026-06-08")).toBe("1");
     expect(t.custom_fields.scheduled_months).toEqual(["2026-06"]);
   });
 

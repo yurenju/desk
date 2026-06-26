@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { Top3Card } from "./Top3Card";
 import { useTasksStore } from "@/store/tasks";
 import { allTasks, MOCK_TODAY } from "@/mock/data";
-import { tasksOnDate } from "@/lib/tasks";
+import { tasksOnDate, dailyRankOn } from "@/lib/tasks";
 import * as api from "@/lib/api/todo";
 
 beforeEach(() => {
@@ -171,7 +171,7 @@ describe("Top3Card (interactive)", () => {
     await user.click(await screen.findByRole("menuitemradio", { name: /今日第二/ }));
 
     expect(
-      useTasksStore.getState().tasks.find((t) => t.id === "d1")!.custom_fields.daily_priority,
+      dailyRankOn(useTasksStore.getState().tasks.find((t) => t.id === "d1")!, MOCK_TODAY),
     ).toBe("2");
   });
 });

@@ -165,8 +165,8 @@ export function byPosition(a: Task, b: Task): number {
 export function nextFreeDailySlot(all: Task[], date: string, excludeId?: string): Priority {
   const taken = new Set(
     all
-      .filter((t) => t.id !== excludeId && primaryDate(t) === date && t.custom_fields.daily_priority)
-      .map((t) => t.custom_fields.daily_priority),
+      .filter((t) => t.id !== excludeId && dailyRankOn(t, date))
+      .map((t) => dailyRankOn(t, date)),
   );
   if (!taken.has("1")) return "1";
   if (!taken.has("2")) return "2";

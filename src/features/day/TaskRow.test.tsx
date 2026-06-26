@@ -7,6 +7,7 @@ import { allTasks, MOCK_TODAY } from "@/mock/data";
 import * as api from "@/lib/api/todo";
 import type { Task } from "@/lib/types";
 import { currentMonthISO } from "@/lib/date";
+import { dailyRankOn } from "@/lib/tasks";
 
 beforeEach(() => {
   vi.restoreAllMocks();
@@ -105,7 +106,10 @@ describe("TaskRow (interactive)", () => {
     await user.click(screen.getByRole("button", { name: "設為今日重點" }));
     await user.click(await screen.findByRole("menuitemradio", { name: /今日第一/ }));
     expect(
-      useTasksStore.getState().tasks.find((t) => t.id === "d5")!.custom_fields.daily_priority,
+      dailyRankOn(
+        useTasksStore.getState().tasks.find((t) => t.id === "d5")!,
+        useTasksStore.getState().today,
+      ),
     ).toBe("1");
   });
 });

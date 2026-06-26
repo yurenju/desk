@@ -18,7 +18,7 @@ import {
   moveToNextMonth,
   demoteToBacklog,
 } from "./taskOps";
-import { primaryDate, layer } from "@/lib/tasks";
+import { primaryDate, layer, dailyRankOn, monthlyRankOn } from "@/lib/tasks";
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
   return {
@@ -169,39 +169,42 @@ describe("deleteTask / restoreTask", () => {
 
 describe("setDailyPriority", () => {
   const today = "2026-05-22";
+  // Seed the per-period array (daily_ranks) — the new storage. The legacy single
+  // value is migrated away on first write, so tests assert against daily_ranks.
   const onToday = (id: string, p?: "1" | "2" | "3") =>
     makeTask({
       id,
-      custom_fields: { scheduled_dates: [today], ...(p ? { daily_priority: p } : {}) },
+      custom_fields: { scheduled_dates: [today], ...(p ? { daily_ranks: [`${today}:${p}`] } : {}) },
     });
 
-  it("assigns a priority to a task that had none", () => {
+  it("writes the rank into daily_ranks for that date and clears the legacy field", () => {
     const tasks = [onToday("a")];
     const next = setDailyPriority(tasks, "a", "1", today);
-    expect(next[0].custom_fields.daily_priority).toBe("1");
+    expect(next[0].custom_fields.daily_ranks).toEqual([`${today}:1`]);
+    expect(next[0].custom_fields.daily_priority).toBeUndefined();
   });
 
   it("evicts the task that already held that priority today", () => {
     const tasks = [onToday("a", "1"), onToday("b")];
     const next = setDailyPriority(tasks, "b", "1", today);
-    expect(next.find((t) => t.id === "b")!.custom_fields.daily_priority).toBe("1");
-    expect(next.find((t) => t.id === "a")!.custom_fields.daily_priority).toBeUndefined();
+    expect(dailyRankOn(next.find((t) => t.id === "b")!, today)).toBe("1");
+    expect(dailyRankOn(next.find((t) => t.id === "a")!, today)).toBeNull();
   });
 
   it("does not evict a same-priority task scheduled on a different day", () => {
     const other = makeTask({
       id: "x",
-      custom_fields: { scheduled_dates: ["2026-05-24"], daily_priority: "1" },
+      custom_fields: { scheduled_dates: ["2026-05-24"], daily_ranks: ["2026-05-24:1"] },
     });
     const tasks = [other, onToday("b")];
     const next = setDailyPriority(tasks, "b", "1", today);
-    expect(next.find((t) => t.id === "x")!.custom_fields.daily_priority).toBe("1");
+    expect(next.find((t) => t.id === "x")!.custom_fields.daily_ranks).toEqual(["2026-05-24:1"]);
   });
 
   it("does not evict a priority on a task scheduled for a different date (cross-date isolation)", () => {
     const a = makeTask({
       id: "a",
-      custom_fields: { scheduled_dates: ["2026-06-10"], daily_priority: "1" },
+      custom_fields: { scheduled_dates: ["2026-06-10"], daily_ranks: ["2026-06-10:1"] },
     });
     const b = makeTask({
       id: "b",
@@ -209,13 +212,14 @@ describe("setDailyPriority", () => {
     });
     const tasks = [a, b];
     const next = setDailyPriority(tasks, "b", "1", "2026-06-17");
-    expect(next.find((t) => t.id === "b")!.custom_fields.daily_priority).toBe("1");
-    expect(next.find((t) => t.id === "a")!.custom_fields.daily_priority).toBe("1");
+    expect(dailyRankOn(next.find((t) => t.id === "b")!, "2026-06-17")).toBe("1");
+    expect(dailyRankOn(next.find((t) => t.id === "a")!, "2026-06-10")).toBe("1");
   });
 
   it("removes the priority when n is null", () => {
     const tasks = [onToday("a", "2")];
     const next = setDailyPriority(tasks, "a", null, today);
+    expect(dailyRankOn(next[0], today)).toBeNull();
     expect(next[0].custom_fields.daily_priority).toBeUndefined();
   });
 
@@ -223,7 +227,7 @@ describe("setDailyPriority", () => {
     const tasks = [onToday("a", "1")];
     const next = setDailyPriority(tasks, "not-found", "1", today);
     expect(next).toBe(tasks);
-    expect(next[0].custom_fields.daily_priority).toBe("1");
+    expect(dailyRankOn(next[0], today)).toBe("1");
   });
 });
 
@@ -264,24 +268,25 @@ function mk(id: string, cf: Record<string, unknown>) {
 describe("setMonthlyPriority", () => {
   it("sets priority and evicts the collider within the same month", () => {
     const tasks = [
-      mk("a", { scheduled_months: ["2026-05"], monthly_priority: "1" }),
+      mk("a", { scheduled_months: ["2026-05"], monthly_ranks: ["2026-05:1"] }),
       mk("b", { scheduled_months: ["2026-05"] }),
     ];
     const out = setMonthlyPriority(tasks, "b", "1", "2026-05");
-    expect(out.find((t) => t.id === "b")!.custom_fields.monthly_priority).toBe("1");
-    expect(out.find((t) => t.id === "a")!.custom_fields.monthly_priority).toBeUndefined();
+    expect(monthlyRankOn(out.find((t) => t.id === "b")!, "2026-05")).toBe("1");
+    expect(monthlyRankOn(out.find((t) => t.id === "a")!, "2026-05")).toBeNull();
   });
   it("does not evict a collider in a different month", () => {
     const tasks = [
-      mk("a", { scheduled_months: ["2026-04"], monthly_priority: "1" }),
+      mk("a", { scheduled_months: ["2026-04"], monthly_ranks: ["2026-04:1"] }),
       mk("b", { scheduled_months: ["2026-05"] }),
     ];
     const out = setMonthlyPriority(tasks, "b", "1", "2026-05");
-    expect(out.find((t) => t.id === "a")!.custom_fields.monthly_priority).toBe("1");
+    expect(monthlyRankOn(out.find((t) => t.id === "a")!, "2026-04")).toBe("1");
   });
   it("clears priority when n is null", () => {
-    const tasks = [mk("a", { scheduled_months: ["2026-05"], monthly_priority: "2" })];
+    const tasks = [mk("a", { scheduled_months: ["2026-05"], monthly_ranks: ["2026-05:2"] })];
     const out = setMonthlyPriority(tasks, "a", null, "2026-05");
+    expect(monthlyRankOn(out[0], "2026-05")).toBeNull();
     expect(out[0].custom_fields.monthly_priority).toBeUndefined();
   });
 });
