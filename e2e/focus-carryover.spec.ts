@@ -71,6 +71,9 @@ test("move-to-today forwards a past-day top-3 task into today", async ({ page })
   await top3Item.getByLabel("更多動作").click();
   await page.getByRole("menuitem", { name: /移到今天/ }).click();
 
+  // it stays in place on the source day as a greyed "已移到今天" trail (not banished)
+  await expect(page.getByText("↪ 已移到今天")).toBeVisible();
+
   // back to today → it now lives here
   await page.getByRole("navigation", { name: "週導覽" }).getByRole("link", { name: "回今天" }).click();
   await expect(page).toHaveURL(/\/focus(\/\d{4}-\d{2}-\d{2})?$/);
@@ -90,7 +93,7 @@ test("demote-to-month turns a day task into a 退回月度 trail", async ({ page
   await page.getByRole("menuitem", { name: /丟回月度/ }).click();
 
   // it left the active list and now shows as a 退回月度 trail on this day
-  await expect(page.getByText("· 退回月度")).toBeVisible();
+  await expect(page.getByText("↩ 已退回本月")).toBeVisible();
 });
 
 test("dismissed trail row checkbox is enabled and can be checked complete", async ({ page }) => {
@@ -107,7 +110,7 @@ test("dismissed trail row checkbox is enabled and can be checked complete", asyn
   await page.getByRole("menuitem", { name: /丟回月度/ }).click();
 
   // The trail banner appears; find the trail row by its trail label.
-  await expect(page.getByText("· 退回月度")).toBeVisible();
+  await expect(page.getByText("↩ 已退回本月")).toBeVisible();
 
   // The checkbox for this task should be enabled (trail rows are checkable).
   const checkbox = page.getByRole("checkbox", { name: "退回完成 e2e" });
@@ -139,5 +142,5 @@ test("demote-to-month works from the top-3 card too", async ({ page }) => {
   await top3Item.getByLabel("更多動作").click();
   await page.getByRole("menuitem", { name: /丟回月度/ }).click();
 
-  await expect(page.getByText("· 退回月度")).toBeVisible();
+  await expect(page.getByText("↩ 已退回本月")).toBeVisible();
 });

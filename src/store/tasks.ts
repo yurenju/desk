@@ -332,7 +332,6 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
       await enqueuePatch(id, {
         unscheduled_at: updated.custom_fields.unscheduled_at,
         scheduled_months: updated.custom_fields.scheduled_months,
-        daily_priority: null,
       });
     } catch {
       set({ tasks: prev, error: "save_failed" });

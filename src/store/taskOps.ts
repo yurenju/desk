@@ -230,7 +230,10 @@ export function demoteToMonth(tasks: Task[], id: string, currentMonth: string): 
       ? patch(t, {
           unscheduled_at: day, // dismiss the day (= last scheduled date); scheduled_dates trail stays
           scheduled_months: nextMonths,
-          daily_priority: undefined,
+          // Keep daily_priority on purpose: the dismissed row stays in place in
+          // the day's Top3 card (greyed, "↩ 已退回本月") instead of vanishing.
+          // It no longer counts as primary (primaryDate is null), so it won't
+          // collide with another day's ring.
         })
       : t,
   );

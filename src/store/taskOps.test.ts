@@ -457,7 +457,7 @@ describe("demoteToMonth", () => {
     expect(next[0].custom_fields.is_adhoc).toBe("true"); // preserved
   });
 
-  it("clears daily_priority", () => {
+  it("preserves daily_priority so the dismissed row stays in its Top3 slot", () => {
     const tasks = [
       makeTask({
         id: "a",
@@ -469,7 +469,9 @@ describe("demoteToMonth", () => {
       }),
     ];
     const next = demoteToMonth(tasks, "a", "2026-05");
-    expect(next[0].custom_fields.daily_priority).toBeUndefined();
+    expect(next[0].custom_fields.daily_priority).toBe("1");
+    // but it is no longer the day's primary, so it can't collide with a ring elsewhere
+    expect(primaryDate(next[0])).toBeNull();
   });
 
   it("preserves the scheduled_dates trail", () => {

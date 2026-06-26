@@ -24,8 +24,7 @@ export function MonthDigest({ allTasks, month, today, selectedDate }: MonthDiges
       (a, b) =>
         Number(a.task.custom_fields.monthly_priority) -
         Number(b.task.custom_fields.monthly_priority),
-    )
-    .map((e) => e.task);
+    );
 
   const daysInMonth = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
   const dayN = dayOfMonth(today);
@@ -51,7 +50,7 @@ export function MonthDigest({ allTasks, month, today, selectedDate }: MonthDiges
       </div>
 
       {top3.length > 0 && (
-        <Top3Card tasks={top3} title="本月三件大事" date={today} variant="plain" />
+        <Top3Card entries={top3} title="本月三件大事" date={today} variant="plain" />
       )}
 
       <Link to="/plan/$date" params={{ date: selectedDate }} className={styles.editLink}>

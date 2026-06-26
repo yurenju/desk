@@ -175,18 +175,32 @@ describe("TaskRow carryover actions", () => {
     ]);
   });
 
-  it("renders a dismissed trail row as 退回月度", () => {
+  it("renders a dismissed trail row with its destination month", () => {
     render(
       <TaskRow
         task={{
           id: "d1", title: "已退回", status: "open", created_at: "x", updated_at: "x",
-          custom_fields: { scheduled_dates: [PAST], unscheduled_at: PAST },
+          custom_fields: { scheduled_dates: [PAST], unscheduled_at: PAST, scheduled_months: ["2026-05"] },
         }}
         kind="dismissed"
         date={PAST}
       />,
     );
-    expect(screen.getByText("· 退回月度")).toBeInTheDocument();
+    expect(screen.getByText("↩ 已退回本月")).toBeInTheDocument();
+  });
+
+  it("renders a forwarded trail row with its destination day", () => {
+    render(
+      <TaskRow
+        task={{
+          id: "f1", title: "已移走", status: "open", created_at: "x", updated_at: "x",
+          custom_fields: { scheduled_dates: [PAST, MOCK_TODAY] },
+        }}
+        kind="forwarded"
+        date={PAST}
+      />,
+    );
+    expect(screen.getByText("↪ 已移到今天")).toBeInTheDocument();
   });
 
   it("a forwarded trail row is checkable but has no overflow menu", () => {
