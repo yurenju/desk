@@ -12,11 +12,11 @@ describe("ensureBootstrap", () => {
     const typeSpy = vi.spyOn(wspc, "createTodoType").mockResolvedValue({ id: "typ_1" });
 
     const out = await ensureBootstrap(kv, "at", "usr_a");
-    expect(out).toEqual({ projectId: "prj_1", typeId: "typ_1" });
+    expect(out).toEqual({ projectId: "prj_1", typeId: "typ_1", schemaVersion: 2 });
     expect(await kv.get("desk:bootstrap:usr_a")).toContain("prj_1");
 
     const out2 = await ensureBootstrap(kv, "at", "usr_a");
-    expect(out2).toEqual({ projectId: "prj_1", typeId: "typ_1" });
+    expect(out2).toEqual({ projectId: "prj_1", typeId: "typ_1", schemaVersion: 2 });
     expect(projectSpy).toHaveBeenCalledTimes(1);
     expect(typeSpy).toHaveBeenCalledTimes(1);
   });
@@ -26,7 +26,25 @@ describe("ensureBootstrap", () => {
     vi.spyOn(wspc, "createProject").mockResolvedValue({ id: "prj_b" });
     vi.spyOn(wspc, "createTodoType").mockResolvedValue({ id: "typ_b" });
     const out = await ensureBootstrap(kv, "at", "usr_b");
-    expect(out).toEqual({ projectId: "prj_b", typeId: "typ_b" });
+    expect(out).toEqual({ projectId: "prj_b", typeId: "typ_b", schemaVersion: 2 });
     expect(await kv.get("desk:bootstrap:usr_a")).toBeNull();
+  });
+
+  it("reconciles an older type's schema once, then caches the new version", async () => {
+    const kv = makeKvStub();
+    // A type created before schema versioning (no schemaVersion field).
+    await kv.put("desk:bootstrap:usr_c", JSON.stringify({ projectId: "prj_c", typeId: "typ_c" }));
+    const updateSpy = vi.spyOn(wspc, "updateTodoType").mockResolvedValue(undefined);
+    const createTypeSpy = vi.spyOn(wspc, "createTodoType");
+
+    const out = await ensureBootstrap(kv, "at", "usr_c");
+    expect(out).toEqual({ projectId: "prj_c", typeId: "typ_c", schemaVersion: 2 });
+    expect(updateSpy).toHaveBeenCalledTimes(1);
+    expect(updateSpy.mock.calls[0][1]).toBe("typ_c"); // reconciles the existing type
+    expect(createTypeSpy).not.toHaveBeenCalled(); // does not recreate
+
+    // Second call sees the bumped version and skips reconciliation.
+    await ensureBootstrap(kv, "at", "usr_c");
+    expect(updateSpy).toHaveBeenCalledTimes(1);
   });
 });
