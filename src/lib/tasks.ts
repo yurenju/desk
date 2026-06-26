@@ -1,4 +1,6 @@
 import type { Task, TaskWithTrail, Layer, TrailKind, Priority } from "./types";
+import { shortDate, monthOf } from "./date";
+import { rankOn } from "./ranks";
 
 export function primaryMonth(t: Task): string | null {
   const arr = t.custom_fields.scheduled_months ?? [];
@@ -98,6 +100,26 @@ export function tasksOnDate(all: Task[], date: string): TaskWithTrail[] {
     });
 }
 
+/**
+ * Human-facing "moved to where" label for a non-primary (trail) day row, shown
+ * in place after a task is moved out of the day it was viewed on. Replaces the
+ * old generic "已順延 / 退回月度" with an explicit destination so the row doesn't
+ * read as if it silently vanished.
+ */
+export function trailLabel(task: Task, kind: TrailKind, today: string): string {
+  if (kind === "forwarded") {
+    const dates = task.custom_fields.scheduled_dates ?? [];
+    const target = dates[dates.length - 1];
+    if (!target) return "↪ 已移走";
+    return target === today ? "↪ 已移到今天" : `↪ 已移到 ${shortDate(target)}`;
+  }
+  // dismissed: bounced off the day back to its month (or all the way to backlog).
+  const pm = primaryMonth(task);
+  if (pm === null) return "↩ 已退回待辦";
+  if (pm === monthOf(today)) return "↩ 已退回本月";
+  return `↩ 已退回 ${Number(pm.slice(5))} 月`;
+}
+
 export function tasksOnMonth(all: Task[], month: string): TaskWithTrail[] {
   return all
     .filter((t) => t.custom_fields.scheduled_months?.includes(month))
@@ -149,4 +171,26 @@ export function nextFreeDailySlot(all: Task[], date: string, excludeId?: string)
   if (!taken.has("1")) return "1";
   if (!taken.has("2")) return "2";
   return "3";
+}
+
+/** This task's rank on `date`: per-date array first, else the legacy single
+ * value but only on its current primary day (so a moved-out trail day shows no
+ * stale rank). */
+export function dailyRankOn(task: Task, date: string): Priority | null {
+  const direct = rankOn(task.custom_fields.daily_ranks, date);
+  if (direct) return direct;
+  if (!task.custom_fields.daily_ranks?.length && primaryDate(task) === date) {
+    return task.custom_fields.daily_priority ?? null;
+  }
+  return null;
+}
+
+/** Monthly mirror of dailyRankOn. */
+export function monthlyRankOn(task: Task, month: string): Priority | null {
+  const direct = rankOn(task.custom_fields.monthly_ranks, month);
+  if (direct) return direct;
+  if (!task.custom_fields.monthly_ranks?.length && primaryMonth(task) === month) {
+    return task.custom_fields.monthly_priority ?? null;
+  }
+  return null;
 }

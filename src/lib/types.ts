@@ -13,6 +13,8 @@ export interface TaskCustomFields {
   unscheduled_at?: string;
   monthly_priority?: Priority;
   daily_priority?: Priority;
+  daily_ranks?: string[];
+  monthly_ranks?: string[];
   is_adhoc?: "true" | "false";
   done_on?: string;
   position?: string;
