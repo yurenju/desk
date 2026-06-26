@@ -473,3 +473,27 @@ export async function createTodoType(
   if (!data.id) throw new Error("WSPC createTodoType response missing id");
   return { id: data.id };
 }
+
+/**
+ * Replace a todo type's custom_fields schema (wholesale). Used by bootstrap's
+ * schema reconciliation to add newly-declared fields to a type that already
+ * exists. Adding a key is allowed; changing an existing key's type is rejected
+ * by WSPC, so DESK_TASK_FIELDS must keep existing keys' types stable.
+ */
+export async function updateTodoType(
+  accessToken: string,
+  typeId: string,
+  customFields: CustomFieldDecl[],
+): Promise<void> {
+  const res = await fetch(`${WSPC_BASE}/todo/types/${encodeURIComponent(typeId)}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ custom_fields: customFields }),
+  });
+  if (!res.ok) {
+    throw new Error(`WSPC updateTodoType failed: ${res.status} ${await res.text()}`);
+  }
+}
