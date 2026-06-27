@@ -1,11 +1,13 @@
 import { useMemo } from "react";
+import { useDndContext } from "@dnd-kit/core";
 import type { Task } from "@/lib/types";
 import { tasksOnDate, byPosition, dailyRankOn } from "@/lib/tasks";
 import { dayOfMonth, shortWeekday } from "@/lib/date";
 import { useTasksStore } from "@/store/tasks";
 import { useDroppableZone } from "@/features/plan-view/useDroppableZone";
 import { SortableSection } from "@/features/plan-view/SortableSection";
-import { containerId } from "@/features/plan-view/planDrag";
+import { containerId, parseContainerId } from "@/features/plan-view/planDrag";
+import { parseDropId } from "@/features/plan-view/dnd";
 import { useDragOrdering } from "@/features/plan-view/useDragOrdering";
 import { TaskRow } from "./TaskRow";
 import { Top3Card } from "./Top3Card";
@@ -68,16 +70,37 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
   const isEmpty = top3.length === 0 && otherPlanned.length === 0 && adhoc.length === 0;
 
   const isInteractive = interactive ?? variant === "today-hero";
-  const { ref: top3Ref, isOver: top3IsOver } = useDroppableZone({
-    kind: "day",
-    date: selectedDate,
-    zone: "top3",
-  });
-  const { ref: otherRef, isOver: otherIsOver } = useDroppableZone({
-    kind: "day",
-    date: selectedDate,
-    zone: "other",
-  });
+  // Keep the coarse zone droppables registered (they catch drops in the padding
+  // between rows), but DON'T drive the highlight off their `isOver`: when the
+  // pointer is over a sortable row, collision resolves to that row — not the coarse
+  // zone — so the zone's isOver goes false and the dashed frame would blink off.
+  // Instead read the live `over` from the DndContext and light the whole section
+  // whenever the drag is over it (container droppable, coarse zone, OR a member row).
+  const { ref: top3Ref } = useDroppableZone({ kind: "day", date: selectedDate, zone: "top3" });
+  const { ref: otherRef } = useDroppableZone({ kind: "day", date: selectedDate, zone: "other" });
+  const { over } = useDndContext();
+  const overZone = ((): "top3" | "other" | null => {
+    const overId = over ? String(over.id) : null;
+    if (!overId) return null;
+    const c = parseContainerId(overId);
+    if (c) {
+      if (c.kind === "top3" && c.date === selectedDate) return "top3";
+      if ((c.kind === "other" || c.kind === "adhoc") && c.date === selectedDate) return "other";
+      return null;
+    }
+    const d = parseDropId(overId);
+    if (d?.kind === "day" && d.date === selectedDate) return d.zone;
+    // Sortable member row "day:<taskId>": classify by which section holds it.
+    if (overId.startsWith("day:")) {
+      const tid = overId.slice("day:".length);
+      if (top3.some((e) => e.task.id === tid)) return "top3";
+      if (otherPlanned.some((e) => e.task.id === tid) || adhoc.some((e) => e.task.id === tid))
+        return "other";
+    }
+    return null;
+  })();
+  const top3IsOver = overZone === "top3";
+  const otherIsOver = overZone === "other";
   // "today" is the store's notion of today (set to the real local date at load),
   // the single source of truth — not a fresh todayISO() read, which would
   // disagree in tests and at a midnight rollover.
