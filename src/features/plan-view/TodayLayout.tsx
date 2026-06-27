@@ -6,7 +6,6 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import type { Task } from "@/lib/types";
@@ -24,7 +23,6 @@ import {
   buildDayContainers,
   commitFinalOrder,
   commitPlan,
-  dragOverPreview,
   isSortableHit,
   makeCollisionDetection,
   planCommit,
@@ -86,30 +84,24 @@ export function TodayLayout({ allTasks, selectedDate, today, month }: TodayLayou
     }
   }
 
-  // Live overflow / reorder preview for the Day column's sortable sections.
-  function handleDragOver(e: DragOverEvent) {
-    const src = dragSource.current;
-    if (!src) return;
-    const overId = e.over ? String(e.over.id) : null;
-    // over.id is either a container droppable (top3:DATE) OR a sortable member
-    // row (day:<id>) when hovering directly over a sibling. Both are valid
-    // sortable hits; isSortableContainerId alone would miss the row case and
-    // wrongly clear the preview, dropping the reorder.
-    if (!overId || !isSortableHit(overId, sortableMembers)) {
-      setPreview((prev) => (prev.size ? new Map() : prev));
-      return;
-    }
-    const resolved = resolveOver(overId, baseContainers);
-    if (!resolved) return;
-    // Same-container moves return null: clear any stale preview and let
-    // SortableContext animate the reorder natively (a preview override here
-    // would fight the native transforms → infinite render loop).
-    const next = dragOverPreview(baseContainers, src, resolved);
-    if (next === null) {
-      setPreview((prev) => (prev.size ? new Map() : prev));
-      return;
-    }
-    setPreview(next);
+  // No live cross-container reflow preview.
+  //
+  // dnd-kit measures the active (dragged) row and its parent via `useRect`, which
+  // remeasures on every `document.body` childList mutation and setStates whenever
+  // the rect changes (core.cjs `useRect` → `containerNodeRect = useRect(activeNode
+  // .parentElement)`, ungated). A preview that physically moves the active row
+  // between sections mutates childList → remeasure → dnd-kit re-fires onDragOver on
+  // the new rect → setPreview → reflow → … until React throws #185 ("Maximum update
+  // depth exceeded") and the whole <DndContext> is torn down by the error boundary.
+  // Same-container reorders already avoided this by setting no preview (native
+  // SortableContext transforms shift rows visually without mutating childList);
+  // cross-container now does too. Feedback is the floating DragOverlay + the
+  // drop-zone highlight, and the drop still lands correctly because commitFinalOrder
+  // reconstructs the order from resolveOver(over) at release (base + insert index).
+  // ponytail: drop the live shuffle to kill the loop; revisit only if the
+  // cross-section insertion animation is worth a placeholder-based reimplementation.
+  function handleDragOver() {
+    setPreview((prev) => (prev.size ? new Map() : prev));
   }
 
   function handleDragEnd(e: DragEndEvent) {
