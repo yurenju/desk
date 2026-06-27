@@ -1,6 +1,8 @@
 # desk.yurenju.me
 
-個人儀表板（整合 Mail / Calendar / Todo），跑在 Cloudflare Workers，後端用 WSPC（https://wspc.ai）。開發策略與進度見 [ROADMAP.md](ROADMAP.md)：垂直切片，每片可 demo。
+個人儀表板（整合 Mail / Calendar / Todo），跑在 Cloudflare Workers，後端用 WSPC（https://wspc.ai）。專案概觀見 [README.md](README.md)。
+
+v1 的 Todo 工作流（三層漏斗：Backlog / Monthly / Daily，Plan 規劃 + Focus 專注兩個鏡頭）已實作到「可實際每天用」並先用一陣子再迭代；Calendar / Mail 為後續階段。排程語意全靠 WSPC todo 的 custom fields 表達，完整欄位語意與「用 wspc MCP 操作 Desk 帳號」的對照見 [docs/wspc-mcp-operations.md](docs/wspc-mcp-operations.md)。
 
 ## 撰寫 spec 時
 
