@@ -27,6 +27,14 @@
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   color: var(--color-ink-soft);
+  /* Clamp long descriptions; full text is available via the detail trigger. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .trail {
