@@ -42,6 +42,50 @@ describe("useTasksStore (local behaviour)", () => {
     expect(added?.custom_fields.is_adhoc).toBe("true");
   });
 
+  it("acting during the create window defers the patch to the real id (no temp-id 404, optimistic kept)", async () => {
+    let resolveCreate!: (t: Task) => void;
+    vi.spyOn(api, "postTodo").mockReturnValue(
+      new Promise<Task>((r) => {
+        resolveCreate = r;
+      }),
+    );
+    const patchSpy = vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+
+    const today = useTasksStore.getState().today;
+    // Fire the add but do NOT await: the POST is still in flight.
+    const adding = useTasksStore.getState().addTodayTask("視窗內動作", today, true);
+
+    // The optimistic task is on-screen with a temp id.
+    const temp = useTasksStore.getState().tasks.find((t) => t.title === "視窗內動作")!;
+    expect(temp.id).toMatch(/^temp-/);
+
+    // User acts during the window. The patch is deferred (waits for the real
+    // id), so its promise must NOT be awaited before the create resolves.
+    const acting = useTasksStore.getState().setDailyPriority(temp.id, "1", today);
+    expect(patchSpy).not.toHaveBeenCalled();
+
+    // Create resolves to a real id.
+    resolveCreate({
+      id: "srv-win",
+      title: "視窗內動作",
+      status: "open",
+      created_at: "x",
+      updated_at: "x",
+      custom_fields: { scheduled_dates: [today], is_adhoc: "true" },
+    });
+    await Promise.all([adding, acting]);
+
+    // Reconcile kept the window's optimistic rank and adopted the real id.
+    const reconciled = useTasksStore.getState().tasks.find((t) => t.id === "srv-win")!;
+    expect(reconciled).toBeDefined();
+    expect(dailyRankOn(reconciled, today)).toBe("1");
+    expect(useTasksStore.getState().tasks.some((t) => t.id === temp.id)).toBe(false);
+
+    // The deferred patch went out exactly once, against the real id.
+    expect(patchSpy).toHaveBeenCalledTimes(1);
+    expect(patchSpy.mock.calls[0][0]).toBe("srv-win");
+  });
+
   it("setDailyPriority scopes eviction to the passed date", async () => {
     vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
     await useTasksStore.getState().setDailyPriority("d5", "1", useTasksStore.getState().today);
