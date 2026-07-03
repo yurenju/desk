@@ -2,6 +2,7 @@ import { defineConfig, configDefaults } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import path from "node:path";
 import os from "node:os";
 
@@ -19,6 +20,11 @@ import os from "node:os";
 const isE2E = process.env.CLOUDFLARE_ENV === "e2e";
 const SHARED_DEV_STATE = path.join(os.homedir(), ".desk-dev", "wrangler-state");
 
+// Source-map upload runs only when SENTRY_AUTH_TOKEN is set (i.e. the deploy
+// env). Without it — local dev, e2e, CI without the secret — the plugin is
+// skipped and no maps are emitted, so builds stay clean and nothing leaks.
+const uploadSourceMaps = !process.env.VITEST && !!process.env.SENTRY_AUTH_TOKEN;
+
 export default defineConfig({
   plugins: [
     TanStackRouterVite({
@@ -29,7 +35,22 @@ export default defineConfig({
     ...(process.env.VITEST
       ? []
       : [cloudflare(isE2E ? {} : { persistState: { path: SHARED_DEV_STATE } })]),
+    ...(uploadSourceMaps
+      ? [
+          sentryVitePlugin({
+            org: "personal-f5k",
+            project: "node-cloudflare-workers",
+            authToken: process.env.SENTRY_AUTH_TOKEN,
+            // Upload to Sentry then delete, so .map files never ship to the
+            // browser or the deployed worker bundle.
+            sourcemaps: { filesToDeleteAfterUpload: ["**/*.map"] },
+          }),
+        ]
+      : []),
   ],
+  // "hidden" emits maps for upload but omits the sourceMappingURL comment, so
+  // browsers don't fetch them; the plugin deletes them post-upload anyway.
+  build: { sourcemap: uploadSourceMaps ? "hidden" : false },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
