@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/cloudflare";
 import { withSession } from "../middleware/session";
 import { ensureBootstrap } from "../bootstrap";
 import { listTodos, createTodo, patchTodo, listChildren } from "../wspc";
@@ -23,7 +24,7 @@ export async function handleListTodo(request: Request, env: Env): Promise<Respon
 }
 
 export async function handleCreateTodo(request: Request, env: Env): Promise<Response> {
-  return withSession(request, env, async ({ accessToken, userId }) => {
+  return withSession(request, env, async ({ accessToken, userId, refreshed }) => {
     let body: {
       title?: string;
       scheduled_dates?: string[];
@@ -41,8 +42,26 @@ export async function handleCreateTodo(request: Request, env: Env): Promise<Resp
     if (body.scheduled_dates) customFields.scheduled_dates = body.scheduled_dates;
     if (body.scheduled_months) customFields.scheduled_months = body.scheduled_months;
     if ("is_adhoc" in body && body.is_adhoc) customFields.is_adhoc = body.is_adhoc;
+    // Measure the create window: this latency is how long the optimistic temp-id
+    // is live client-side, during which an action on it PATCHes temp-xxx → 404.
+    // Reported to Sentry so we know how slow create is and how often a token
+    // refresh piggybacks the critical path. tracesSampleRate is 0, so we send a
+    // message with timings in `extra` rather than a perf span.
+    const t0 = Date.now();
     const { projectId, typeId } = await ensureBootstrap(env.DESK_KV, accessToken, userId);
+    const t1 = Date.now();
     const todo = await createTodo(accessToken, { title, projectId, typeId, customFields });
+    const t2 = Date.now();
+    Sentry.captureMessage("create_timing", {
+      level: "info",
+      tags: { refreshed: String(refreshed) },
+      extra: {
+        bootstrapMs: t1 - t0,
+        createMs: t2 - t1,
+        totalMs: t2 - t0,
+        refreshed,
+      },
+    });
     return json({ task: mapTodoToTask(todo) }, 201);
   });
 }

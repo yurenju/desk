@@ -12,6 +12,9 @@ interface Env {
 export interface SessionContext {
   accessToken: string;
   userId: string;
+  // True when this request piggybacked a token refresh on the critical path
+  // (widens the create window — see temp-id PATCH 404 investigation).
+  refreshed: boolean;
 }
 
 export type SessionHandler = (ctx: SessionContext) => Promise<Response>;
@@ -42,6 +45,7 @@ export async function withSession(
 
   const nowSeconds = Math.floor(Date.now() / 1000);
   let accessToken = session.accessToken;
+  let refreshed = false;
 
   if (session.accessExp - nowSeconds < REFRESH_THRESHOLD_SECONDS) {
     // Tag every event with a stable-but-non-secret session marker so concurrent
@@ -82,6 +86,7 @@ export async function withSession(
         userId: session.userId,
       });
       accessToken = tokens.accessToken;
+      refreshed = true;
       Sentry.captureMessage("refresh_succeeded", {
         level: "info",
         tags: { sess, phase: "refresh" },
@@ -104,5 +109,5 @@ export async function withSession(
     }
   }
 
-  return handler({ accessToken, userId: session.userId });
+  return handler({ accessToken, userId: session.userId, refreshed });
 }

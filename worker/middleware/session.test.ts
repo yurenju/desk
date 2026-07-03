@@ -47,7 +47,7 @@ describe("withSession", () => {
     const handler = vi.fn(async ({ accessToken }: { accessToken: string }) => new Response(accessToken));
     const res = await withSession(req, env, handler);
 
-    expect(handler).toHaveBeenCalledWith({ accessToken: "at-1", userId: "usr_test" });
+    expect(handler).toHaveBeenCalledWith({ accessToken: "at-1", userId: "usr_test", refreshed: false });
     expect(await res.text()).toBe("at-1");
   });
 
@@ -73,7 +73,7 @@ describe("withSession", () => {
     const handler = vi.fn(async ({ accessToken }: { accessToken: string }) => new Response(accessToken));
     const res = await withSession(req, env, handler);
 
-    expect(handler).toHaveBeenCalledWith({ accessToken: "at-new", userId: "usr_test" });
+    expect(handler).toHaveBeenCalledWith({ accessToken: "at-new", userId: "usr_test", refreshed: true });
     expect(await res.text()).toBe("at-new");
     const stored = await getSession(env.DESK_KV, "sid-1");
     expect(stored?.accessToken).toBe("at-new");
@@ -121,6 +121,6 @@ describe("withSession", () => {
       seen = ctx;
       return new Response("ok");
     });
-    expect(seen).toEqual({ accessToken: "at", userId: "usr_123" });
+    expect(seen).toEqual({ accessToken: "at", userId: "usr_123", refreshed: false });
   });
 });
