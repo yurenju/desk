@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/cloudflare";
 import { parseSessionId, clearSessionCookie } from "../cookie";
 import { getSession, putSession, deleteSession, getClientId } from "../kv";
 import { refreshAccessToken } from "../wspc";
@@ -43,9 +44,23 @@ export async function withSession(
   let accessToken = session.accessToken;
 
   if (session.accessExp - nowSeconds < REFRESH_THRESHOLD_SECONDS) {
+    // Tag every event with a stable-but-non-secret session marker so concurrent
+    // refresh attempts on the SAME session (the suspected race) group together
+    // in Sentry: one success + N invalid_grant failures within ~1s == confirmed.
+    const sess = sessionId.slice(-8);
+    Sentry.addBreadcrumb({
+      category: "auth.refresh",
+      message: "refresh_start",
+      level: "info",
+      data: { sess, remaining: session.accessExp - nowSeconds },
+    });
     const clientId = await getClientId(env.DESK_KV);
     if (!clientId) {
       await deleteSession(env.DESK_KV, sessionId);
+      Sentry.captureMessage("session_deleted:client_missing", {
+        level: "warning",
+        tags: { sess, phase: "refresh" },
+      });
       return new Response(JSON.stringify({ error: "client_missing" }), {
         status: 401,
         headers: {
@@ -67,7 +82,17 @@ export async function withSession(
         userId: session.userId,
       });
       accessToken = tokens.accessToken;
-    } catch {
+      Sentry.captureMessage("refresh_succeeded", {
+        level: "info",
+        tags: { sess, phase: "refresh" },
+      });
+    } catch (e) {
+      // The error message carries the WSPC status + body (e.g. invalid_grant),
+      // which is the direct evidence for the rotated-refresh-token race.
+      Sentry.captureException(e, {
+        tags: { sess, phase: "refresh" },
+        extra: { remaining: session.accessExp - nowSeconds },
+      });
       await deleteSession(env.DESK_KV, sessionId);
       return new Response(JSON.stringify({ error: "refresh_failed" }), {
         status: 401,
