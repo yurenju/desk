@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { Priority, Task } from "@/lib/types";
 import { fetchTodos, postTodo } from "@/lib/api/todo";
-import { enqueuePatch } from "@/lib/api/todoQueue";
+import { enqueuePatch, trackCreate } from "@/lib/api/todoQueue";
 import {
   addTodayTask,
   addMonthTask as addMonthTaskOp,
@@ -113,13 +113,20 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     const prev = get().tasks;
     const tempId = `temp-${crypto.randomUUID()}`;
     set({ tasks: addTodayTask(prev, trimmed, date, tempId, now(), isAdhoc), error: null });
+    const create = postTodo({
+      title: trimmed,
+      scheduled_dates: [date],
+      is_adhoc: isAdhoc ? "true" : "false",
+    });
+    trackCreate(tempId, create);
     try {
-      const created = await postTodo({
-        title: trimmed,
-        scheduled_dates: [date],
-        is_adhoc: isAdhoc ? "true" : "false",
-      });
-      set({ tasks: get().tasks.map((t) => (t.id === tempId ? created : t)) });
+      const created = await create;
+      // Keep the optimistic task (incl. any action taken during the create
+      // window) and only adopt the real id — replacing wholesale with `created`
+      // would clobber those window changes. ponytail: server timestamps/version
+      // aren't adopted here; next reload reconciles them (version is unused by
+      // our optimistic-locking-free patches).
+      set({ tasks: get().tasks.map((t) => (t.id === tempId ? { ...t, id: created.id } : t)) });
     } catch {
       set({ tasks: prev, error: "save_failed" });
     }
@@ -264,13 +271,15 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     const prev = get().tasks;
     const tempId = `temp-${crypto.randomUUID()}`;
     set({ tasks: addMonthTaskOp(prev, trimmed, month, tempId, now(), isAdhoc), error: null });
+    const create = postTodo({
+      title: trimmed,
+      scheduled_months: [month],
+      is_adhoc: isAdhoc ? "true" : "false",
+    });
+    trackCreate(tempId, create);
     try {
-      const created = await postTodo({
-        title: trimmed,
-        scheduled_months: [month],
-        is_adhoc: isAdhoc ? "true" : "false",
-      });
-      set({ tasks: get().tasks.map((t) => (t.id === tempId ? created : t)) });
+      const created = await create;
+      set({ tasks: get().tasks.map((t) => (t.id === tempId ? { ...t, id: created.id } : t)) });
     } catch {
       set({ tasks: prev, error: "save_failed" });
     }
@@ -282,9 +291,11 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     const prev = get().tasks;
     const tempId = `temp-${crypto.randomUUID()}`;
     set({ tasks: addBacklogTaskOp(prev, trimmed, tempId, now()), error: null });
+    const create = postTodo({ title: trimmed, is_adhoc: "false" });
+    trackCreate(tempId, create);
     try {
-      const created = await postTodo({ title: trimmed, is_adhoc: "false" });
-      set({ tasks: get().tasks.map((t) => (t.id === tempId ? created : t)) });
+      const created = await create;
+      set({ tasks: get().tasks.map((t) => (t.id === tempId ? { ...t, id: created.id } : t)) });
     } catch {
       set({ tasks: prev, error: "save_failed" });
     }

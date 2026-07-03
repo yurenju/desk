@@ -22,6 +22,33 @@ export function resetTodoQueue(): void {
   queues.clear();
 }
 
+// Seed an in-flight placeholder for a task still being created (its id is a
+// `temp-*` optimistic id). Patches enqueued during the create window coalesce
+// into the placeholder instead of hitting `PATCH /todo/temp-xxx` (→ WSPC 404).
+// When the create resolves to a real id, the coalesced patch is flushed against
+// that real id; if it fails, the window's waiters are rejected.
+export function trackCreate(tempId: string, create: Promise<Task>): void {
+  queues.set(tempId, { pendingPatch: null, pendingWaiters: [] });
+  create.then(
+    (task) => flushCreated(tempId, task.id),
+    (err) => abort(tempId, err),
+  );
+}
+
+function flushCreated(tempId: string, realId: string): void {
+  const entry = queues.get(tempId);
+  if (!entry) return;
+  const patch = entry.pendingPatch;
+  const batch = entry.pendingWaiters;
+  queues.delete(tempId);
+  if (patch === null) return; // no action happened during the create window
+  // Re-enter through the normal path so further patches to realId coalesce too.
+  enqueuePatch(realId, patch).then(
+    (task) => batch.forEach((w) => w.resolve(task)),
+    (err) => batch.forEach((w) => w.reject(err)),
+  );
+}
+
 export function enqueuePatch(id: string, patch: TodoPatch): Promise<Task> {
   const entry = queues.get(id);
   if (!entry) {

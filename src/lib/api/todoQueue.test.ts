@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Task } from "@/lib/types";
 import * as api from "./todo";
-import { enqueuePatch, resetTodoQueue } from "./todoQueue";
+import { enqueuePatch, trackCreate, resetTodoQueue } from "./todoQueue";
 
 beforeEach(() => {
   vi.restoreAllMocks();
@@ -135,6 +135,53 @@ describe("todoQueue", () => {
 
     await expect(c1).rejects.toThrow("boom");
     await expect(c2).rejects.toThrow("boom");
+  });
+
+  it("defers window patches on a temp id and coalesces them into ONE real-id patch", async () => {
+    let resolveCreate!: (t: Task) => void;
+    const create = new Promise<Task>((r) => {
+      resolveCreate = r;
+    });
+    const spy = vi
+      .spyOn(api, "patchTodoApi")
+      .mockResolvedValue({ id: "real", v: 9 } as unknown as Task);
+
+    trackCreate("temp-1", create);
+
+    // User acts twice during the create window. Nothing is sent yet.
+    const c1 = enqueuePatch("temp-1", { daily_priority: "1" });
+    const c2 = enqueuePatch("temp-1", { status: "done" });
+    expect(spy).not.toHaveBeenCalled();
+
+    resolveCreate({ id: "real" } as Task);
+    const [r1, r2] = await Promise.all([c1, c2]);
+
+    // Exactly one network patch, against the REAL id, carrying both actions.
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith("real", {
+      daily_priority: "1",
+      status: "done",
+    });
+    expect(r1).toEqual({ id: "real", v: 9 });
+    expect(r2).toEqual({ id: "real", v: 9 });
+  });
+
+  it("sends nothing when no action happens during the create window", async () => {
+    const spy = vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as Task);
+    trackCreate("temp-2", Promise.resolve({ id: "real" } as Task));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(spy).not.toHaveBeenCalled();
+    // temp-2 is now idle: a later patch on the real id sends normally.
+    await enqueuePatch("real", { title: "x" });
+    expect(spy).toHaveBeenCalledWith("real", { title: "x" });
+  });
+
+  it("rejects window waiters when the create fails", async () => {
+    trackCreate("temp-3", Promise.reject(new Error("create boom")));
+    await expect(
+      enqueuePatch("temp-3", { daily_priority: "1" }),
+    ).rejects.toThrow("create boom");
   });
 
   it("recovers for the same id after a failure (queue state is cleared)", async () => {
