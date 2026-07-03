@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/cloudflare";
 import { handleLogin, handleStatus, handleLogout } from "./routes/auth";
 import { handleMe } from "./routes/me";
 import { handleListTodo, handleCreateTodo, handlePatchTodo, handleListSubtasks, handleCreateSubtask } from "./routes/todo";
@@ -8,9 +9,10 @@ interface Env {
   DESK_KV: KVNamespace;
   WSPC_BASE?: string;
   E2E?: string;
+  SENTRY_DSN?: string;
 }
 
-export default {
+const handler = {
   async fetch(request: Request, env: Env): Promise<Response> {
     setWspcBase(env.WSPC_BASE);
 
@@ -92,3 +94,14 @@ export default {
     });
   },
 } satisfies ExportedHandler<Env>;
+
+export default Sentry.withSentry(
+  (env: Env) => ({
+    // Off in e2e/tests (no DSN there). captureException/Message are no-ops when
+    // the client isn't initialized, so unit tests that import session.ts are safe.
+    dsn: env.E2E === "true" ? undefined : env.SENTRY_DSN,
+    tracesSampleRate: 0, // error-only for now; no perf tracing / replay
+    sendDefaultPii: false,
+  }),
+  handler,
+);

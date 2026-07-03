@@ -2,7 +2,16 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "desk",
   "compatibility_date": "2026-05-26",
+  // nodejs_als gives @sentry/cloudflare the AsyncLocalStorage it needs to bind
+  // the Sentry client across the request lifecycle. Inherited by named envs.
+  "compatibility_flags": ["nodejs_als"],
   "main": "./worker/index.ts",
+  // Sentry DSN is a public client key (safe to commit). Not set in the `e2e`
+  // env below, so e2e/tests never report. Local dev DOES report — fine while
+  // we're actively reproducing the token-refresh race.
+  "vars": {
+    "SENTRY_DSN": "https://b6e18e27016b0b4b7174c3b2fd7680b3@o4511668612759552.ingest.us.sentry.io/4511668622983173"
+  },
   "assets": {
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
