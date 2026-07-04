@@ -23,6 +23,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   clear() {
     useTasksStore.getState().clearTasks();
+    useTasksStore.persist.clearStorage();
     set({ me: null, status: "unauthenticated" });
   },
   async fetchMe() {

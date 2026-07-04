@@ -57,6 +57,15 @@ describe("useAuthStore", () => {
     expect(useAuthStore.getState().me).toBeNull();
     expect(useAuthStore.getState().status).toBe("unauthenticated");
   });
+
+  it("clear() wipes persisted tasks from localStorage", () => {
+    useTasksStore.setState({
+      tasks: [{ id: "x", title: "X", status: "open", created_at: "x", updated_at: "x", custom_fields: {} }],
+    });
+    expect(localStorage.getItem("desk-tasks")).not.toBeNull();
+    useAuthStore.getState().clear();
+    expect(localStorage.getItem("desk-tasks")).toBeNull();
+  });
 });
 
 it("clear() also empties tasks cache", () => {
