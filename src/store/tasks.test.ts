@@ -653,4 +653,26 @@ describe("persist + synced (SWR)", () => {
     await useTasksStore.getState().reload();
     expect(useTasksStore.getState().status).toBe("error");
   });
+
+  it("a successful write clears a stale unsynced flag", async () => {
+    useTasksStore.setState({
+      tasks: [{ id: "t1", title: "A", status: "open", created_at: "x", updated_at: "x", custom_fields: {} }],
+      status: "ready",
+      synced: false,
+    });
+    vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+    await useTasksStore.getState().toggleDone("t1");
+    expect(useTasksStore.getState().synced).toBe(true);
+  });
+
+  it("a failed write does not set synced true", async () => {
+    useTasksStore.setState({
+      tasks: [{ id: "t1", title: "A", status: "open", created_at: "x", updated_at: "x", custom_fields: {} }],
+      status: "ready",
+      synced: false,
+    });
+    vi.spyOn(api, "patchTodoApi").mockRejectedValue(new Error("boom"));
+    await useTasksStore.getState().toggleDone("t1");
+    expect(useTasksStore.getState().synced).toBe(false);
+  });
 });

@@ -2,7 +2,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Priority, Task } from "@/lib/types";
 import { fetchTodos, postTodo } from "@/lib/api/todo";
-import { enqueuePatch, trackCreate } from "@/lib/api/todoQueue";
+import type { TodoPatch } from "@/lib/api/todo";
+import { enqueuePatch as enqueuePatchRaw, trackCreate } from "@/lib/api/todoQueue";
 import {
   addTodayTask,
   addMonthTask as addMonthTaskOp,
@@ -31,6 +32,15 @@ const now = () => new Date().toISOString();
 // Monotonic counter used to sequence reload calls. Only the most-recent
 // invocation is allowed to commit its result to the store.
 let loadSeq = 0;
+
+// A completed server write proves connectivity is back, so clear a stale
+// "unsynced" flag. Failures propagate unchanged (callers handle rollback).
+function enqueuePatch(id: string, patch: TodoPatch): Promise<Task> {
+  return enqueuePatchRaw(id, patch).then((task) => {
+    if (!useTasksStore.getState().synced) useTasksStore.setState({ synced: true });
+    return task;
+  });
+}
 
 interface TasksState {
   tasks: Task[];
