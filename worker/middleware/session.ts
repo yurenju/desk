@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/cloudflare";
-import { parseSessionId, clearSessionCookie } from "../cookie";
+import { parseSessionId, clearSessionCookie, serializeSessionCookie } from "../cookie";
 import { getSession, putSession, deleteSession, getClientId } from "../kv";
 import { refreshAccessToken } from "../wspc";
 
@@ -42,6 +42,15 @@ export async function withSession(
       },
     });
   }
+
+  // Slide the session cookie's 30-day window on every authenticated response so
+  // active use never hits the cap (the cookie Max-Age is otherwise fixed at
+  // login; the KV TTL already slides on refresh, but the cookie did not).
+  const respondWithSlide = async (ctx: SessionContext): Promise<Response> => {
+    const res = await handler(ctx);
+    res.headers.append("Set-Cookie", serializeSessionCookie(sessionId));
+    return res;
+  };
 
   const nowSeconds = Math.floor(Date.now() / 1000);
   let accessToken = session.accessToken;
@@ -105,7 +114,7 @@ export async function withSession(
           level: "info",
           tags: { sess, phase: "refresh" },
         });
-        return handler({
+        return respondWithSlide({
           accessToken: healed.accessToken,
           userId: healed.userId,
           refreshed: false,
@@ -128,5 +137,5 @@ export async function withSession(
     }
   }
 
-  return handler({ accessToken, userId: session.userId, refreshed });
+  return respondWithSlide({ accessToken, userId: session.userId, refreshed });
 }

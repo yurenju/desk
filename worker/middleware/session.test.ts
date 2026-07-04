@@ -163,4 +163,21 @@ describe("withSession", () => {
     });
     expect(seen).toEqual({ accessToken: "at", userId: "usr_123", refreshed: false });
   });
+
+  it("slides the session cookie on an authenticated response", async () => {
+    const env = makeEnv();
+    await putSession(env.DESK_KV, "sid-slide", {
+      accessToken: "at",
+      refreshToken: "rt",
+      accessExp: Math.floor(Date.now() / 1000) + 600, // fresh: no refresh
+      userId: "usr_test",
+    });
+    const req = new Request("https://desk.yurenju.me/api/me", {
+      headers: { Cookie: "__Host-Session=sid-slide" },
+    });
+    const res = await withSession(req, env, async () => new Response("ok"));
+    const setCookie = res.headers.get("Set-Cookie");
+    expect(setCookie).toContain("__Host-Session=sid-slide");
+    expect(setCookie).toContain("Max-Age=2592000"); // 30 days, re-issued each request
+  });
 });
