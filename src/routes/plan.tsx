@@ -13,7 +13,9 @@ export function PlanView({ date }: { date: string }) {
     useTasksStore.getState().loadTasks();
   }, []);
 
-  if (status === "loading" || status === "idle") return <LoadSkeleton />;
+  // Only cold-start with an empty cache shows the skeleton; a warm cache renders
+  // immediately while the background revalidate runs (SWR).
+  if ((status === "loading" || status === "idle") && tasks.length === 0) return <LoadSkeleton />;
   if (status === "error") {
     return <LoadError onRetry={() => useTasksStore.getState().reload()} />;
   }
