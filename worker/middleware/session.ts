@@ -92,6 +92,25 @@ export async function withSession(
         tags: { sess, phase: "refresh" },
       });
     } catch (e) {
+      // A refresh failure may be a lost rotation race: a concurrent request on
+      // the same session refreshed first and wrote fresh tokens to KV. Re-read
+      // before nuking the session — if it now carries a freshly-refreshed access
+      // token, adopt it (self-heal) instead of forcing a full re-login. Only a
+      // session that is truly gone/stale gets deleted. (KV is eventually
+      // consistent in production, so a re-read can still miss a just-written
+      // winner; that degrades to the old delete-and-401 — no worse than before.)
+      const healed = await getSession(env.DESK_KV, sessionId);
+      if (healed && healed.accessExp - nowSeconds >= REFRESH_THRESHOLD_SECONDS) {
+        Sentry.captureMessage("refresh_selfhealed", {
+          level: "info",
+          tags: { sess, phase: "refresh" },
+        });
+        return handler({
+          accessToken: healed.accessToken,
+          userId: healed.userId,
+          refreshed: false,
+        });
+      }
       // The error message carries the WSPC status + body (e.g. invalid_grant),
       // which is the direct evidence for the rotated-refresh-token race.
       Sentry.captureException(e, {

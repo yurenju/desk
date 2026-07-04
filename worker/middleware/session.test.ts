@@ -105,6 +105,46 @@ describe("withSession", () => {
     expect(await getSession(env.DESK_KV, "sid-1")).toBeNull();
   });
 
+  it("self-heals a lost refresh race: adopts a concurrently-refreshed session instead of deleting", async () => {
+    const env = makeEnv();
+    const now = Math.floor(Date.now() / 1000);
+    await putSession(env.DESK_KV, "sid-1", {
+      accessToken: "at-old",
+      refreshToken: "rt-old",
+      accessExp: now + 10, // near expiry → triggers refresh
+      userId: "usr_test",
+    });
+    await env.DESK_KV.put("wspc:client_id", "client-1");
+    // Our refresh loses the rotation race: WSPC rejects our now-rotated token.
+    // But a concurrent request on the same session refreshed first and wrote
+    // fresh tokens to KV before our attempt returned.
+    vi.spyOn(wspc, "refreshAccessToken").mockImplementation(async () => {
+      await putSession(env.DESK_KV, "sid-1", {
+        accessToken: "at-winner",
+        refreshToken: "rt-winner",
+        accessExp: now + 900,
+        userId: "usr_test",
+      });
+      throw new Error("invalid_grant");
+    });
+
+    const req = new Request("https://desk.yurenju.me/api/me", {
+      headers: { Cookie: "__Host-Session=sid-1" },
+    });
+    const handler = vi.fn(async ({ accessToken }: { accessToken: string }) => new Response(accessToken));
+    const res = await withSession(req, env, handler);
+
+    // Adopted the winner's token; did NOT delete the session or 401.
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("at-winner");
+    expect(handler).toHaveBeenCalledWith({
+      accessToken: "at-winner",
+      userId: "usr_test",
+      refreshed: false,
+    });
+    expect(await getSession(env.DESK_KV, "sid-1")).not.toBeNull();
+  });
+
   it("passes userId from session to the handler", async () => {
     const env = makeEnv();
     await putSession(env.DESK_KV, "sid-u", {
