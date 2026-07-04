@@ -36,6 +36,16 @@ v1 的 Todo 工作流（三層漏斗：Backlog / Monthly / Daily，Plan 規劃 +
 >
 > ⚠️ `--persistent` 的 profile 目錄同一時間只能一個瀏覽器實例用，務必跟日常 Chrome 分開（專用 `~/.desk-dev/pw-profile`）。
 
+### agent 探測登入的固定 SOP（別再繞錯路）
+
+手動驗收要判斷「有沒有登入」時，**一律照這個順序，不要繞去 preview MCP**：
+
+1. **不要用 preview MCP 瀏覽器（`preview_start` / `preview_snapshot`）判斷登入。** 那個瀏覽器跟共用 profile 是**兩個不同瀏覽器**，結構上**永遠不帶** `__Host-Session` cookie → 一定顯示登出，會誤導你以為要重登。認證相關的探測**只走 playwright-cli `--persistent --profile ~/.desk-dev/pw-profile`**。
+2. **先確保 5173 上跑的是共用 KV 的 dev server**：跑過 e2e 後常有殘留的 `CLOUDFLARE_ENV=e2e` dev server（隔離 KV、無真 session）占著 5173 —— 先殺掉殘留、確認你連到的是一般 `npm run dev`（共用 KV）那台，否則會拿到假 401。
+3. `playwright-cli eval` 打 `/api/me`：**回 200 就直接開始驗收，不要問使用者**（這是計畫明訂的「已登入就直接做」）。**只有真的 401** 才告知使用者走一次 device flow。
+
+換句話說：會「每次都停下來問」通常是第 1 步用錯瀏覽器、或第 2 步連到殘留 e2e server 造成的假登出，不是真的沒登入。
+
 ## 改動 UI 互動後要跑 e2e
 
 改到 **Today 互動**（task row 動作、優先權、計畫外 / 內切換）、**登入流程**、或任何使用者操作流程後，**除了 `npx vitest run` 也要跑 e2e**：`npm run test:e2e`（Playwright，對真實 BFF + mock WSPC）。

@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/cloudflare";
-import { parseSessionId, clearSessionCookie } from "../cookie";
+import { parseSessionId, clearSessionCookie, serializeSessionCookie } from "../cookie";
 import { getSession, putSession, deleteSession, getClientId } from "../kv";
 import { refreshAccessToken } from "../wspc";
 
@@ -42,6 +42,15 @@ export async function withSession(
       },
     });
   }
+
+  // Slide the session cookie's 30-day window on every authenticated response so
+  // active use never hits the cap (the cookie Max-Age is otherwise fixed at
+  // login; the KV TTL already slides on refresh, but the cookie did not).
+  const respondWithSlide = async (ctx: SessionContext): Promise<Response> => {
+    const res = await handler(ctx);
+    res.headers.append("Set-Cookie", serializeSessionCookie(sessionId));
+    return res;
+  };
 
   const nowSeconds = Math.floor(Date.now() / 1000);
   let accessToken = session.accessToken;
@@ -92,6 +101,25 @@ export async function withSession(
         tags: { sess, phase: "refresh" },
       });
     } catch (e) {
+      // A refresh failure may be a lost rotation race: a concurrent request on
+      // the same session refreshed first and wrote fresh tokens to KV. Re-read
+      // before nuking the session — if it now carries a freshly-refreshed access
+      // token, adopt it (self-heal) instead of forcing a full re-login. Only a
+      // session that is truly gone/stale gets deleted. (KV is eventually
+      // consistent in production, so a re-read can still miss a just-written
+      // winner; that degrades to the old delete-and-401 — no worse than before.)
+      const healed = await getSession(env.DESK_KV, sessionId);
+      if (healed && healed.accessExp - nowSeconds >= REFRESH_THRESHOLD_SECONDS) {
+        Sentry.captureMessage("refresh_selfhealed", {
+          level: "info",
+          tags: { sess, phase: "refresh" },
+        });
+        return respondWithSlide({
+          accessToken: healed.accessToken,
+          userId: healed.userId,
+          refreshed: false,
+        });
+      }
       // The error message carries the WSPC status + body (e.g. invalid_grant),
       // which is the direct evidence for the rotated-refresh-token race.
       Sentry.captureException(e, {
@@ -109,5 +137,5 @@ export async function withSession(
     }
   }
 
-  return handler({ accessToken, userId: session.userId, refreshed });
+  return respondWithSlide({ accessToken, userId: session.userId, refreshed });
 }

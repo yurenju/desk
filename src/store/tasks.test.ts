@@ -606,3 +606,73 @@ describe("useTasksStore carryover actions", () => {
     expect(t.custom_fields.scheduled_months).toEqual(["2026-05"]); // MOCK_TODAY is 2026-05-22
   });
 });
+
+describe("persist + synced (SWR)", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+    useTasksStore.setState({ tasks: [], status: "idle", error: null, synced: true });
+  });
+
+  it("persists only tasks, not status", () => {
+    useTasksStore.setState({
+      tasks: [{ id: "p1", title: "P", status: "open", created_at: "x", updated_at: "x", custom_fields: {} }],
+      status: "ready",
+    });
+    const stored = JSON.parse(localStorage.getItem("desk-tasks")!);
+    expect(stored.state.tasks.map((t: { id: string }) => t.id)).toEqual(["p1"]);
+    expect(stored.state.status).toBeUndefined();
+  });
+
+  it("sets synced=true after a successful reload", async () => {
+    useTasksStore.setState({ synced: false });
+    vi.spyOn(api, "fetchTodos").mockResolvedValue([
+      { id: "r", title: "R", status: "open", created_at: "x", updated_at: "x", custom_fields: {} },
+    ]);
+    await useTasksStore.getState().reload();
+    expect(useTasksStore.getState().synced).toBe(true);
+  });
+
+  it("keeps cached tasks and flags unsynced when reload fails with cache", async () => {
+    useTasksStore.setState({
+      tasks: [{ id: "cached", title: "C", status: "open", created_at: "x", updated_at: "x", custom_fields: {} }],
+      status: "ready",
+      synced: true,
+    });
+    vi.spyOn(api, "fetchTodos").mockRejectedValue(new Error("boom"));
+    await useTasksStore.getState().reload();
+    const s = useTasksStore.getState();
+    expect(s.tasks.map((t) => t.id)).toEqual(["cached"]);
+    expect(s.status).toBe("ready");
+    expect(s.synced).toBe(false);
+  });
+
+  it("falls back to status=error when reload fails with no cache", async () => {
+    useTasksStore.setState({ tasks: [], status: "idle", synced: true });
+    vi.spyOn(api, "fetchTodos").mockRejectedValue(new Error("boom"));
+    await useTasksStore.getState().reload();
+    expect(useTasksStore.getState().status).toBe("error");
+  });
+
+  it("a successful write clears a stale unsynced flag", async () => {
+    useTasksStore.setState({
+      tasks: [{ id: "t1", title: "A", status: "open", created_at: "x", updated_at: "x", custom_fields: {} }],
+      status: "ready",
+      synced: false,
+    });
+    vi.spyOn(api, "patchTodoApi").mockResolvedValue({} as never);
+    await useTasksStore.getState().toggleDone("t1");
+    expect(useTasksStore.getState().synced).toBe(true);
+  });
+
+  it("a failed write does not set synced true", async () => {
+    useTasksStore.setState({
+      tasks: [{ id: "t1", title: "A", status: "open", created_at: "x", updated_at: "x", custom_fields: {} }],
+      status: "ready",
+      synced: false,
+    });
+    vi.spyOn(api, "patchTodoApi").mockRejectedValue(new Error("boom"));
+    await useTasksStore.getState().toggleDone("t1");
+    expect(useTasksStore.getState().synced).toBe(false);
+  });
+});

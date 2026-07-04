@@ -1,7 +1,8 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import type { Priority, Task } from "@/lib/types";
-import { fetchTodos, postTodo } from "@/lib/api/todo";
-import { enqueuePatch, trackCreate } from "@/lib/api/todoQueue";
+import { fetchTodos, postTodo, type TodoPatch } from "@/lib/api/todo";
+import { enqueuePatch as enqueuePatchRaw, trackCreate } from "@/lib/api/todoQueue";
 import {
   addTodayTask,
   addMonthTask as addMonthTaskOp,
@@ -31,12 +32,24 @@ const now = () => new Date().toISOString();
 // invocation is allowed to commit its result to the store.
 let loadSeq = 0;
 
+// A completed server write proves connectivity is back, so clear a stale
+// "unsynced" flag. Failures propagate unchanged (callers handle rollback).
+// Note: references `useTasksStore` (declared below) — safe because this runs
+// only at call time, after the store is created, never during module eval.
+function enqueuePatch(id: string, patch: TodoPatch): Promise<Task> {
+  return enqueuePatchRaw(id, patch).then((task) => {
+    if (!useTasksStore.getState().synced) useTasksStore.setState({ synced: true });
+    return task;
+  });
+}
+
 interface TasksState {
   tasks: Task[];
   today: string;
   status: "idle" | "loading" | "ready" | "error";
   error: string | null;
   recentlyDeleted: RemovedTask | null;
+  synced: boolean;
   loadTasks: () => Promise<void>;
   reload: () => Promise<void>;
   toggleDone: (id: string) => Promise<void>;
@@ -64,12 +77,15 @@ interface TasksState {
   clearError: () => void;
 }
 
-export const useTasksStore = create<TasksState>()((set, get) => ({
-  tasks: [],
-  today: todayISO(),
-  status: "idle",
-  error: null,
-  recentlyDeleted: null,
+export const useTasksStore = create<TasksState>()(
+  persist(
+    (set, get) => ({
+      tasks: [],
+      today: todayISO(),
+      status: "idle",
+      error: null,
+      recentlyDeleted: null,
+      synced: true,
 
   async loadTasks() {
     const st = get().status;
@@ -83,10 +99,16 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     try {
       const tasks = await fetchTodos();
       if (seq !== loadSeq) return;          // a newer load superseded this one
-      set({ tasks, today: todayISO(), status: "ready" });
+      set({ tasks, today: todayISO(), status: "ready", synced: true });
     } catch {
       if (seq !== loadSeq) return;
-      set({ status: "error", error: "load_failed" });
+      // With cached tasks on screen, stay put and flag "unsynced" instead of
+      // blanking to a full-screen error. Only cold-start-with-no-cache errors out.
+      if (get().tasks.length > 0) {
+        set({ status: "ready", synced: false });
+      } else {
+        set({ status: "error", error: "load_failed" });
+      }
     }
   },
 
@@ -461,4 +483,10 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
   clearError() {
     set({ error: null });
   },
-}));
+    }),
+    {
+      name: "desk-tasks",
+      partialize: (s) => ({ tasks: s.tasks }),
+    },
+  ),
+);

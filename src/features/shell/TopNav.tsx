@@ -1,6 +1,7 @@
 import { DeskLogo } from "@/ui/DeskLogo";
 import { AuthMenu } from "./AuthMenu";
 import { ModeToggle } from "./ModeToggle";
+import { SyncBadge } from "./SyncBadge";
 import styles from "./TopNav.module.css";
 
 export function TopNav() {
@@ -14,6 +15,7 @@ export function TopNav() {
         <ModeToggle />
       </div>
       <div className={styles.actions}>
+        <SyncBadge />
         <AuthMenu />
       </div>
     </header>
