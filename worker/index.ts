@@ -100,7 +100,11 @@ export default Sentry.withSentry(
     // Off in e2e/tests (no DSN there). captureException/Message are no-ops when
     // the client isn't initialized, so unit tests that import session.ts are safe.
     dsn: env.E2E === "true" ? undefined : env.SENTRY_DSN,
-    tracesSampleRate: 0, // error-only for now; no perf tracing / replay
+    // Trace outgoing wspc fetches. @sentry/cloudflare auto-instruments fetch, so
+    // every WSPC_BASE call becomes a span (url, method, status, duration) with no
+    // per-call-site changes. Full sampling: single-user, low-traffic personal app.
+    // ponytail: 1.0 is fine here; drop to a fraction only if volume ever grows.
+    tracesSampleRate: env.E2E === "true" ? 0 : 1.0,
     sendDefaultPii: false,
   }),
   handler,
