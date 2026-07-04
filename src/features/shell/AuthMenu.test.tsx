@@ -80,9 +80,8 @@ describe("AuthMenu", () => {
     );
 
     renderWithRouter();
-    expect(await screen.findByText("Alice")).toBeInTheDocument();
     await userEvent.click(
-      screen.getByRole("button", { name: /Alice|帳號選單/ }),
+      await screen.findByRole("button", { name: /帳號選單/ }),
     );
     expect(await screen.findByText("a@b")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Theme" })).toBeInTheDocument();
@@ -109,13 +108,13 @@ describe("AuthMenu", () => {
     expect(useAuthStore.getState().status).toBe("unauthenticated");
   });
 
-  it("falls back to email on the trigger when displayName is missing", async () => {
+  it("uses the email initial on the avatar when displayName is missing", async () => {
     useAuthStore.setState({
       me: { userId: "u-1", email: "a@b" },
       status: "authenticated",
     });
     renderWithRouter();
     const trigger = await screen.findByRole("button", { name: /帳號選單/ });
-    expect(trigger).toHaveTextContent("a@b");
+    expect(trigger).toHaveTextContent("A");
   });
 });

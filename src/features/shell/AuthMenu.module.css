@@ -33,13 +33,6 @@
   line-height: 1;
 }
 
-.name {
-  max-width: 10rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .iconTrigger {
   display: inline-flex;
   align-items: center;

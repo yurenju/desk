@@ -69,7 +69,6 @@ export function AuthMenu() {
         <span className={styles.avatar} aria-hidden="true">
           {initial}
         </span>
-        <span className={styles.name}>{label}</span>
       </BaseMenu.Trigger>
       <BaseMenu.Portal>
         <BaseMenu.Positioner align="end" sideOffset={6} className={styles.positioner}>
