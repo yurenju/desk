@@ -1,8 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Priority, Task } from "@/lib/types";
-import { fetchTodos, postTodo } from "@/lib/api/todo";
-import type { TodoPatch } from "@/lib/api/todo";
+import { fetchTodos, postTodo, type TodoPatch } from "@/lib/api/todo";
 import { enqueuePatch as enqueuePatchRaw, trackCreate } from "@/lib/api/todoQueue";
 import {
   addTodayTask,
@@ -35,6 +34,8 @@ let loadSeq = 0;
 
 // A completed server write proves connectivity is back, so clear a stale
 // "unsynced" flag. Failures propagate unchanged (callers handle rollback).
+// Note: references `useTasksStore` (declared below) — safe because this runs
+// only at call time, after the store is created, never during module eval.
 function enqueuePatch(id: string, patch: TodoPatch): Promise<Task> {
   return enqueuePatchRaw(id, patch).then((task) => {
     if (!useTasksStore.getState().synced) useTasksStore.setState({ synced: true });
