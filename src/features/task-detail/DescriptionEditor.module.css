@@ -6,6 +6,8 @@
 }
 .markdown { line-height: 1.6; }
 .markdown :where(ul, ol) { margin: 6px 0 0; padding-left: 20px; }
+/* Links have no default styling; browser blue is too dark in the dark theme. */
+.markdown a { color: var(--color-accent-text); }
 .placeholder {
   background: none; border: none; cursor: text;
   color: var(--color-ink-faint); font-size: 14px; padding: 0;
