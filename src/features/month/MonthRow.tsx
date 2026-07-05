@@ -1,5 +1,5 @@
 import type { Task, TrailKind } from "@/lib/types";
-import { delayKind, monthlyRankOn } from "@/lib/tasks";
+import { delayKind, monthlyRankOn, monthTrailLabel } from "@/lib/tasks";
 import { Checkbox } from "@/ui/Checkbox";
 import { UnplannedChip } from "@/ui/Chip";
 import { Menu } from "@/ui/Menu";
@@ -138,8 +138,9 @@ function MonthRowImpl({
       ) : (
         <span className={styles.title}>{task.title}</span>
       )}
-      {kind === "forwarded" && <span className={styles.trail}>↪</span>}
-      {kind === "dismissed" && <span className={styles.trail}>·略過</span>}
+      {kind !== "primary" && (
+        <span className={styles.trail}>{monthTrailLabel(task, kind)}</span>
+      )}
       {isAdhoc && <UnplannedChip />}
       {weekdayLabel && <span className={styles.weekChip}>{weekdayLabel}</span>}
       {otherWeekDate && <span className={styles.otherDate}>{otherWeekDate}</span>}
