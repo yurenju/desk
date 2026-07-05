@@ -253,6 +253,20 @@ describe("GET /api/todo/:id/subtasks", () => {
     const body = (await res.json()) as { subtasks: { id: string }[] };
     expect(body.subtasks[0]).toEqual({ id: "c1", title: "step", status: "open" });
   });
+
+  it("sorts by position, with unset positions kept after set ones in server order", async () => {
+    const env = makeEnv();
+    await seedSession(env);
+    vi.spyOn(wspc, "listChildren").mockResolvedValue([
+      { id: "u1", status: "open", title: "unset", created_at: 0, updated_at: 0, custom_fields: {} },
+      { id: "c2", status: "open", title: "b", created_at: 0, updated_at: 0, custom_fields: { position: "n" } },
+      { id: "c1", status: "open", title: "a", created_at: 0, updated_at: 0, custom_fields: { position: "b" } },
+    ]);
+    const req = new Request("https://d/api/todo/tod_1/subtasks", { headers: cookie });
+    const res = await handleListSubtasks(req, env, "tod_1");
+    const body = (await res.json()) as { subtasks: { id: string }[] };
+    expect(body.subtasks.map((s) => s.id)).toEqual(["c1", "c2", "u1"]);
+  });
 });
 
 describe("POST /api/todo/:id/subtasks", () => {

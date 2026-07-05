@@ -140,7 +140,18 @@ export async function handleListSubtasks(
   return withSession(request, env, async ({ accessToken, userId }) => {
     const { projectId, typeId } = await ensureBootstrap(env.DESK_KV, accessToken, userId);
     const children = await listChildren(accessToken, { projectId, typeId, parentId });
-    return json({ subtasks: children.map(mapTodoToSubtask) });
+    // Sort by the `position` custom field, mirroring byPosition() semantics for
+    // top-level tasks: set positions first (ascending string), unset keep server
+    // order (stable sort). mapTodoToSubtask drops position, so sort before mapping.
+    const sorted = [...children].sort((a, b) => {
+      const pa = a.custom_fields?.position as string | undefined;
+      const pb = b.custom_fields?.position as string | undefined;
+      if (pa && pb) return pa < pb ? -1 : pa > pb ? 1 : 0;
+      if (pa && !pb) return -1;
+      if (!pa && pb) return 1;
+      return 0;
+    });
+    return json({ subtasks: sorted.map(mapTodoToSubtask) });
   });
 }
 
