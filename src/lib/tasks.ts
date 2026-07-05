@@ -120,6 +120,22 @@ export function trailLabel(task: Task, kind: TrailKind, today: string): string {
   return `↩ 已退回 ${Number(pm.slice(5))} 月`;
 }
 
+/**
+ * Month-side mirror of `trailLabel`: the destination label for a non-primary
+ * (trail) month row, so a task moved out of the month it was viewed on reads as
+ * "moved to N月" instead of a bare arrow.
+ */
+export function monthTrailLabel(task: Task, kind: TrailKind): string {
+  if (kind === "forwarded") {
+    const months = task.custom_fields.scheduled_months ?? [];
+    const target = months[months.length - 1];
+    if (!target) return "↪ 已移走";
+    return `↪ 已移到 ${Number(target.slice(5))} 月`;
+  }
+  // dismissed: bounced off this month back to backlog.
+  return "↩ 已退回待辦";
+}
+
 export function tasksOnMonth(all: Task[], month: string): TaskWithTrail[] {
   return all
     .filter((t) => t.custom_fields.scheduled_months?.includes(month))

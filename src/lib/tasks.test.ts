@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Task } from "./types";
-import { primaryDate, primaryMonth, layer, tasksOnDate, tasksOnMonth, nextFreeDailySlot, delayKind, delaySummary, dayInWeek, isDayAdhocChip, byPosition, trailLabel, dailyRankOn, monthlyRankOn } from "./tasks";
+import { primaryDate, primaryMonth, layer, tasksOnDate, tasksOnMonth, nextFreeDailySlot, delayKind, delaySummary, dayInWeek, isDayAdhocChip, byPosition, trailLabel, monthTrailLabel, dailyRankOn, monthlyRankOn } from "./tasks";
 import { weekOf } from "./date";
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
@@ -390,6 +390,21 @@ describe("trailLabel", () => {
       custom_fields: { scheduled_dates: ["2026-05-20"], unscheduled_at: "2026-05-20" },
     });
     expect(trailLabel(t, "dismissed", TODAY)).toBe("↩ 已退回待辦");
+  });
+});
+
+describe("monthTrailLabel", () => {
+  it("forwarded reads the destination month (June → July)", () => {
+    const t = makeTask({ id: "a", custom_fields: { scheduled_months: ["2026-06", "2026-07"] } });
+    expect(monthTrailLabel(t, "forwarded")).toBe("↪ 已移到 7 月");
+  });
+
+  it("dismissed (bounced to backlog) reads 已退回待辦", () => {
+    const t = makeTask({
+      id: "a",
+      custom_fields: { scheduled_months: ["2026-06"], unscheduled_month: "2026-06" },
+    });
+    expect(monthTrailLabel(t, "dismissed")).toBe("↩ 已退回待辦");
   });
 });
 
