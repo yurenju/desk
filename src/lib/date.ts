@@ -121,6 +121,23 @@ export function monthOf(date: string): string {
   return date.slice(0, 7);
 }
 
+/** Formats an ISO timestamp as a Chinese relative time, e.g. "3 天前" / "剛剛". */
+export function relativeTime(iso: string, now: Date = new Date()): string {
+  const diffMs = now.getTime() - new Date(iso).getTime();
+  const sec = Math.floor(diffMs / 1000);
+  if (sec < 60) return "剛剛";
+  const rtf = new Intl.RelativeTimeFormat("zh-TW", { numeric: "always" });
+  const min = Math.floor(sec / 60);
+  if (min < 60) return rtf.format(-min, "minute");
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return rtf.format(-hr, "hour");
+  const day = Math.floor(hr / 24);
+  if (day < 30) return rtf.format(-day, "day");
+  const month = Math.floor(day / 30);
+  if (month < 12) return rtf.format(-month, "month");
+  return rtf.format(-Math.floor(month / 12), "year");
+}
+
 /**
  * Shift an ISO date by n months, clamping the day to the target month's last
  * day (e.g. addMonths("2026-01-31", 1) === "2026-02-28").

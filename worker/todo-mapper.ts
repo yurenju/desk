@@ -1,5 +1,5 @@
-import type { Todo } from "./wspc";
-import type { Task, Subtask, TaskCustomFields } from "../src/lib/types";
+import type { Todo, WspcComment } from "./wspc";
+import type { Task, Subtask, TaskComment, TaskCustomFields } from "../src/lib/types";
 
 export function mapTodoToTask(todo: Todo): Task {
   const custom_fields = { ...(todo.custom_fields ?? {}) } as TaskCustomFields;
@@ -29,4 +29,15 @@ export function mapTodoToTask(todo: Todo): Task {
 
 export function mapTodoToSubtask(todo: Todo): Subtask {
   return { id: todo.id, title: todo.title, status: todo.status };
+}
+
+// Drop user_id/org_id/todo_id: single-user app, the frontend only renders
+// content and timestamps.
+export function mapComment(comment: WspcComment): TaskComment {
+  return {
+    id: comment.id,
+    content: comment.content,
+    created_at: new Date(comment.created_at).toISOString(),
+    updated_at: new Date(comment.updated_at).toISOString(),
+  };
 }
