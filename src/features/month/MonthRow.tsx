@@ -3,12 +3,13 @@ import { delayKind, monthlyRankOn, monthTrailLabel } from "@/lib/tasks";
 import { Checkbox } from "@/ui/Checkbox";
 import { UnplannedChip } from "@/ui/Chip";
 import { Menu } from "@/ui/Menu";
-import { PriorityRing } from "@/ui/PriorityRing";
+import { RowTitleInput } from "@/ui/RowTitleInput";
 import type { CSSProperties } from "react";
 import { useDraggableRow } from "@/features/plan-view/useDraggableRow";
 import { useSortableRow } from "@/features/plan-view/useSortableRow";
 import { TaskDetailTrigger } from "@/features/task-detail/TaskDetailTrigger";
 import { useMonthRow } from "./useMonthRow";
+import { MonthPriorityMenu } from "./MonthPriorityMenu";
 import { buildMonthRowMenuItems } from "./monthRowMenu";
 import styles from "./MonthRow.module.css";
 
@@ -95,25 +96,9 @@ function MonthRowImpl({
         aria-label={task.title}
       />
       {showRing && editable && (
-        <Menu
-          ariaLabel="本月重點"
-          selectedKey={monthlyRankOn(task, month) ?? "none"}
-          trigger={
-            <PriorityRing
-              value={monthlyRankOn(task, month) ?? null}
-              aria-label={
-                monthlyRankOn(task, month)
-                  ? `本月重點第 ${monthlyRankOn(task, month)}`
-                  : "設為本月重點"
-              }
-            />
-          }
-          items={[
-            { key: "1", label: "① 本月第一", onSelect: () => row.setPriority("1") },
-            { key: "2", label: "② 本月第二", onSelect: () => row.setPriority("2") },
-            { key: "3", label: "③ 本月第三", onSelect: () => row.setPriority("3") },
-            { key: "none", label: "— 移除重點", onSelect: () => row.setPriority(null) },
-          ]}
+        <MonthPriorityMenu
+          value={monthlyRankOn(task, month) ?? null}
+          onSelect={row.setPriority}
         />
       )}
       {kind === "primary" && (
@@ -124,16 +109,12 @@ function MonthRowImpl({
         />
       )}
       {row.isEditing ? (
-        <input
+        <RowTitleInput
           className={styles.editInput}
-          autoFocus
-          value={row.draft}
-          onChange={(e) => row.changeDraft(e.target.value)}
-          onBlur={row.cancelEdit}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.nativeEvent.isComposing) row.commitEdit();
-            if (e.key === "Escape") row.cancelEdit();
-          }}
+          draft={row.draft}
+          onChangeDraft={row.changeDraft}
+          onCommit={row.commitEdit}
+          onCancel={row.cancelEdit}
         />
       ) : (
         <span className={styles.title}>{task.title}</span>

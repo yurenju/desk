@@ -1,5 +1,6 @@
 import type { Task } from "@/lib/types";
 import { Checkbox } from "@/ui/Checkbox";
+import { RowTitleInput } from "@/ui/RowTitleInput";
 import { Menu } from "@/ui/Menu";
 import { useSortableRow } from "@/features/plan-view/useSortableRow";
 import { TaskDetailTrigger } from "@/features/task-detail/TaskDetailTrigger";
@@ -33,16 +34,12 @@ export function BacklogRow({ task, focusDate }: BacklogRowProps) {
         aria-label={task.title}
       />
       {row.isEditing ? (
-        <input
+        <RowTitleInput
           className={styles.editInput}
-          autoFocus
-          value={row.draft}
-          onChange={(e) => row.changeDraft(e.target.value)}
-          onBlur={row.cancelEdit}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.nativeEvent.isComposing) row.commitEdit();
-            if (e.key === "Escape") row.cancelEdit();
-          }}
+          draft={row.draft}
+          onChangeDraft={row.changeDraft}
+          onCommit={row.commitEdit}
+          onCancel={row.cancelEdit}
         />
       ) : (
         <span className={styles.title}>{task.title}</span>
