@@ -5,8 +5,10 @@ import { primaryDate, primaryMonth, dailyRankOn, delaySummary } from "@/lib/task
 import { Checkbox } from "@/ui/Checkbox";
 import { useTaskDetailStore } from "./store";
 import { useTaskDetail } from "./useTaskDetail";
+import { useComments } from "./useComments";
 import { DescriptionEditor } from "./DescriptionEditor";
 import { SubtaskList } from "./SubtaskList";
+import { CommentSection } from "./CommentSection";
 import styles from "./TaskDetailModal.module.css";
 
 const PRIORITY_LABEL: Record<string, string> = { "1": "① 今日第一", "2": "② 今日第二", "3": "③ 今日第三" };
@@ -22,6 +24,7 @@ export function TaskDetailModal() {
   const deleteTask = useTasksStore((s) => s.deleteTask);
 
   const detail = useTaskDetail(openId);
+  const commentThread = useComments(openId);
 
   const open = Boolean(openId && task);
 
@@ -102,6 +105,19 @@ export function TaskDetailModal() {
                     onAdd={detail.add}
                   />
                 )}
+              </section>
+
+              <section className={styles.section}>
+                <div className={styles.label}>
+                  留言{commentThread.comments.length > 0 && ` ${commentThread.comments.length}`}
+                </div>
+                <CommentSection
+                  comments={commentThread.comments}
+                  status={commentThread.status}
+                  onAdd={commentThread.add}
+                  onEdit={commentThread.edit}
+                  onRemove={commentThread.remove}
+                />
               </section>
 
               <div className={styles.footer}>

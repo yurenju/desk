@@ -1,4 +1,4 @@
-import type { Task, Subtask, TaskStatus } from "@/lib/types";
+import type { Task, Subtask, TaskComment, TaskStatus } from "@/lib/types";
 
 async function jsonOrThrow<T>(res: Response): Promise<T> {
   if (!res.ok) throw new Error(`api ${res.status}`);
@@ -74,4 +74,42 @@ export async function createSubtask(parentId: string, title: string): Promise<Su
   });
   const data = await jsonOrThrow<{ subtask: Subtask }>(res);
   return data.subtask;
+}
+
+export async function fetchComments(taskId: string): Promise<TaskComment[]> {
+  const res = await fetch(`/api/todo/${encodeURIComponent(taskId)}/comments`, {
+    credentials: "same-origin",
+  });
+  const data = await jsonOrThrow<{ comments: TaskComment[] }>(res);
+  return data.comments;
+}
+
+export async function createComment(taskId: string, content: string): Promise<TaskComment> {
+  const res = await fetch(`/api/todo/${encodeURIComponent(taskId)}/comments`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content }),
+  });
+  const data = await jsonOrThrow<{ comment: TaskComment }>(res);
+  return data.comment;
+}
+
+export async function updateComment(commentId: string, content: string): Promise<TaskComment> {
+  const res = await fetch(`/api/todo/comments/${encodeURIComponent(commentId)}`, {
+    method: "PATCH",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content }),
+  });
+  const data = await jsonOrThrow<{ comment: TaskComment }>(res);
+  return data.comment;
+}
+
+export async function deleteComment(commentId: string): Promise<void> {
+  const res = await fetch(`/api/todo/comments/${encodeURIComponent(commentId)}`, {
+    method: "DELETE",
+    credentials: "same-origin",
+  });
+  if (!res.ok) throw new Error(`api ${res.status}`);
 }

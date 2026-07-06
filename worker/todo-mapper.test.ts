@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mapTodoToTask, mapTodoToSubtask } from "./todo-mapper";
+import { mapTodoToTask, mapTodoToSubtask, mapComment } from "./todo-mapper";
 
 describe("mapTodoToTask", () => {
   it("converts epoch-ms timestamps to ISO and flattens custom_fields", () => {
@@ -112,5 +112,25 @@ describe("mapTodoToSubtask", () => {
       id: "c1", status: "done", title: "step", created_at: 0, updated_at: 0, custom_fields: {},
     });
     expect(out).toEqual({ id: "c1", title: "step", status: "done" });
+  });
+});
+
+describe("mapComment", () => {
+  it("keeps only content and ISO timestamps, dropping user/org/todo ids", () => {
+    const out = mapComment({
+      id: "cm1",
+      todo_id: "t1",
+      user_id: "u1",
+      org_id: "o1",
+      content: "note",
+      created_at: 1751846400000,
+      updated_at: 1751932800000,
+    });
+    expect(out).toEqual({
+      id: "cm1",
+      content: "note",
+      created_at: new Date(1751846400000).toISOString(),
+      updated_at: new Date(1751932800000).toISOString(),
+    });
   });
 });

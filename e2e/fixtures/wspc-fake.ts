@@ -34,7 +34,19 @@ interface Todo {
   recurring_template_id?: string;
 }
 
+interface Comment {
+  id: string;
+  todo_id: string;
+  user_id: string;
+  org_id: string;
+  content: string;
+  created_at: number;
+  updated_at: number;
+  deleted_at?: number;
+}
+
 let todos: Todo[] = [];
+let comments: Comment[] = [];
 let idCounter = 0;
 
 function todayISO(): string {
@@ -190,6 +202,7 @@ function seed(): void {
     due_at: recurrenceDate,
   });
 
+  comments = [];
   idCounter = 0;
 }
 
@@ -285,6 +298,50 @@ const server = createServer(async (req, res) => {
     }
     todo.updated_at = Date.parse("2026-05-22T12:00:00Z") + ++idCounter * 1000;
     return send(res, 200, todo);
+  }
+
+  // ── Todo comments ────────────────────────────────────────────────────────
+  const commentsMatch = path.match(/^\/todo\/items\/([^/]+)\/comments$/);
+  if (commentsMatch) {
+    const todoId = decodeURIComponent(commentsMatch[1]);
+    if (method === "GET") {
+      const list = comments
+        .filter((c) => c.todo_id === todoId && !c.deleted_at)
+        .sort((a, b) => a.created_at - b.created_at);
+      return send(res, 200, { comments: list });
+    }
+    if (method === "POST") {
+      const body = await readJson(req);
+      const now = Date.parse("2026-05-22T12:00:00Z") + ++idCounter * 1000;
+      const comment: Comment = {
+        id: `e2e-comment-${idCounter}`,
+        todo_id: todoId,
+        user_id: "e2e-user",
+        org_id: "e2e-org",
+        content: String(body.content ?? ""),
+        created_at: now,
+        updated_at: now,
+      };
+      comments.push(comment);
+      return send(res, 201, comment);
+    }
+  }
+
+  const commentIdMatch = path.match(/^\/todo\/comments\/([^/]+)$/);
+  if (commentIdMatch) {
+    const id = decodeURIComponent(commentIdMatch[1]);
+    const comment = comments.find((c) => c.id === id && !c.deleted_at);
+    if (!comment) return send(res, 404, { error: { code: "NOT_FOUND" } });
+    if (method === "PATCH") {
+      const body = await readJson(req);
+      if (typeof body.content === "string") comment.content = body.content;
+      comment.updated_at = Date.parse("2026-05-22T12:00:00Z") + ++idCounter * 1000;
+      return send(res, 200, comment);
+    }
+    if (method === "DELETE") {
+      comment.deleted_at = Date.parse("2026-05-22T12:00:00Z") + ++idCounter * 1000;
+      return send(res, 200, comment);
+    }
   }
 
   // ── Bootstrap fallbacks (normally pre-seeded via test-login) ────────────

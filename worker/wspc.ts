@@ -425,6 +425,86 @@ export async function patchTodo(
   return (await res.json()) as Todo;
 }
 
+export type WspcComment = components["schemas"]["Comment"];
+
+// ponytail: single page of 200 (WSPC max), no cursor-following — a personal
+// task never accumulates that many comments; wire next_cursor if one ever does.
+export async function listComments(
+  accessToken: string,
+  todoId: string,
+): Promise<WspcComment[]> {
+  const params = new URLSearchParams({ order: "asc", limit: "200" });
+  const res = await fetch(
+    `${WSPC_BASE}/todo/items/${encodeURIComponent(todoId)}/comments?${params.toString()}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) {
+    throw new Error(`WSPC listComments failed: ${res.status} ${await res.text()}`);
+  }
+  const data = (await res.json()) as { comments?: WspcComment[] };
+  return data.comments ?? [];
+}
+
+export async function createComment(
+  accessToken: string,
+  todoId: string,
+  content: string,
+): Promise<WspcComment> {
+  const res = await fetch(
+    `${WSPC_BASE}/todo/items/${encodeURIComponent(todoId)}/comments`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ content }),
+    },
+  );
+  if (!res.ok) {
+    throw new Error(`WSPC createComment failed: ${res.status} ${await res.text()}`);
+  }
+  return (await res.json()) as WspcComment;
+}
+
+export async function updateComment(
+  accessToken: string,
+  commentId: string,
+  content: string,
+): Promise<WspcComment> {
+  const res = await fetch(
+    `${WSPC_BASE}/todo/comments/${encodeURIComponent(commentId)}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ content }),
+    },
+  );
+  if (!res.ok) {
+    throw new Error(`WSPC updateComment failed: ${res.status} ${await res.text()}`);
+  }
+  return (await res.json()) as WspcComment;
+}
+
+export async function deleteComment(
+  accessToken: string,
+  commentId: string,
+): Promise<void> {
+  const res = await fetch(
+    `${WSPC_BASE}/todo/comments/${encodeURIComponent(commentId)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
+  if (!res.ok) {
+    throw new Error(`WSPC deleteComment failed: ${res.status} ${await res.text()}`);
+  }
+}
+
 export async function createProject(
   accessToken: string,
   name: string,

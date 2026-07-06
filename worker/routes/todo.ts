@@ -1,8 +1,17 @@
 import * as Sentry from "@sentry/cloudflare";
 import { withSession } from "../middleware/session";
 import { ensureBootstrap } from "../bootstrap";
-import { listTodos, createTodo, patchTodo, listChildren } from "../wspc";
-import { mapTodoToTask, mapTodoToSubtask } from "../todo-mapper";
+import {
+  listTodos,
+  createTodo,
+  patchTodo,
+  listChildren,
+  listComments,
+  createComment,
+  updateComment,
+  deleteComment,
+} from "../wspc";
+import { mapTodoToTask, mapTodoToSubtask, mapComment } from "../todo-mapper";
 
 interface Env {
   DESK_KV: KVNamespace;
@@ -152,6 +161,66 @@ export async function handleListSubtasks(
       return 0;
     });
     return json({ subtasks: sorted.map(mapTodoToSubtask) });
+  });
+}
+
+export async function handleListComments(
+  request: Request,
+  env: Env,
+  todoId: string,
+): Promise<Response> {
+  return withSession(request, env, async ({ accessToken }) => {
+    const comments = await listComments(accessToken, todoId);
+    return json({ comments: comments.map(mapComment) });
+  });
+}
+
+export async function handleCreateComment(
+  request: Request,
+  env: Env,
+  todoId: string,
+): Promise<Response> {
+  return withSession(request, env, async ({ accessToken }) => {
+    let body: { content?: string };
+    try {
+      body = (await request.json()) as typeof body;
+    } catch {
+      return json({ error: "invalid_json" }, 400);
+    }
+    const content = body.content?.trim();
+    if (!content) return json({ error: "content_required" }, 400);
+    const comment = await createComment(accessToken, todoId, content);
+    return json({ comment: mapComment(comment) }, 201);
+  });
+}
+
+export async function handleUpdateComment(
+  request: Request,
+  env: Env,
+  commentId: string,
+): Promise<Response> {
+  return withSession(request, env, async ({ accessToken }) => {
+    let body: { content?: string };
+    try {
+      body = (await request.json()) as typeof body;
+    } catch {
+      return json({ error: "invalid_json" }, 400);
+    }
+    const content = body.content?.trim();
+    if (!content) return json({ error: "content_required" }, 400);
+    const comment = await updateComment(accessToken, commentId, content);
+    return json({ comment: mapComment(comment) });
+  });
+}
+
+export async function handleDeleteComment(
+  request: Request,
+  env: Env,
+  commentId: string,
+): Promise<Response> {
+  return withSession(request, env, async ({ accessToken }) => {
+    await deleteComment(accessToken, commentId);
+    return new Response(null, { status: 204 });
   });
 }
 

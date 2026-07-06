@@ -26,6 +26,13 @@ export interface Subtask {
   status: TaskStatus;
 }
 
+export interface TaskComment {
+  id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Task {
   id: string;
   title: string;

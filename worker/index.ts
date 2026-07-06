@@ -1,7 +1,17 @@
 import * as Sentry from "@sentry/cloudflare";
 import { handleLogin, handleStatus, handleLogout } from "./routes/auth";
 import { handleMe } from "./routes/me";
-import { handleListTodo, handleCreateTodo, handlePatchTodo, handleListSubtasks, handleCreateSubtask } from "./routes/todo";
+import {
+  handleListTodo,
+  handleCreateTodo,
+  handlePatchTodo,
+  handleListSubtasks,
+  handleCreateSubtask,
+  handleListComments,
+  handleCreateComment,
+  handleUpdateComment,
+  handleDeleteComment,
+} from "./routes/todo";
 import { handleTestLogin } from "./routes/test-login";
 import { setWspcBase } from "./wspc";
 
@@ -72,6 +82,36 @@ const handler = {
       }
       if (method === "GET") return handleListSubtasks(request, env, parentId);
       if (method === "POST") return handleCreateSubtask(request, env, parentId);
+    }
+
+    const commentsMatch = path.match(/^\/api\/todo\/([^/]+)\/comments$/);
+    if (commentsMatch) {
+      let todoId: string;
+      try {
+        todoId = decodeURIComponent(commentsMatch[1]);
+      } catch {
+        return new Response(JSON.stringify({ error: "bad_todo_id" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (method === "GET") return handleListComments(request, env, todoId);
+      if (method === "POST") return handleCreateComment(request, env, todoId);
+    }
+
+    const commentIdMatch = path.match(/^\/api\/todo\/comments\/([^/]+)$/);
+    if (commentIdMatch) {
+      let commentId: string;
+      try {
+        commentId = decodeURIComponent(commentIdMatch[1]);
+      } catch {
+        return new Response(JSON.stringify({ error: "bad_comment_id" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (method === "PATCH") return handleUpdateComment(request, env, commentId);
+      if (method === "DELETE") return handleDeleteComment(request, env, commentId);
     }
 
     const todoIdMatch = path.match(/^\/api\/todo\/([^/]+)$/);

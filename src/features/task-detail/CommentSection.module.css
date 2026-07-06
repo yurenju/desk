@@ -1,0 +1,14 @@
+.wrap { display: flex; flex-direction: column; gap: 4px; }
+.row { display: flex; flex-direction: column; gap: 2px; padding: 6px 4px; border-radius: 6px; }
+.row:hover { background: var(--color-paper-alt); }
+.content { white-space: pre-wrap; overflow-wrap: anywhere; }
+.meta { display: flex; align-items: center; gap: 8px; }
+.time { font-size: 12px; color: var(--color-ink-faint); }
+.action { background: none; border: none; cursor: pointer; opacity: 0.5; padding: 2px 4px; }
+.action:hover { opacity: 1; }
+.editArea { font: inherit; border: none; border-bottom: 1px solid var(--color-accent); background: transparent; color: inherit; padding: 2px 0; resize: vertical; width: 100%; }
+.add { display: flex; align-items: flex-end; gap: 8px; padding: 8px 4px; }
+.addInput { flex: 1; font: inherit; border: none; border-bottom: 1px dashed var(--color-rule); background: transparent; color: inherit; padding: 3px 2px; resize: vertical; }
+.send { background: none; border: 1px solid var(--color-rule); border-radius: 6px; cursor: pointer; font-size: 12px; padding: 4px 10px; color: var(--color-ink-faint); }
+.send:hover { color: inherit; border-color: var(--color-ink-faint); }
+.muted { color: var(--color-ink-faint); font-size: 13px; margin: 0; }
