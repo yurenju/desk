@@ -1,5 +1,6 @@
 import type { Task, TrailKind } from "@/lib/types";
 import { Checkbox } from "@/ui/Checkbox";
+import { RowTitleInput } from "@/ui/RowTitleInput";
 import { UnplannedChip } from "@/ui/Chip";
 import { Menu } from "@/ui/Menu";
 import { useSortableRow } from "@/features/plan-view/useSortableRow";
@@ -59,16 +60,11 @@ export function TaskRow({ task, kind, date, interactive, showRing }: TaskRowProp
       )}
       <div className={styles.body}>
         {row.isEditing ? (
-          <input
-            className={styles.editInput}
-            autoFocus
-            value={row.draft}
-            onChange={(e) => row.changeDraft(e.target.value)}
-            onBlur={row.cancelEdit}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.nativeEvent.isComposing) row.commitEdit();
-              if (e.key === "Escape") row.cancelEdit();
-            }}
+          <RowTitleInput
+            draft={row.draft}
+            onChangeDraft={row.changeDraft}
+            onCommit={row.commitEdit}
+            onCancel={row.cancelEdit}
           />
         ) : (
           <div className={styles.titleRow}>

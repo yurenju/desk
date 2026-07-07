@@ -53,12 +53,3 @@
   background: var(--color-paper-alt);
 }
 
-.editInput {
-  width: 100%;
-  font: inherit;
-  border: 1.5px solid var(--color-flag, #c1432e);
-  border-radius: 5px;
-  padding: 4px 8px;
-  background: var(--color-paper-alt);
-  color: inherit;
-}

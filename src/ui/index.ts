@@ -7,3 +7,4 @@ export * from "./ProgressBar";
 export * from "./PaperTexture";
 export * from "./DeskLogo";
 export * from "./PriorityRing";
+export * from "./RowTitleInput";

@@ -2,12 +2,14 @@ import type { Task } from "@/lib/types";
 import { Checkbox } from "@/ui/Checkbox";
 import { UnplannedChip } from "@/ui/Chip";
 import { Menu } from "@/ui/Menu";
-import { PriorityRing } from "@/ui/PriorityRing";
+import { RowTitleInput } from "@/ui/RowTitleInput";
 import { useSortableRow } from "@/features/plan-view/useSortableRow";
 import { SortableSection } from "@/features/plan-view/SortableSection";
 import { containerId } from "@/features/plan-view/planDrag";
 import { useDragOrdering } from "@/features/plan-view/useDragOrdering";
+import { isAdhoc } from "@/lib/tasks";
 import { useMonthRow } from "./useMonthRow";
+import { MonthPriorityMenu } from "./MonthPriorityMenu";
 import { buildMonthRowMenuItems } from "./monthRowMenu";
 import styles from "./MonthHeroCard.module.css";
 
@@ -61,7 +63,7 @@ function MonthHeroItem({
 }) {
   const row = useMonthRow(task.id, { month, selectedDate });
   const { ref: dragRef, isDragging, handleProps, style } = useSortableRow(`month:${task.id}`);
-  const isAdhoc = task.custom_fields.is_adhoc === "true";
+  const adhoc = isAdhoc(task);
   // Ring shows the previewed render position (live ①②③ reflow), not the stored
   // monthly_priority — so dropping reflows the numbers before commit.
   const pr = String(rank) as "1" | "2" | "3";
@@ -78,35 +80,20 @@ function MonthHeroItem({
         onCheckedChange={row.toggle}
         aria-label={task.title}
       />
-      <Menu
-        ariaLabel="本月重點"
-        selectedKey={pr}
-        trigger={<PriorityRing value={pr} aria-label={`本月重點第 ${pr}`} />}
-        items={[
-          { key: "1", label: "① 本月第一", onSelect: () => row.setPriority("1") },
-          { key: "2", label: "② 本月第二", onSelect: () => row.setPriority("2") },
-          { key: "3", label: "③ 本月第三", onSelect: () => row.setPriority("3") },
-          { key: "none", label: "— 移除重點", onSelect: () => row.setPriority(null) },
-        ]}
-      />
+      <MonthPriorityMenu value={pr} onSelect={row.setPriority} />
       <div className={styles.itemBody}>
         {row.isEditing ? (
-          <input
-            className={styles.editInput}
-            autoFocus
-            value={row.draft}
-            onChange={(e) => row.changeDraft(e.target.value)}
-            onBlur={row.cancelEdit}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.nativeEvent.isComposing) row.commitEdit();
-              if (e.key === "Escape") row.cancelEdit();
-            }}
+          <RowTitleInput
+            draft={row.draft}
+            onChangeDraft={row.changeDraft}
+            onCommit={row.commitEdit}
+            onCancel={row.cancelEdit}
           />
         ) : (
           <div className={styles.itemTitle}>{task.title}</div>
         )}
       </div>
-      {isAdhoc && <UnplannedChip />}
+      {adhoc && <UnplannedChip />}
       {!row.isEditing && (
         <div className={styles.actions}>
           <Menu
