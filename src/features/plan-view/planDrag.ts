@@ -12,7 +12,7 @@ import {
   type CollisionDetection,
 } from "@dnd-kit/core";
 import type { Task } from "@/lib/types";
-import { tasksOnDate, tasksOnMonth, tasksInBacklog, dayInWeek, byPosition, dailyRankOn, monthlyRankOn } from "@/lib/tasks";
+import { tasksOnDate, tasksOnMonth, tasksInBacklog, dayInWeek, byPosition, dailyRankOn, monthlyRankOn, isAdhoc } from "@/lib/tasks";
 import { weekOf } from "@/lib/date";
 import { useTasksStore } from "@/store/tasks";
 
@@ -160,10 +160,10 @@ export function buildDayContainers(allTasks: Task[], date: string): ContainerMap
     .filter((t) => dailyRankOn(t, date))
     .sort((a, b) => Number(dailyRankOn(a, date)) - Number(dailyRankOn(b, date)));
   const other = primary
-    .filter((t) => !dailyRankOn(t, date) && t.custom_fields.is_adhoc !== "true")
+    .filter((t) => !dailyRankOn(t, date) && !isAdhoc(t))
     .sort(byPosition);
   const adhoc = primary
-    .filter((t) => !dailyRankOn(t, date) && t.custom_fields.is_adhoc === "true")
+    .filter((t) => !dailyRankOn(t, date) && isAdhoc(t))
     .sort(byPosition);
 
   const map: ContainerMap = new Map();
@@ -207,9 +207,7 @@ export function buildMonthContainers(
   const others = undone
     .filter((e) => e.kind === "primary")
     .sort((a, b) => {
-      const adhocDelta =
-        Number(a.task.custom_fields.is_adhoc === "true") -
-        Number(b.task.custom_fields.is_adhoc === "true");
+      const adhocDelta = Number(isAdhoc(a.task)) - Number(isAdhoc(b.task));
       return adhocDelta !== 0 ? adhocDelta : byPosition(a.task, b.task);
     })
     .map((e) => e.task);

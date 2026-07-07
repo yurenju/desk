@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useDndContext } from "@dnd-kit/core";
 import type { Task } from "@/lib/types";
-import { tasksOnDate, byPosition, dailyRankOn } from "@/lib/tasks";
+import { tasksOnDate, byPosition, dailyRankOn, isAdhoc } from "@/lib/tasks";
 import { dayOfMonth, shortWeekday } from "@/lib/date";
 import { useTasksStore } from "@/store/tasks";
 import { useDroppableZone } from "@/features/plan-view/useDroppableZone";
@@ -39,13 +39,13 @@ export function DayColumn({ allTasks, selectedDate, variant, interactive }: DayC
     );
 
   const otherPlanned = entries
-    .filter((e) => !dailyRankOn(e.task, selectedDate) && e.task.custom_fields.is_adhoc !== "true")
+    .filter((e) => !dailyRankOn(e.task, selectedDate) && !isAdhoc(e.task))
     .sort((a, b) => byPosition(a.task, b.task));
 
   // Exclude tasks already promoted to Top3 (mirrors otherPlanned) so a
   // prioritised adhoc task isn't rendered in both sections.
   const adhoc = entries
-    .filter((e) => !dailyRankOn(e.task, selectedDate) && e.task.custom_fields.is_adhoc === "true")
+    .filter((e) => !dailyRankOn(e.task, selectedDate) && isAdhoc(e.task))
     .sort((a, b) => byPosition(a.task, b.task));
 
   // Live drag preview: re-order each section by the DndContext's preview map.

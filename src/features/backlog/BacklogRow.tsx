@@ -5,6 +5,7 @@ import { Menu } from "@/ui/Menu";
 import { useSortableRow } from "@/features/plan-view/useSortableRow";
 import { TaskDetailTrigger } from "@/features/task-detail/TaskDetailTrigger";
 import { useBacklogRow } from "./useBacklogRow";
+import { buildBacklogRowMenuItems } from "./backlogRowMenu";
 import styles from "./BacklogRow.module.css";
 
 export interface BacklogRowProps {
@@ -16,7 +17,6 @@ export function BacklogRow({ task, focusDate }: BacklogRowProps) {
   const isDone = task.status === "done";
   const row = useBacklogRow(task.id, { focusDate });
   const { ref: dragRef, isDragging, handleProps, style } = useSortableRow(`backlog:${task.id}`);
-  const day = focusDate.slice(8);
 
   return (
     <div
@@ -35,7 +35,6 @@ export function BacklogRow({ task, focusDate }: BacklogRowProps) {
       />
       {row.isEditing ? (
         <RowTitleInput
-          className={styles.editInput}
           draft={row.draft}
           onChangeDraft={row.changeDraft}
           onCommit={row.commitEdit}
@@ -54,15 +53,7 @@ export function BacklogRow({ task, focusDate }: BacklogRowProps) {
                 ⋯
               </button>
             }
-            items={[
-              { key: "to-month", label: "→ 本月（其他計劃內）", onSelect: row.toMonth },
-              { key: "to-day-1", label: `→ ${day} 日 · ① 三件事`, onSelect: () => row.toDay("1") },
-              { key: "to-day-2", label: `→ ${day} 日 · ② 三件事`, onSelect: () => row.toDay("2") },
-              { key: "to-day-3", label: `→ ${day} 日 · ③ 三件事`, onSelect: () => row.toDay("3") },
-              { key: "to-day-other", label: `→ ${day} 日 · 其他`, onSelect: () => row.toDay() },
-              { key: "edit", label: "編輯", onSelect: () => row.startEdit(task.title) },
-              { key: "delete", label: "刪除", onSelect: row.remove, danger: true },
-            ]}
+            items={buildBacklogRowMenuItems({ task, focusDate, row })}
           />
         </div>
       )}

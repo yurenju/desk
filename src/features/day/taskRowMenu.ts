@@ -1,4 +1,5 @@
 import type { Task } from "@/lib/types";
+import { isAdhoc } from "@/lib/tasks";
 import type { MenuItemSpec } from "@/ui/Menu/Menu";
 import type { useTaskRow } from "./useTaskRow";
 
@@ -23,13 +24,13 @@ export function buildTaskRowMenuItems({
   today: string;
   row: ReturnType<typeof useTaskRow>;
 }): MenuItemSpec[] {
-  const isAdhoc = task.custom_fields.is_adhoc === "true";
+  const adhoc = isAdhoc(task);
   return [
     ...(date !== today
       ? [{ key: "move-today", label: "⤴ 移到今天", onSelect: row.moveToToday } satisfies MenuItemSpec]
       : []),
     { key: "demote-month", label: "↩ 丟回月度", onSelect: row.demoteToMonth },
-    isAdhoc
+    adhoc
       ? { key: "to-planned", label: "↑ 移到計畫內", onSelect: row.toggleAdhoc }
       : { key: "to-adhoc", label: "↓ 標為計畫外", onSelect: row.toggleAdhoc },
     { key: "edit", label: "編輯", onSelect: () => row.startEdit(task.title) },

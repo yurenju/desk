@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Priority } from "@/lib/types";
+import { isAdhoc } from "@/lib/tasks";
 import { useTasksStore } from "@/store/tasks";
 
 export function useMonthRow(id: string, opts: { month: string; selectedDate: string }) {
@@ -34,8 +35,7 @@ export function useMonthRow(id: string, opts: { month: string; selectedDate: str
       if (priority) reorderPriority(id, priority, "daily", opts.selectedDate);
     },
     toggleAdhoc: () => {
-      const isAdhoc = current?.custom_fields.is_adhoc === "true";
-      setAdhoc(id, !isAdhoc);
+      setAdhoc(id, !(current && isAdhoc(current)));
     },
     startEdit: (initial: string) => {
       setDraft(initial);

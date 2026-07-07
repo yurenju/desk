@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import type { Task } from "@/lib/types";
-import { tasksOnMonth, dayInWeek, primaryDate, byPosition, monthlyRankOn } from "@/lib/tasks";
+import { tasksOnMonth, dayInWeek, primaryDate, byPosition, monthlyRankOn, isAdhoc } from "@/lib/tasks";
 import { formatMonth, addMonths, weekOf, weekdayZh, shortDate } from "@/lib/date";
 import { isAdhocOf } from "@/lib/entryMode";
 import { useTasksStore } from "@/store/tasks";
@@ -53,8 +53,7 @@ export function MonthColumn({ allTasks, month, selectedDate }: MonthColumnProps)
   const others = undone
     .filter((e) => e.kind === "primary")
     .sort((a, b) => {
-      const adhocDelta =
-        Number(a.task.custom_fields.is_adhoc === "true") - Number(b.task.custom_fields.is_adhoc === "true");
+      const adhocDelta = Number(isAdhoc(a.task)) - Number(isAdhoc(b.task));
       return adhocDelta !== 0 ? adhocDelta : byPosition(a.task, b.task);
     });
 

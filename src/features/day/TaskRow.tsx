@@ -61,7 +61,6 @@ export function TaskRow({ task, kind, date, interactive, showRing }: TaskRowProp
       <div className={styles.body}>
         {row.isEditing ? (
           <RowTitleInput
-            className={styles.editInput}
             draft={row.draft}
             onChangeDraft={row.changeDraft}
             onCommit={row.commitEdit}

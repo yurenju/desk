@@ -65,6 +65,12 @@ export function dayInWeek(t: Task, week: string[]): string | null {
   return d && week.includes(d) ? d : null;
 }
 
+/** Whether the task is marked ad-hoc (計劃外). Single home for the string-typed
+ *  custom-field comparison so call sites read as intent. */
+export function isAdhoc(t: Task): boolean {
+  return t.custom_fields.is_adhoc === "true";
+}
+
 /**
  * Whether the "+ 計劃外" chip should show for a task in the day column on `date`.
  * The chip flags a genuine same-day ad-hoc insertion, not any task that merely
@@ -73,7 +79,7 @@ export function dayInWeek(t: Task, week: string[]): string | null {
  * `date` AND scheduled only for `date`.
  */
 export function isDayAdhocChip(t: Task, date: string): boolean {
-  if (t.custom_fields.is_adhoc !== "true") return false;
+  if (!isAdhoc(t)) return false;
   if (t.created_at.slice(0, 10) !== date) return false;
   const dates = t.custom_fields.scheduled_dates ?? [];
   return dates.length > 0 && dates.every((d) => d === date);

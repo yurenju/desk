@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Priority } from "@/lib/types";
+import { isAdhoc } from "@/lib/tasks";
 import { useTasksStore } from "@/store/tasks";
 
 export function useTaskRow(id: string, date: string) {
@@ -24,8 +25,7 @@ export function useTaskRow(id: string, date: string) {
     setPriority: (n: Priority | null) =>
       n === null ? setDailyPriority(id, null, date) : reorderPriority(id, n, "daily", date),
     toggleAdhoc: () => {
-      const isAdhoc = current?.custom_fields.is_adhoc === "true";
-      setAdhoc(id, !isAdhoc);
+      setAdhoc(id, !(current && isAdhoc(current)));
     },
     moveToToday: () => moveToToday(id),
     demoteToMonth: () => demoteToMonth(id),

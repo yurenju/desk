@@ -1,5 +1,5 @@
 import type { Task, TrailKind } from "@/lib/types";
-import { delayKind, monthlyRankOn, monthTrailLabel } from "@/lib/tasks";
+import { delayKind, monthlyRankOn, monthTrailLabel, isAdhoc } from "@/lib/tasks";
 import { Checkbox } from "@/ui/Checkbox";
 import { UnplannedChip } from "@/ui/Chip";
 import { Menu } from "@/ui/Menu";
@@ -64,7 +64,7 @@ function MonthRowImpl({
   dnd,
 }: MonthRowProps & { dnd: RowDnd }) {
   const isDone = task.status === "done";
-  const isAdhoc = task.custom_fields.is_adhoc === "true";
+  const adhoc = isAdhoc(task);
   const delay = kind === "primary" && !isDone ? delayKind(task, month) : "none";
   const delayTitle =
     delay === "carried"
@@ -110,7 +110,6 @@ function MonthRowImpl({
       )}
       {row.isEditing ? (
         <RowTitleInput
-          className={styles.editInput}
           draft={row.draft}
           onChangeDraft={row.changeDraft}
           onCommit={row.commitEdit}
@@ -122,7 +121,7 @@ function MonthRowImpl({
       {kind !== "primary" && (
         <span className={styles.trail}>{monthTrailLabel(task, kind)}</span>
       )}
-      {isAdhoc && <UnplannedChip />}
+      {adhoc && <UnplannedChip />}
       {weekdayLabel && <span className={styles.weekChip}>{weekdayLabel}</span>}
       {otherWeekDate && <span className={styles.otherDate}>{otherWeekDate}</span>}
       {!row.isEditing && <TaskDetailTrigger task={task} />}

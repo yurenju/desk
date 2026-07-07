@@ -7,6 +7,7 @@ import { useSortableRow } from "@/features/plan-view/useSortableRow";
 import { SortableSection } from "@/features/plan-view/SortableSection";
 import { containerId } from "@/features/plan-view/planDrag";
 import { useDragOrdering } from "@/features/plan-view/useDragOrdering";
+import { isAdhoc } from "@/lib/tasks";
 import { useMonthRow } from "./useMonthRow";
 import { MonthPriorityMenu } from "./MonthPriorityMenu";
 import { buildMonthRowMenuItems } from "./monthRowMenu";
@@ -62,7 +63,7 @@ function MonthHeroItem({
 }) {
   const row = useMonthRow(task.id, { month, selectedDate });
   const { ref: dragRef, isDragging, handleProps, style } = useSortableRow(`month:${task.id}`);
-  const isAdhoc = task.custom_fields.is_adhoc === "true";
+  const adhoc = isAdhoc(task);
   // Ring shows the previewed render position (live ①②③ reflow), not the stored
   // monthly_priority — so dropping reflows the numbers before commit.
   const pr = String(rank) as "1" | "2" | "3";
@@ -83,7 +84,6 @@ function MonthHeroItem({
       <div className={styles.itemBody}>
         {row.isEditing ? (
           <RowTitleInput
-            className={styles.editInput}
             draft={row.draft}
             onChangeDraft={row.changeDraft}
             onCommit={row.commitEdit}
@@ -93,7 +93,7 @@ function MonthHeroItem({
           <div className={styles.itemTitle}>{task.title}</div>
         )}
       </div>
-      {isAdhoc && <UnplannedChip />}
+      {adhoc && <UnplannedChip />}
       {!row.isEditing && (
         <div className={styles.actions}>
           <Menu
