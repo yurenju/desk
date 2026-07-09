@@ -4,6 +4,7 @@ import { todayISO } from "@/lib/date";
 import { primaryDate, primaryMonth, dailyRankOn, delaySummary } from "@/lib/tasks";
 import { Checkbox } from "@/ui/Checkbox";
 import { useTaskDetailStore } from "./store";
+import { useDetailTask } from "./useDetailTask";
 import { useTaskDetail } from "./useTaskDetail";
 import { useComments } from "./useComments";
 import { DescriptionEditor } from "./DescriptionEditor";
@@ -15,22 +16,36 @@ const PRIORITY_LABEL: Record<string, string> = { "1": "① 今日第一", "2": "
 
 export function TaskDetailModal() {
   const openId = useTaskDetailStore((s) => s.openId);
+  const trail = useTaskDetailStore((s) => s.trail);
   const close = useTaskDetailStore((s) => s.close);
-  const task = useTasksStore((s) => s.tasks.find((t) => t.id === openId) ?? null);
+  const back = useTaskDetailStore((s) => s.back);
+  const push = useTaskDetailStore((s) => s.push);
 
-  const toggleDone = useTasksStore((s) => s.toggleDone);
-  const editTitle = useTasksStore((s) => s.editTitle);
-  const editDescription = useTasksStore((s) => s.editDescription);
-  const deleteTask = useTasksStore((s) => s.deleteTask);
+  const bumpSubtaskCount = useTasksStore((s) => s.bumpSubtaskCount);
+
+  const { task, isDetached, toggleDone, editTitle, editDescription, remove } =
+    useDetailTask(openId);
 
   const detail = useTaskDetail(openId);
   const commentThread = useComments(openId);
 
   const open = Boolean(openId && task);
+  const parentId = trail.length > 0 ? trail[trail.length - 1] : null;
 
   const delayMonth = task ? primaryMonth(task) : null;
   const delay = task && delayMonth ? delaySummary(task, delayMonth) : null;
   const hasDelay = Boolean(delay && (delay.carriedMonths > 0 || delay.dismissedDate));
+
+  async function handleDelete() {
+    if (!task) return;
+    await remove();
+    if (isDetached && parentId) {
+      bumpSubtaskCount(parentId, -1);
+      back();
+    } else {
+      close();
+    }
+  }
 
   return (
     <Dialog.Root open={open} onOpenChange={(next) => { if (!next) close(); }}>
@@ -40,9 +55,19 @@ export function TaskDetailModal() {
           {task && (
             <>
               <div className={styles.header}>
+                {parentId && (
+                  <button
+                    type="button"
+                    className={styles.back}
+                    aria-label="返回上層任務"
+                    onClick={back}
+                  >
+                    ‹
+                  </button>
+                )}
                 <Checkbox
                   checked={task.status === "done"}
-                  onCheckedChange={() => toggleDone(task.id)}
+                  onCheckedChange={() => toggleDone()}
                   aria-label="完成任務"
                 />
                 <input
@@ -51,7 +76,7 @@ export function TaskDetailModal() {
                   key={task.id}
                   onBlur={(e) => {
                     const v = e.target.value.trim();
-                    if (v && v !== task.title) editTitle(task.id, v);
+                    if (v && v !== task.title) editTitle(v);
                   }}
                   aria-label="任務標題"
                 />
@@ -88,7 +113,7 @@ export function TaskDetailModal() {
                 <div className={styles.label}>描述</div>
                 <DescriptionEditor
                   value={task.description ?? ""}
-                  onSave={(text) => editDescription(task.id, text)}
+                  onSave={(text) => editDescription(text)}
                 />
               </section>
 
@@ -103,6 +128,8 @@ export function TaskDetailModal() {
                     onRename={detail.rename}
                     onRemove={detail.remove}
                     onAdd={detail.add}
+                    onOpen={push}
+                    onReorder={detail.reorder}
                   />
                 )}
               </section>
@@ -121,11 +148,7 @@ export function TaskDetailModal() {
               </section>
 
               <div className={styles.footer}>
-                <button
-                  type="button"
-                  className={styles.delete}
-                  onClick={() => { deleteTask(task.id); close(); }}
-                >
+                <button type="button" className={styles.delete} onClick={handleDelete}>
                   🗑 刪除任務
                 </button>
               </div>

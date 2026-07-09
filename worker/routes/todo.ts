@@ -5,6 +5,7 @@ import {
   listTodos,
   createTodo,
   patchTodo,
+  getTodo,
   listChildren,
   listComments,
   createComment,
@@ -137,6 +138,20 @@ export async function handlePatchTodo(
       title: body.title,
       description: body.description,
     });
+    return json({ task: mapTodoToTask(todo) });
+  });
+}
+
+// Single-todo lookup: the detail modal uses this for subtasks, which the
+// root todo list (and thus the client tasks store) never contains.
+export async function handleGetTodo(
+  request: Request,
+  env: Env,
+  id: string,
+): Promise<Response> {
+  return withSession(request, env, async ({ accessToken, userId }) => {
+    await ensureBootstrap(env.DESK_KV, accessToken, userId);
+    const todo = await getTodo(accessToken, id);
     return json({ task: mapTodoToTask(todo) });
   });
 }

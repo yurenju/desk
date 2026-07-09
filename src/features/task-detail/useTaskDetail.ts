@@ -3,6 +3,7 @@ import type { Subtask } from "@/lib/types";
 import { fetchSubtasks, createSubtask } from "@/lib/api/todo";
 import { enqueuePatch } from "@/lib/api/todoQueue";
 import { useTasksStore } from "@/store/tasks";
+import { midpoint } from "@/lib/order";
 
 type Status = "loading" | "ready" | "error";
 
@@ -79,6 +80,45 @@ export function useTaskDetail(parentId: string | null) {
     }
   }
 
+  // Drag reorder: move `activeId` to `overId`'s slot, then walk the new order
+  // and give a fresh `midpoint` key to any subtask whose position no longer
+  // sorts (the moved one always does — its old key is discarded — and, when
+  // positions were never set, the whole list gets a key chain in one pass).
+  // The server's position-first sort then reproduces this order on reload.
+  async function reorder(activeId: string, overId: string) {
+    if (activeId === overId) return;
+    const prev = subtasks;
+    const from = prev.findIndex((s) => s.id === activeId);
+    const to = prev.findIndex((s) => s.id === overId);
+    if (from < 0 || to < 0) return;
+    const moved = [...prev];
+    moved.splice(to, 0, ...moved.splice(from, 1));
+
+    const patches: { id: string; position: string }[] = [];
+    let prevPos: string | null = null;
+    const next = moved.map((s, i) => {
+      let pos = s.id === activeId ? null : (s.position ?? null);
+      if (!pos || (prevPos !== null && pos <= prevPos)) {
+        const upper =
+          moved
+            .slice(i + 1)
+            .find((n) => n.id !== activeId && n.position && (!prevPos || n.position > prevPos!))
+            ?.position ?? null;
+        pos = midpoint(prevPos, upper);
+        patches.push({ id: s.id, position: pos });
+      }
+      prevPos = pos;
+      return pos === s.position ? s : { ...s, position: pos };
+    });
+
+    setSubtasks(next);
+    try {
+      await Promise.all(patches.map((p) => enqueuePatch(p.id, { position: p.position })));
+    } catch {
+      setSubtasks(prev);
+    }
+  }
+
   // Derive everything for the current parent during render. No parent → empty +
   // ready (modal closed). Subtasks not yet loaded for this parent → loading +
   // empty (also masks a stale list while switching tasks). Loaded → ready/error.
@@ -103,5 +143,6 @@ export function useTaskDetail(parentId: string | null) {
     toggle,
     rename,
     remove,
+    reorder,
   };
 }

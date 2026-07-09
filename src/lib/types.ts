@@ -24,6 +24,7 @@ export interface Subtask {
   id: string;
   title: string;
   status: TaskStatus;
+  position?: string;
 }
 
 export interface TaskComment {

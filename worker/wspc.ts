@@ -366,6 +366,16 @@ export async function listChildren(
   return fetchAllTodoItems(accessToken, params, "listChildren");
 }
 
+export async function getTodo(accessToken: string, id: string): Promise<Todo> {
+  const res = await fetch(`${WSPC_BASE}/todo/items/${encodeURIComponent(id)}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    throw new Error(`WSPC getTodo failed: ${res.status} ${await res.text()}`);
+  }
+  return (await res.json()) as Todo;
+}
+
 export async function createTodo(
   accessToken: string,
   body: {

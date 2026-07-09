@@ -5,6 +5,7 @@ import {
   handleListTodo,
   handleCreateTodo,
   handlePatchTodo,
+  handleGetTodo,
   handleListSubtasks,
   handleCreateSubtask,
   handleListComments,
@@ -115,7 +116,7 @@ const handler = {
     }
 
     const todoIdMatch = path.match(/^\/api\/todo\/([^/]+)$/);
-    if (todoIdMatch && method === "PATCH") {
+    if (todoIdMatch && (method === "PATCH" || method === "GET")) {
       let todoId: string;
       try {
         todoId = decodeURIComponent(todoIdMatch[1]);
@@ -125,6 +126,7 @@ const handler = {
           headers: { "Content-Type": "application/json" },
         });
       }
+      if (method === "GET") return handleGetTodo(request, env, todoId);
       return handlePatchTodo(request, env, todoId);
     }
 
