@@ -282,6 +282,15 @@ const server = createServer(async (req, res) => {
   }
 
   const itemMatch = path.match(/^\/todo\/items\/([^/]+)$/);
+  if (itemMatch && method === "GET") {
+    const id = decodeURIComponent(itemMatch[1]);
+    const todo = todos.find((t) => t.id === id);
+    if (!todo) return send(res, 404, { error: { code: "NOT_FOUND" } });
+    return send(res, 200, {
+      ...todo,
+      child_count: todos.filter((c) => c.parent_id === todo.id && c.status !== "cancelled").length,
+    });
+  }
   if (itemMatch && method === "PATCH") {
     const id = decodeURIComponent(itemMatch[1]);
     const todo = todos.find((t) => t.id === id);

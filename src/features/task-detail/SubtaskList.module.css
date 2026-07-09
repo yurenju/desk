@@ -5,6 +5,11 @@
 .count { font-size: 12px; color: var(--color-ink-faint); }
 .row { display: flex; align-items: center; gap: 10px; padding: 6px 4px; border-radius: 6px; }
 .row:hover { background: var(--color-paper-alt); }
+.dragging { opacity: 0.5; }
+.handle { cursor: grab; color: var(--color-ink-faint); opacity: 0.35; touch-action: none; user-select: none; }
+.handle:hover { opacity: 1; }
+.open { background: none; border: none; cursor: pointer; opacity: 0.5; color: var(--color-ink-faint); }
+.open:hover { opacity: 1; }
 .title { flex: 1; text-align: left; background: none; border: none; cursor: text; font: inherit; color: inherit; padding: 0; }
 .done .title { text-decoration: line-through; opacity: 0.5; }
 .editInput { flex: 1; font: inherit; border: none; border-bottom: 1px solid var(--color-accent); background: transparent; color: inherit; padding: 2px 0; }

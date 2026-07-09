@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { makeKvStub } from "../test-helpers/kv-stub";
 import { putSession, putBootstrap } from "../kv";
-import { handleListTodo, handleCreateTodo, handlePatchTodo, handleListSubtasks, handleCreateSubtask } from "./todo";
+import { handleListTodo, handleCreateTodo, handlePatchTodo, handleGetTodo, handleListSubtasks, handleCreateSubtask } from "./todo";
 import * as wspc from "../wspc";
 
 function makeEnv(kv = makeKvStub()) {
@@ -240,7 +240,36 @@ describe("PATCH /api/todo/:id", () => {
   });
 });
 
+describe("GET /api/todo/:id", () => {
+  it("returns the single mapped task", async () => {
+    const env = makeEnv();
+    await seedSession(env);
+    const spy = vi.spyOn(wspc, "getTodo").mockResolvedValue({
+      id: "sub_1", status: "open", title: "child", description: "body",
+      created_at: 0, updated_at: 0, custom_fields: {}, child_count: 2,
+    });
+    const req = new Request("https://d/api/todo/sub_1", { headers: cookie });
+    const res = await handleGetTodo(req, env, "sub_1");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { task: { id: string; description?: string; subtask_count?: number } };
+    expect(body.task).toMatchObject({ id: "sub_1", description: "body", subtask_count: 2 });
+    expect(spy).toHaveBeenCalledWith("at", "sub_1");
+  });
+});
+
 describe("GET /api/todo/:id/subtasks", () => {
+  it("includes each subtask's position so the client can reorder", async () => {
+    const env = makeEnv();
+    await seedSession(env);
+    vi.spyOn(wspc, "listChildren").mockResolvedValue([
+      { id: "c1", status: "open", title: "a", created_at: 0, updated_at: 0, custom_fields: { position: "b" } },
+    ]);
+    const req = new Request("https://d/api/todo/tod_1/subtasks", { headers: cookie });
+    const res = await handleListSubtasks(req, env, "tod_1");
+    const body = (await res.json()) as { subtasks: { position?: string }[] };
+    expect(body.subtasks[0].position).toBe("b");
+  });
+
   it("lists children of a parent", async () => {
     const env = makeEnv();
     await seedSession(env);

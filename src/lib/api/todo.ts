@@ -57,6 +57,14 @@ export async function patchTodoApi(id: string, patch: TodoPatch): Promise<Task> 
   return data.task;
 }
 
+// Single-todo fetch, used by the detail modal for subtasks (absent from the
+// root fetchTodos list and thus from the tasks store).
+export async function fetchTodo(id: string): Promise<Task> {
+  const res = await fetch(`/api/todo/${encodeURIComponent(id)}`, { credentials: "same-origin" });
+  const data = await jsonOrThrow<{ task: Task }>(res);
+  return data.task;
+}
+
 export async function fetchSubtasks(parentId: string): Promise<Subtask[]> {
   const res = await fetch(`/api/todo/${encodeURIComponent(parentId)}/subtasks`, {
     credentials: "same-origin",

@@ -28,7 +28,8 @@ export function mapTodoToTask(todo: Todo): Task {
 }
 
 export function mapTodoToSubtask(todo: Todo): Subtask {
-  return { id: todo.id, title: todo.title, status: todo.status };
+  const position = (todo.custom_fields ?? {}).position as string | undefined;
+  return { id: todo.id, title: todo.title, status: todo.status, ...(position ? { position } : {}) };
 }
 
 // Drop user_id/org_id/todo_id: single-user app, the frontend only renders
