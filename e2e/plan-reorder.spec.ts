@@ -79,7 +79,12 @@ async function dragRowTo(
   target: Locator,
   targetYFraction = 0.75,
 ) {
-  await source.scrollIntoViewIfNeeded();
+  // Center the source in the viewport BEFORE measuring. The mouse path below is
+  // fixed viewport coordinates; if the rows sit near the viewport bottom (e.g.
+  // today's week cell when "today" falls late in the week), dnd-kit's auto-scroll
+  // kicks in mid-drag, the list shifts under the fixed pointer, and the drop
+  // lands outside the sortable — demoting instead of reordering.
+  await source.evaluate((el) => el.scrollIntoView({ block: "center" }));
   const sBox = await source.boundingBox();
   const tBox = await target.boundingBox();
   if (!sBox || !tBox) throw new Error("dragRowTo: missing bounding box");
