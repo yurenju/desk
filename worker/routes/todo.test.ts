@@ -40,6 +40,30 @@ describe("GET /api/todo", () => {
     // scopes to the bootstrapped project + type, no date/cf filter
     expect(spy.mock.calls[0][1]).toEqual({ projectId: "prj_1", typeId: "typ_1" });
   });
+
+  it("counts done children into subtask_done, skipping childless tasks", async () => {
+    const env = makeEnv();
+    await seedSession(env);
+    vi.spyOn(wspc, "listTodos").mockResolvedValue([
+      { id: "p1", status: "open", title: "has kids", created_at: 0, updated_at: 0, custom_fields: {}, child_count: 3 },
+      { id: "p2", status: "open", title: "no kids", created_at: 0, updated_at: 0, custom_fields: {}, child_count: 0 },
+    ]);
+    const children = vi.spyOn(wspc, "listChildren").mockResolvedValue([
+      { id: "c1", status: "done", title: "a", created_at: 0, updated_at: 0, custom_fields: {} },
+      { id: "c2", status: "done", title: "b", created_at: 0, updated_at: 0, custom_fields: {} },
+      { id: "c3", status: "open", title: "c", created_at: 0, updated_at: 0, custom_fields: {} },
+    ]);
+    const req = new Request("https://d/api/todo", { headers: cookie });
+    const res = await handleListTodo(req, env);
+    const body = (await res.json()) as { tasks: { id: string; subtask_count?: number; subtask_done?: number }[] };
+    const p1 = body.tasks.find((t) => t.id === "p1")!;
+    const p2 = body.tasks.find((t) => t.id === "p2")!;
+    expect(p1).toMatchObject({ subtask_count: 3, subtask_done: 2 });
+    expect(p2).toMatchObject({ subtask_count: 0, subtask_done: 0 });
+    // only the parent with children is fetched
+    expect(children).toHaveBeenCalledTimes(1);
+    expect(children.mock.calls[0][1]).toMatchObject({ parentId: "p1" });
+  });
 });
 
 describe("POST /api/todo", () => {

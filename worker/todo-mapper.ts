@@ -19,6 +19,9 @@ export function mapTodoToTask(todo: Todo): Task {
     title: todo.title,
     description: todo.description ? todo.description : undefined,
     subtask_count: todo.child_count ?? 0,
+    // Completed-child count is filled in by the list route (which fetches
+    // children); default 0 so childless tasks stay symmetric with subtask_count.
+    subtask_done: 0,
     status: todo.status,
     created_at: new Date(todo.created_at).toISOString(),
     updated_at: new Date(todo.updated_at).toISOString(),

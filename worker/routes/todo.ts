@@ -29,7 +29,19 @@ export async function handleListTodo(request: Request, env: Env): Promise<Respon
   return withSession(request, env, async ({ accessToken, userId }) => {
     const { projectId, typeId } = await ensureBootstrap(env.DESK_KV, accessToken, userId);
     const todos = await listTodos(accessToken, { projectId, typeId });
-    return json({ tasks: todos.map(mapTodoToTask) });
+    // child_count gives the total, but not how many children are done. Fetch
+    // children (in parallel) only for tasks that have any, and count done.
+    const tasks = await Promise.all(
+      todos.map(async (todo) => {
+        const task = mapTodoToTask(todo);
+        if ((todo.child_count ?? 0) > 0) {
+          const children = await listChildren(accessToken, { projectId, typeId, parentId: todo.id });
+          task.subtask_done = children.filter((c) => c.status === "done").length;
+        }
+        return task;
+      }),
+    );
+    return json({ tasks });
   });
 }
 

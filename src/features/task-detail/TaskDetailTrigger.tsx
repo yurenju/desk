@@ -1,5 +1,6 @@
 import type { Task } from "@/lib/types";
 import { useTaskDetailStore } from "./store";
+import { subtaskGlyph } from "./subtaskGlyph";
 import styles from "./TaskDetailTrigger.module.css";
 
 export interface TaskDetailTriggerProps {
@@ -9,6 +10,7 @@ export interface TaskDetailTriggerProps {
 export function TaskDetailTrigger({ task }: TaskDetailTriggerProps) {
   const open = useTaskDetailStore((s) => s.open);
   const count = task.subtask_count ?? 0;
+  const done = task.subtask_done ?? 0;
   const hasDesc = Boolean(task.description);
 
   return (
@@ -19,10 +21,10 @@ export function TaskDetailTrigger({ task }: TaskDetailTriggerProps) {
             <span
               data-testid="subtask-badge"
               className={styles.count}
-              aria-label={`${count} 個子任務`}
+              aria-label={`${done}/${count} 個子任務完成`}
             >
-              <span aria-hidden="true">◔</span>
-              <span>{count}</span>
+              <span aria-hidden="true">{subtaskGlyph(done, count)}</span>
+              <span>{done}/{count}</span>
             </span>
           )}
           {hasDesc && (

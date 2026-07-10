@@ -47,11 +47,14 @@ export function useTaskDetail(parentId: string | null) {
     const target = subtasks.find((s) => s.id === id);
     if (!target) return;
     const next = target.status === "done" ? "open" : "done";
+    const doneDelta = next === "done" ? 1 : -1;
     setSubtasks((prev) => prev.map((s) => (s.id === id ? { ...s, status: next } : s)));
+    if (parentId) bumpSubtaskCount(parentId, 0, doneDelta);
     try {
       await enqueuePatch(id, { status: next });
     } catch {
       setSubtasks((prev) => prev.map((s) => (s.id === id ? { ...s, status: target.status } : s)));
+      if (parentId) bumpSubtaskCount(parentId, 0, -doneDelta);
     }
   }
 
@@ -70,13 +73,14 @@ export function useTaskDetail(parentId: string | null) {
   async function remove(id: string) {
     if (!parentId) return;
     const prev = subtasks;
+    const wasDone = subtasks.find((s) => s.id === id)?.status === "done" ? 1 : 0;
     setSubtasks((cur) => cur.filter((s) => s.id !== id));
-    bumpSubtaskCount(parentId, -1);
+    bumpSubtaskCount(parentId, -1, -wasDone);
     try {
       await enqueuePatch(id, { status: "cancelled" });
     } catch {
       setSubtasks(prev);
-      bumpSubtaskCount(parentId, 1);
+      bumpSubtaskCount(parentId, 1, wasDone);
     }
   }
 
