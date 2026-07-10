@@ -16,17 +16,26 @@ export function useTaskDetail(parentId: string | null) {
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [errored, setErrored] = useState(false);
   const bumpSubtaskCount = useTasksStore((s) => s.bumpSubtaskCount);
+  const setSubtaskCounts = useTasksStore((s) => s.setSubtaskCounts);
 
   useEffect(() => {
     // No parent (modal closed): skip the fetch; the closed case is derived below.
     if (!parentId) return;
     let alive = true;
     fetchSubtasks(parentId).then(
-      (list) => { if (alive) { setSubtasks(list); setLoadedFor(parentId); setErrored(false); } },
+      (list) => {
+        if (!alive) return;
+        setSubtasks(list);
+        setLoadedFor(parentId);
+        setErrored(false);
+        // Full fetch is authoritative: repair counts the list route skipped
+        // (subrequest budget) or that drifted while the tab was stale.
+        setSubtaskCounts(parentId, list.length, list.filter((s) => s.status === "done").length);
+      },
       () => { if (alive) { setErrored(true); setLoadedFor(parentId); } },
     );
     return () => { alive = false; };
-  }, [parentId]);
+  }, [parentId, setSubtaskCounts]);
 
   // add is intentionally non-optimistic: the new subtask is appended only after
   // the server assigns its id. A failed add fails silently (no global status

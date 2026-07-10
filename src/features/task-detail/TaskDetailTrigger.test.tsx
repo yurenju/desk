@@ -24,6 +24,14 @@ describe("TaskDetailTrigger", () => {
     expect(screen.getByText("1/3")).toBeInTheDocument();
   });
 
+  it("falls back to total-only when the done count is unknown", () => {
+    // subtask_done absent = the server skipped counting (subrequest budget);
+    // showing "0/2" would be a lie, so the badge shows just the total.
+    render(<TaskDetailTrigger task={task({ subtask_count: 2 })} />);
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.queryByText("0/2")).toBeNull();
+  });
+
   it("shows a description marker when description is present", () => {
     render(<TaskDetailTrigger task={task({ description: "x" })} />);
     expect(screen.getByLabelText("有描述")).toBeInTheDocument();
