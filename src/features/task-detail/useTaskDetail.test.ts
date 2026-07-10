@@ -40,6 +40,25 @@ describe("useTaskDetail", () => {
     await act(async () => { await result.current.toggle("c1"); });
     expect(result.current.subtasks[0].status).toBe("done");
     expect(spy.mock.calls[0]).toEqual(["c1", { status: "done" }]);
+    expect(useTasksStore.getState().tasks[0].subtask_done).toBe(1);
+    // toggling back off decrements the parent's done count again
+    await act(async () => { await result.current.toggle("c1"); });
+    expect(useTasksStore.getState().tasks[0].subtask_done).toBe(0);
+  });
+
+  it("removing a done subtask decrements the parent's done count", async () => {
+    useTasksStore.setState({
+      tasks: [{ id: "t1", title: "T", status: "open", created_at: "", updated_at: "",
+        custom_fields: {}, subtask_count: 1, subtask_done: 1 }],
+      status: "ready", error: null, recentlyDeleted: null,
+    });
+    vi.spyOn(api, "fetchSubtasks").mockResolvedValue([{ id: "c1", title: "s", status: "done" }]);
+    vi.spyOn(queue, "enqueuePatch").mockResolvedValue({} as never);
+    const { result } = renderHook(() => useTaskDetail("t1"));
+    await waitFor(() => expect(result.current.subtasks).toHaveLength(1));
+    await act(async () => { await result.current.remove("c1"); });
+    expect(useTasksStore.getState().tasks[0].subtask_count).toBe(0);
+    expect(useTasksStore.getState().tasks[0].subtask_done).toBe(0);
   });
 
   it("removes a subtask and decrements parent count", async () => {

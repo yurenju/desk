@@ -39,6 +39,7 @@ export interface Task {
   title: string;
   description?: string;
   subtask_count?: number;
+  subtask_done?: number;
   status: TaskStatus;
   created_at: string;
   updated_at: string;

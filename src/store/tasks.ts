@@ -57,7 +57,7 @@ interface TasksState {
   addTodayTask: (title: string, date: string, isAdhoc: boolean) => Promise<void>;
   editTitle: (id: string, title: string) => Promise<void>;
   editDescription: (id: string, description: string) => Promise<void>;
-  bumpSubtaskCount: (id: string, delta: number) => void;
+  bumpSubtaskCount: (id: string, delta: number, doneDelta?: number) => void;
   deleteTask: (id: string) => Promise<void>;
   restoreTask: () => Promise<void>;
   setDailyPriority: (id: string, n: Priority | null, date: string) => Promise<void>;
@@ -181,10 +181,16 @@ export const useTasksStore = create<TasksState>()(
     }
   },
 
-  bumpSubtaskCount(id, delta) {
+  bumpSubtaskCount(id, delta, doneDelta = 0) {
     set({
       tasks: get().tasks.map((t) =>
-        t.id === id ? { ...t, subtask_count: Math.max(0, (t.subtask_count ?? 0) + delta) } : t,
+        t.id === id
+          ? {
+              ...t,
+              subtask_count: Math.max(0, (t.subtask_count ?? 0) + delta),
+              subtask_done: Math.max(0, (t.subtask_done ?? 0) + doneDelta),
+            }
+          : t,
       ),
     });
   },

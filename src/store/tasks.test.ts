@@ -487,6 +487,14 @@ describe("bumpSubtaskCount", () => {
     useTasksStore.getState().bumpSubtaskCount("t1", -5);
     expect(useTasksStore.getState().tasks[0].subtask_count).toBe(0);
   });
+
+  it("adjusts subtask_done by doneDelta, floored at 0", () => {
+    useTasksStore.setState({ tasks: [task("t1", { subtask_count: 3, subtask_done: 1 })] });
+    useTasksStore.getState().bumpSubtaskCount("t1", 0, 1);
+    expect(useTasksStore.getState().tasks[0].subtask_done).toBe(2);
+    useTasksStore.getState().bumpSubtaskCount("t1", 0, -5);
+    expect(useTasksStore.getState().tasks[0].subtask_done).toBe(0);
+  });
 });
 
 describe("moveToNextMonth action", () => {
