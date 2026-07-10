@@ -58,6 +58,7 @@ interface TasksState {
   editTitle: (id: string, title: string) => Promise<void>;
   editDescription: (id: string, description: string) => Promise<void>;
   bumpSubtaskCount: (id: string, delta: number, doneDelta?: number) => void;
+  setSubtaskCounts: (id: string, total: number, done: number) => void;
   deleteTask: (id: string) => Promise<void>;
   restoreTask: () => Promise<void>;
   setDailyPriority: (id: string, n: Priority | null, date: string) => Promise<void>;
@@ -191,6 +192,16 @@ export const useTasksStore = create<TasksState>()(
               subtask_done: Math.max(0, (t.subtask_done ?? 0) + doneDelta),
             }
           : t,
+      ),
+    });
+  },
+
+  // Authoritative counts from a full subtask fetch (the detail modal), fixing
+  // any parent the list route skipped or whose cached counts drifted.
+  setSubtaskCounts(id, total, done) {
+    set({
+      tasks: get().tasks.map((t) =>
+        t.id === id ? { ...t, subtask_count: total, subtask_done: done } : t,
       ),
     });
   },

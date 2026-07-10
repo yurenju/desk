@@ -25,18 +25,41 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
+// Each children fetch is a subrequest, and the Workers free plan caps a request
+// at 50 total (listTodos pages, KV reads and the Sentry envelope eat a few).
+// An unbounded per-parent fan-out took the whole route down with
+// "Too many subrequests" (error 1101) once enough done tasks accumulated.
+// ponytail: hard budget, live parents first — if >40 live parents ever carry
+// subtasks, move done-counting client-side or denormalize onto the parent.
+const CHILDREN_FETCH_BUDGET = 40;
+
 export async function handleListTodo(request: Request, env: Env): Promise<Response> {
   return withSession(request, env, async ({ accessToken, userId }) => {
     const { projectId, typeId } = await ensureBootstrap(env.DESK_KV, accessToken, userId);
     const todos = await listTodos(accessToken, { projectId, typeId });
     // child_count gives the total, but not how many children are done. Fetch
-    // children (in parallel) only for tasks that have any, and count done.
+    // children (in parallel) for tasks that have any, within the budget: live
+    // parents first (their badges matter most), done parents with what's left.
+    const withChildren = todos.filter((t) => (t.child_count ?? 0) > 0);
+    const countable = new Set(
+      [
+        ...withChildren.filter((t) => t.status !== "done"),
+        ...withChildren.filter((t) => t.status === "done"),
+      ]
+        .slice(0, CHILDREN_FETCH_BUDGET)
+        .map((t) => t.id),
+    );
     const tasks = await Promise.all(
       todos.map(async (todo) => {
         const task = mapTodoToTask(todo);
-        if ((todo.child_count ?? 0) > 0) {
-          const children = await listChildren(accessToken, { projectId, typeId, parentId: todo.id });
-          task.subtask_done = children.filter((c) => c.status === "done").length;
+        if (countable.has(todo.id)) {
+          try {
+            const children = await listChildren(accessToken, { projectId, typeId, parentId: todo.id });
+            task.subtask_done = children.filter((c) => c.status === "done").length;
+          } catch {
+            // Done count stays unknown; the badge falls back to total-only.
+            // One flaky child fetch must not 500 the whole list.
+          }
         }
         return task;
       }),

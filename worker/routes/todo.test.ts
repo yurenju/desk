@@ -59,10 +59,60 @@ describe("GET /api/todo", () => {
     const p1 = body.tasks.find((t) => t.id === "p1")!;
     const p2 = body.tasks.find((t) => t.id === "p2")!;
     expect(p1).toMatchObject({ subtask_count: 3, subtask_done: 2 });
-    expect(p2).toMatchObject({ subtask_count: 0, subtask_done: 0 });
+    // childless task: done count is unknown/meaningless, field stays absent
+    expect(p2.subtask_count).toBe(0);
+    expect(p2.subtask_done).toBeUndefined();
     // only the parent with children is fetched
     expect(children).toHaveBeenCalledTimes(1);
     expect(children.mock.calls[0][1]).toMatchObject({ parentId: "p1" });
+  });
+
+  it("caps children fetches at the subrequest budget, live parents first", async () => {
+    const env = makeEnv();
+    await seedSession(env);
+    // 50 parents with children: done ones listed FIRST so the test fails if the
+    // route fetches in list order instead of prioritizing live parents.
+    const doneParents = Array.from({ length: 45 }, (_, i) => ({
+      id: `d${i}`, status: "done" as const, title: `done ${i}`,
+      created_at: 0, updated_at: 0, custom_fields: {}, child_count: 1,
+    }));
+    const openParents = Array.from({ length: 5 }, (_, i) => ({
+      id: `o${i}`, status: "open" as const, title: `open ${i}`,
+      created_at: 0, updated_at: 0, custom_fields: {}, child_count: 1,
+    }));
+    vi.spyOn(wspc, "listTodos").mockResolvedValue([...doneParents, ...openParents]);
+    const children = vi.spyOn(wspc, "listChildren").mockResolvedValue([
+      { id: "c", status: "done", title: "c", created_at: 0, updated_at: 0, custom_fields: {} },
+    ]);
+    const req = new Request("https://d/api/todo", { headers: cookie });
+    const res = await handleListTodo(req, env);
+    expect(res.status).toBe(200);
+    expect(children).toHaveBeenCalledTimes(40);
+    const fetched = new Set(children.mock.calls.map((c) => (c[1] as { parentId: string }).parentId));
+    // every live parent got its done count; only done parents were skipped
+    for (let i = 0; i < 5; i++) expect(fetched.has(`o${i}`)).toBe(true);
+    const body = (await res.json()) as { tasks: { id: string; subtask_done?: number }[] };
+    const skipped = body.tasks.filter((t) => t.id.startsWith("d") && t.subtask_done === undefined);
+    expect(skipped.length).toBe(10); // 45 done - 35 remaining budget
+  });
+
+  it("keeps the list alive when one children fetch fails", async () => {
+    const env = makeEnv();
+    await seedSession(env);
+    vi.spyOn(wspc, "listTodos").mockResolvedValue([
+      { id: "p1", status: "open", title: "ok", created_at: 0, updated_at: 0, custom_fields: {}, child_count: 1 },
+      { id: "p2", status: "open", title: "boom", created_at: 0, updated_at: 0, custom_fields: {}, child_count: 1 },
+    ]);
+    vi.spyOn(wspc, "listChildren").mockImplementation(async (_at, opts) => {
+      if (opts.parentId === "p2") throw new Error("WSPC listChildren failed: 429");
+      return [{ id: "c", status: "done", title: "c", created_at: 0, updated_at: 0, custom_fields: {} }];
+    });
+    const req = new Request("https://d/api/todo", { headers: cookie });
+    const res = await handleListTodo(req, env);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { tasks: { id: string; subtask_done?: number }[] };
+    expect(body.tasks.find((t) => t.id === "p1")!.subtask_done).toBe(1);
+    expect(body.tasks.find((t) => t.id === "p2")!.subtask_done).toBeUndefined();
   });
 });
 

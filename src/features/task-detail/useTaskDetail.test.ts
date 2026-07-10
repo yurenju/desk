@@ -22,8 +22,23 @@ describe("useTaskDetail", () => {
     expect(result.current.status).toBe("ready");
   });
 
+  it("syncs the parent's counts to the fetched subtasks", async () => {
+    // The list route may have skipped counting this parent (subrequest budget)
+    // or its counts may be stale; the modal's full fetch is authoritative.
+    vi.spyOn(api, "fetchSubtasks").mockResolvedValue([
+      { id: "c1", title: "s", status: "done" },
+      { id: "c2", title: "t", status: "open" },
+    ]);
+    const { result } = renderHook(() => useTaskDetail("t1"));
+    await waitFor(() => expect(result.current.subtasks).toHaveLength(2));
+    expect(useTasksStore.getState().tasks[0].subtask_count).toBe(2);
+    expect(useTasksStore.getState().tasks[0].subtask_done).toBe(1);
+  });
+
   it("adds a subtask and bumps parent count", async () => {
-    vi.spyOn(api, "fetchSubtasks").mockResolvedValue([]);
+    // one existing subtask, matching the seeded subtask_count: 1 (the load
+    // sync would otherwise correct a mismatched count before the add)
+    vi.spyOn(api, "fetchSubtasks").mockResolvedValue([{ id: "c0", title: "old", status: "open" }]);
     vi.spyOn(api, "createSubtask").mockResolvedValue({ id: "c9", title: "new", status: "open" });
     const { result } = renderHook(() => useTaskDetail("t1"));
     await waitFor(() => expect(result.current.status).toBe("ready"));
