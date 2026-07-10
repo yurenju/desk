@@ -12,6 +12,7 @@ export function useTaskRow(id: string, date: string) {
   const setAdhoc = useTasksStore((s) => s.setAdhoc);
   const moveToToday = useTasksStore((s) => s.moveToToday);
   const demoteToMonth = useTasksStore((s) => s.demoteToMonth);
+  const restoreToDay = useTasksStore((s) => s.restoreToDay);
   const current = useTasksStore((s) => s.tasks.find((t) => t.id === id));
 
   const [isEditing, setIsEditing] = useState(false);
@@ -29,6 +30,7 @@ export function useTaskRow(id: string, date: string) {
     },
     moveToToday: () => moveToToday(id),
     demoteToMonth: () => demoteToMonth(id),
+    restoreToDay: () => restoreToDay(id, date),
     startEdit: (initial: string) => {
       setDraft(initial);
       setIsEditing(true);

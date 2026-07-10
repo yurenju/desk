@@ -94,7 +94,7 @@ export async function handlePatchTodo(
       description?: string;
       scheduled_dates?: string[];
       scheduled_months?: string[];
-      unscheduled_at?: string;
+      unscheduled_at?: string | null;
       unscheduled_month?: string;
       daily_ranks?: string[];
       monthly_ranks?: string[];
@@ -111,7 +111,7 @@ export async function handlePatchTodo(
         description?: string;
         scheduled_dates?: string[];
         scheduled_months?: string[];
-        unscheduled_at?: string;
+        unscheduled_at?: string | null;
         unscheduled_month?: string;
         daily_ranks?: string[];
         monthly_ranks?: string[];
@@ -127,7 +127,8 @@ export async function handlePatchTodo(
     if ("is_adhoc" in body) customFields.is_adhoc = body.is_adhoc ?? null;
     if ("scheduled_dates" in body && body.scheduled_dates) customFields.scheduled_dates = body.scheduled_dates;
     if ("scheduled_months" in body && body.scheduled_months) customFields.scheduled_months = body.scheduled_months;
-    if ("unscheduled_at" in body && body.unscheduled_at) customFields.unscheduled_at = body.unscheduled_at;
+    // null clears the field (restore-to-day); absent leaves it untouched.
+    if ("unscheduled_at" in body) customFields.unscheduled_at = body.unscheduled_at ?? null;
     if ("unscheduled_month" in body && body.unscheduled_month)
       customFields.unscheduled_month = body.unscheduled_month;
     if ("daily_ranks" in body && body.daily_ranks) customFields.daily_ranks = body.daily_ranks;
