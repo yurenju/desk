@@ -15,6 +15,7 @@ import {
   planScheduleDay,
   moveToToday,
   demoteToMonth,
+  restoreToDay,
   moveToNextMonth,
   demoteToBacklog,
 } from "./taskOps";
@@ -522,6 +523,79 @@ describe("demoteToMonth", () => {
   it("returns the same ref when id is not found", () => {
     const tasks = [makeTask({ id: "a", custom_fields: { scheduled_dates: ["2026-05-21"] } })];
     expect(demoteToMonth(tasks, "zz", "2026-05")).toBe(tasks);
+  });
+});
+
+describe("restoreToDay", () => {
+  it("restores a forwarded task back to the viewed day (replaces the last date)", () => {
+    // forwarded: viewed on 05-20, but already moved to 05-22
+    const tasks = [
+      makeTask({
+        id: "a",
+        custom_fields: {
+          scheduled_months: ["2026-05"],
+          scheduled_dates: ["2026-05-20", "2026-05-22"],
+        },
+      }),
+    ];
+    const next = restoreToDay(tasks, "a", "2026-05-20");
+    expect(primaryDate(next[0])).toBe("2026-05-20");
+  });
+
+  it("restores a dismissed task by clearing unscheduled_at", () => {
+    const tasks = [
+      makeTask({
+        id: "a",
+        custom_fields: {
+          scheduled_months: ["2026-05"],
+          scheduled_dates: ["2026-05-20"],
+          unscheduled_at: "2026-05-20",
+        },
+      }),
+    ];
+    const next = restoreToDay(tasks, "a", "2026-05-20");
+    expect(next[0].custom_fields.unscheduled_at).toBeUndefined();
+    expect(primaryDate(next[0])).toBe("2026-05-20");
+  });
+
+  it("reactivates the target date's month", () => {
+    // dismissed all the way to backlog: both month and day were unscheduled
+    const tasks = [
+      makeTask({
+        id: "a",
+        custom_fields: {
+          scheduled_months: ["2026-05"],
+          unscheduled_month: "2026-05",
+          scheduled_dates: ["2026-05-20"],
+          unscheduled_at: "2026-05-20",
+        },
+      }),
+    ];
+    const next = restoreToDay(tasks, "a", "2026-05-20");
+    expect(layer(next[0])).toBe("daily");
+    expect(next[0].custom_fields.scheduled_months).toEqual(["2026-05", "2026-05"]);
+  });
+
+  it("clears the legacy daily_priority but keeps daily_ranks history", () => {
+    const tasks = [
+      makeTask({
+        id: "a",
+        custom_fields: {
+          scheduled_dates: ["2026-05-20"],
+          unscheduled_at: "2026-05-20",
+          daily_priority: "1",
+          daily_ranks: ["2026-05-20:2"],
+        },
+      }),
+    ];
+    const next = restoreToDay(tasks, "a", "2026-05-20");
+    expect(next[0].custom_fields.daily_priority).toBeUndefined();
+    expect(next[0].custom_fields.daily_ranks).toEqual(["2026-05-20:2"]);
+  });
+
+  it("returns the same ref when id is not found", () => {
+    const tasks = [makeTask({ id: "a", custom_fields: { scheduled_dates: ["2026-05-20"] } })];
+    expect(restoreToDay(tasks, "zz", "2026-05-20")).toBe(tasks);
   });
 });
 

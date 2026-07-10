@@ -40,7 +40,7 @@ export interface TodoPatch {
   description?: string;
   scheduled_dates?: string[];
   scheduled_months?: string[];
-  unscheduled_at?: string;
+  unscheduled_at?: string | null;
   unscheduled_month?: string;
   daily_ranks?: string[];
   monthly_ranks?: string[];

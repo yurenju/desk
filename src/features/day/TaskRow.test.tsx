@@ -207,34 +207,50 @@ describe("TaskRow carryover actions", () => {
     expect(screen.getByText("↪ 已移到今天")).toBeInTheDocument();
   });
 
-  it("a forwarded trail row is checkable but has no overflow menu", () => {
+  it("a forwarded trail row opens a status menu excluding 移到今天, and 未完成 restores it", async () => {
+    const user = userEvent.setup();
+    seed({
+      id: "f1", title: "已順延", status: "open", created_at: "x", updated_at: "x",
+      custom_fields: { scheduled_dates: [PAST, MOCK_TODAY] },
+    });
     render(
-      <TaskRow
-        task={{
-          id: "f1", title: "已順延", status: "open", created_at: "x", updated_at: "x",
-          custom_fields: { scheduled_dates: [PAST, MOCK_TODAY] },
-        }}
-        kind="forwarded"
-        date={PAST}
-        interactive
-      />,
+      <TaskRow task={useTasksStore.getState().tasks[0]} kind="forwarded" date={PAST} interactive />,
     );
-    expect(screen.getByRole("checkbox")).not.toBeDisabled();
+    // no plain checkbox, no overflow menu — the status cell is the only control
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "更多動作" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "變更狀態：已順延" }));
+    expect(await screen.findByRole("menuitem", { name: "已完成" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /移到今天/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("menuitem", { name: "未完成" }));
+    const t = useTasksStore.getState().tasks.find((x) => x.id === "f1")!;
+    // restored: PAST is the primary date again
+    expect(t.custom_fields.scheduled_dates).toEqual([PAST, PAST]);
   });
 
-  it("a dismissed trail row is checkable", () => {
+  it("a dismissed trail row's status menu offers 移到今天 but not 退回本月", async () => {
+    const user = userEvent.setup();
+    seed({
+      id: "d2", title: "已退回", status: "open", created_at: "x", updated_at: "x",
+      custom_fields: { scheduled_dates: [PAST], unscheduled_at: PAST },
+    });
     render(
-      <TaskRow
-        task={{
-          id: "d2", title: "已退回", status: "open", created_at: "x", updated_at: "x",
-          custom_fields: { scheduled_dates: [PAST], unscheduled_at: PAST },
-        }}
-        kind="dismissed"
-        date={PAST}
-        interactive
-      />,
+      <TaskRow task={useTasksStore.getState().tasks[0]} kind="dismissed" date={PAST} interactive />,
     );
-    expect(screen.getByRole("checkbox")).not.toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "變更狀態：已退回" }));
+    expect(await screen.findByRole("menuitem", { name: /移到今天/ })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /退回本月/ })).not.toBeInTheDocument();
+  });
+
+  it("a completed trail row shows the plain done checkbox, not the status cell", () => {
+    seed({
+      id: "f2", title: "做完的順延", status: "done", created_at: "x", updated_at: "x",
+      custom_fields: { scheduled_dates: [PAST, MOCK_TODAY] },
+    });
+    render(
+      <TaskRow task={useTasksStore.getState().tasks[0]} kind="forwarded" date={PAST} interactive />,
+    );
+    expect(screen.getByRole("checkbox")).toBeChecked();
+    expect(screen.queryByRole("button", { name: /變更狀態/ })).not.toBeInTheDocument();
   });
 });

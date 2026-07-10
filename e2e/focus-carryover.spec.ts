@@ -96,10 +96,12 @@ test("demote-to-month turns a day task into a 退回月度 trail", async ({ page
   await expect(page.getByText("↩ 已退回本月")).toBeVisible();
 });
 
-test("dismissed trail row checkbox is enabled and can be checked complete", async ({ page }) => {
+test("dismissed trail status cell opens a menu (no 退回本月) and 已完成 completes it", async ({
+  page,
+}) => {
   await gotoTodaySeeded(page);
 
-  // Add a task, demote it to month → it becomes a "· 退回月度" dismissed trail.
+  // Add a task, demote it to month → it becomes a dismissed trail row.
   const input = page.getByPlaceholder("+ 加一件這天的事…");
   await input.fill("退回完成 e2e");
   await input.press("Enter");
@@ -109,16 +111,65 @@ test("dismissed trail row checkbox is enabled and can be checked complete", asyn
   await row.getByLabel("更多動作").click();
   await page.getByRole("menuitem", { name: /丟回月度/ }).click();
 
-  // The trail banner appears; find the trail row by its trail label.
   await expect(page.getByText("↩ 已退回本月")).toBeVisible();
 
-  // The checkbox for this task should be enabled (trail rows are checkable).
-  const checkbox = page.getByRole("checkbox", { name: "退回完成 e2e" });
-  await expect(checkbox).toBeEnabled();
+  // The cell is now a status-menu trigger, not a checkbox.
+  await page.getByRole("button", { name: "變更狀態：退回完成 e2e" }).click();
+  await expect(page.getByRole("menuitem", { name: /移到今天/ })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: /退回本月/ })).toHaveCount(0);
 
-  // Click it → task becomes done.
+  // 已完成 → the row turns into a done row with a checked checkbox.
+  await page.getByRole("menuitem", { name: "已完成" }).click();
+  await expect(page.getByRole("checkbox", { name: "退回完成 e2e" })).toBeChecked();
+});
+
+test("forwarded trail status cell: 未完成 restores the task to the viewed day", async ({
+  page,
+}) => {
+  await gotoTodaySeeded(page);
+
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const yesterday = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
+
+  await page.goto(`/focus/${yesterday}`);
+  await expect(page).toHaveURL(new RegExp(`/focus/${yesterday}$`));
+
+  // Create a task on yesterday and forward it to today → forwarded trail row.
+  const input = page.getByPlaceholder("+ 加一件這天的事…");
+  await input.fill("還原 e2e");
+  await input.press("Enter");
+
+  const row = rowOf(page, "還原 e2e");
+  await row.hover();
+  await row.getByLabel("更多動作").click();
+  await page.getByRole("menuitem", { name: /移到今天/ }).click();
+  await expect(page.getByText("↪ 已移到今天")).toBeVisible();
+
+  // Status menu: no 移到今天 (current state), pick 未完成 → back to a plain
+  // planned open row on this day (trail label gone, checkbox back).
+  await page.getByRole("button", { name: "變更狀態：還原 e2e" }).click();
+  await expect(page.getByRole("menuitem", { name: /移到今天/ })).toHaveCount(0);
+  await page.getByRole("menuitem", { name: "未完成" }).click();
+  await expect(page.getByText("↪ 已移到今天")).toHaveCount(0);
+  const checkbox = page.getByRole("checkbox", { name: "還原 e2e" });
+  await expect(checkbox).toBeVisible();
+  await expect(checkbox).not.toBeChecked();
+});
+
+test("open row's checkbox toggles directly without opening a menu", async ({ page }) => {
+  await gotoTodaySeeded(page);
+
+  const input = page.getByPlaceholder("+ 加一件這天的事…");
+  await input.fill("直接勾 e2e");
+  await input.press("Enter");
+
+  const checkbox = page.getByRole("checkbox", { name: "直接勾 e2e" });
   await checkbox.click();
   await expect(checkbox).toBeChecked();
+  await expect(page.getByRole("menu")).toHaveCount(0);
 });
 
 test("demote-to-month works from the top-3 card too", async ({ page }) => {

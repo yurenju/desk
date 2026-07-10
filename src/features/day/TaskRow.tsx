@@ -1,5 +1,5 @@
 import type { Task, TrailKind } from "@/lib/types";
-import { Checkbox } from "@/ui/Checkbox";
+import { StatusCell } from "./StatusCell";
 import { RowTitleInput } from "@/ui/RowTitleInput";
 import { UnplannedChip } from "@/ui/Chip";
 import { Menu } from "@/ui/Menu";
@@ -26,9 +26,6 @@ export function TaskRow({ task, kind, date, interactive, showRing }: TaskRowProp
   const row = useTaskRow(task.id, date);
   const today = useTasksStore((s) => s.today);
   const editable = Boolean(interactive) && kind === "primary";
-  // Trail rows (forwarded/dismissed) stay read-only — no ring/menu/edit — but can
-  // still be checked complete (same entity), so the checkbox uses `checkable`, not `editable`.
-  const checkable = Boolean(interactive);
   const { ref: dragRef, isDragging, handleProps, style } = useSortableRow(`day:${task.id}`);
   const draggable = kind === "primary";
 
@@ -46,12 +43,7 @@ export function TaskRow({ task, kind, date, interactive, showRing }: TaskRowProp
         .join(" ")}
       {...(draggable ? handleProps : {})}
     >
-      <Checkbox
-        checked={isDone}
-        disabled={!checkable}
-        onCheckedChange={checkable ? row.toggle : undefined}
-        aria-label={task.title}
-      />
+      <StatusCell task={task} kind={kind} row={row} interactive={interactive} />
       {showRing && editable && (
         <DailyPriorityMenu
           value={dailyRankOn(task, date)}

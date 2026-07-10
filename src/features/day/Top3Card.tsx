@@ -6,6 +6,7 @@ import { Menu } from "@/ui/Menu";
 import { useSortableRow } from "@/features/plan-view/useSortableRow";
 import { TaskDetailTrigger } from "@/features/task-detail/TaskDetailTrigger";
 import { useTaskRow } from "./useTaskRow";
+import { StatusCell } from "./StatusCell";
 import { DailyPriorityMenu } from "./DailyPriorityMenu";
 import { buildTaskRowMenuItems } from "./taskRowMenu";
 import { isDayAdhocChip, trailLabel, dailyRankOn } from "@/lib/tasks";
@@ -102,12 +103,12 @@ function Top3Item({
     const trailRank = dailyRankOn(t, date);
     return (
       <li className={[styles.item, styles.trail].join(" ")}>
-        <Checkbox
-          variant={variant === "accent" ? "accent" : "primary"}
-          checked={t.status === "done"}
-          disabled={!interactive}
-          onCheckedChange={interactive ? row.toggle : undefined}
-          aria-label={t.title}
+        <StatusCell
+          task={t}
+          kind={kind}
+          row={row}
+          interactive={interactive}
+          checkboxVariant={variant === "accent" ? "accent" : "primary"}
         />
         {trailRank && <span className={[styles.ring, styles.ringMuted].join(" ")}>{trailRank}</span>}
         <div className={styles.itemBody}>

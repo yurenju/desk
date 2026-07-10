@@ -249,6 +249,44 @@ export function moveToToday(tasks: Task[], id: string, today: string): Task[] {
   );
 }
 
+/**
+ * Restore a trail row (forwarded or dismissed) back to being `date`'s regular
+ * planned open task, i.e. make `primaryDate(target) === date`.
+ *
+ * Same append/replace rules as planScheduleDay, plus one extra step: clear
+ * `unscheduled_at`. A dismissed row has `unscheduled_at === date`, which would
+ * otherwise keep primaryDate null no matter what we append. For a forwarded row
+ * (no unscheduled_at) this is equivalent to planScheduleDay.
+ */
+export function restoreToDay(tasks: Task[], id: string, date: string): Task[] {
+  const target = tasks.find((t) => t.id === id);
+  if (!target) return tasks;
+  const month = monthOf(date);
+  const dates = target.custom_fields.scheduled_dates ?? [];
+  const hasPrimaryDate = primaryDate(target) !== null;
+
+  let nextDates: string[];
+  if (dates[dates.length - 1] === date) nextDates = dates;
+  else if (hasPrimaryDate) nextDates = [...dates.slice(0, -1), date];
+  else nextDates = [...dates, date];
+
+  const months = target.custom_fields.scheduled_months ?? [];
+  // Reactivate the target month (same backfill as planScheduleDay).
+  const nextMonths = primaryMonth(target) === month ? months : [...months, month];
+
+  // daily_ranks stay untouched (preserved history); clear the legacy single field.
+  return tasks.map((t) =>
+    t.id === id
+      ? patch(t, {
+          scheduled_dates: nextDates,
+          scheduled_months: nextMonths,
+          unscheduled_at: undefined,
+          daily_priority: undefined,
+        })
+      : t,
+  );
+}
+
 export function demoteToMonth(tasks: Task[], id: string, currentMonth: string): Task[] {
   const target = tasks.find((t) => t.id === id);
   if (!target) return tasks;

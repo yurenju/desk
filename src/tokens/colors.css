@@ -20,6 +20,11 @@
   --color-carry-bg-2: oklch(0.9 0.045 80);
   --color-carry-edge: oklch(0.78 0.06 75);
   --color-carry-text: oklch(0.42 0.07 70);
+
+  /* cool counterpart of carry: dismissed-to-month (defer) trail state */
+  --color-defer-bg: oklch(0.93 0.03 250);
+  --color-defer-edge: oklch(0.72 0.06 250);
+  --color-defer-text: oklch(0.46 0.09 250);
 }
 
 [data-theme="dark"] {
@@ -43,4 +48,8 @@
   --color-carry-bg-2: oklch(0.3 0.045 70);
   --color-carry-edge: oklch(0.4 0.06 70);
   --color-carry-text: oklch(0.78 0.07 70);
+
+  --color-defer-bg: oklch(0.28 0.03 245);
+  --color-defer-edge: oklch(0.5 0.06 245);
+  --color-defer-text: oklch(0.76 0.06 245);
 }

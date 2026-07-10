@@ -11,6 +11,7 @@ import {
   planScheduleDay as planScheduleDayOp,
   moveToToday as moveToTodayOp,
   demoteToMonth as demoteToMonthOp,
+  restoreToDay as restoreToDayOp,
   moveToNextMonth as moveToNextMonthOp,
   demoteToBacklog as demoteToBacklogOp,
   deleteTask,
@@ -68,6 +69,7 @@ interface TasksState {
   planScheduleDay: (id: string, date: string) => Promise<void>;
   moveToToday: (id: string) => Promise<void>;
   demoteToMonth: (id: string) => Promise<void>;
+  restoreToDay: (id: string, date: string) => Promise<void>;
   moveToNextMonth: (id: string) => Promise<void>;
   demoteToBacklog: (id: string) => Promise<void>;
   reorderPriority: (id: string, targetRank: Priority, axis: "daily" | "monthly", scope: string) => Promise<void>;
@@ -381,6 +383,24 @@ export const useTasksStore = create<TasksState>()(
         unscheduled_at: updated.custom_fields.unscheduled_at,
         scheduled_months: updated.custom_fields.scheduled_months,
         daily_ranks: updated.custom_fields.daily_ranks ?? [],
+        daily_priority: null,
+      });
+    } catch {
+      set({ tasks: prev, error: "save_failed" });
+    }
+  },
+
+  async restoreToDay(id, date) {
+    const prev = get().tasks;
+    const next = restoreToDayOp(prev, id, date);
+    if (next === prev) return;
+    set({ tasks: next, error: null });
+    const updated = next.find((t) => t.id === id)!;
+    try {
+      await enqueuePatch(id, {
+        scheduled_dates: updated.custom_fields.scheduled_dates,
+        scheduled_months: updated.custom_fields.scheduled_months,
+        unscheduled_at: null,
         daily_priority: null,
       });
     } catch {

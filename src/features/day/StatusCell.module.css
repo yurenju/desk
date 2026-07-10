@@ -1,0 +1,39 @@
+/* Same footprint as Checkbox (22px box) so trail rows line up with primary rows. */
+.cell {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1.5px solid;
+  border-radius: var(--radius-xs);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  line-height: 1;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+/* forwarded (moved to another day): warm amber — near-term, still yours to do */
+.k_forwarded {
+  background: var(--color-carry-bg);
+  border-color: var(--color-carry-edge);
+  color: var(--color-carry-text);
+}
+
+/* dismissed (sent back to the month): cool blue-grey — later, lower priority */
+.k_dismissed {
+  background: var(--color-defer-bg);
+  border-color: var(--color-defer-edge);
+  color: var(--color-defer-text);
+}
+
+.cell:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.cell:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
