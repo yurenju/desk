@@ -1,5 +1,5 @@
 import { it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 import { RouterProvider, createRouter, createMemoryHistory } from "@tanstack/react-router";
 import { routeTree } from "@/routeTree.gen";
 import { useTasksStore } from "@/store/tasks";
@@ -12,7 +12,8 @@ function renderAt(path: string, today = TODAY) {
     routeTree,
     history: createMemoryHistory({ initialEntries: [path] }),
   });
-  return render(<RouterProvider router={router} />);
+  render(<RouterProvider router={router} />);
+  return { router };
 }
 
 async function chips() {
@@ -32,13 +33,18 @@ it("links each chip to /focus/$date with aria-current on the selected day", asyn
   expect(link.getAttribute("aria-current")).toBe("page");
 });
 
-it("mobile week nav shifts the selected date by 7 days", async () => {
-  renderAt("/focus/2026-06-10");
+it("mobile week arrows page the chips a week without moving the focus day", async () => {
+  const { router } = renderAt("/focus/2026-06-10");
   const nav = await chips();
-  expect(within(nav).getByRole("link", { name: "上一週" }).getAttribute("href")).toBe(
-    "/focus/2026-06-03",
-  );
-  expect(within(nav).getByRole("link", { name: "下一週" }).getAttribute("href")).toBe(
-    "/focus/2026-06-17",
-  );
+
+  fireEvent.click(within(nav).getByRole("button", { name: "上一週" }));
+  expect(within(nav).getByRole("link", { name: "切到 2026-06-03" })).toBeInTheDocument();
+  expect(within(nav).queryByRole("link", { name: "切到 2026-06-10" })).toBeNull();
+  expect(router.state.location.pathname).toBe("/focus/2026-06-10");
+
+  // Two clicks forward lands on the week after the starting one.
+  fireEvent.click(within(nav).getByRole("button", { name: "下一週" }));
+  fireEvent.click(within(nav).getByRole("button", { name: "下一週" }));
+  expect(within(nav).getByRole("link", { name: "切到 2026-06-17" })).toBeInTheDocument();
+  expect(router.state.location.pathname).toBe("/focus/2026-06-10");
 });
