@@ -1,13 +1,18 @@
 import { test, expect } from "@playwright/test";
 import { gotoTodaySeeded } from "./fixtures/session";
 
-test("next/prev week navigates the focus view, back-to-today returns", async ({ page }) => {
+test("week arrows page the rail only; back-to-today re-syncs it", async ({ page }) => {
   await gotoTodaySeeded(page);
   const rail = page.getByRole("navigation", { name: "週導覽" });
 
-  await rail.getByRole("link", { name: "下一週" }).click();
-  await expect(page).toHaveURL(/\/focus\/\d{4}-\d{2}-\d{2}$/);
+  const urlBefore = page.url();
+  // Paging the week must NOT drag the focus day along: the URL stays put and the
+  // center hero still shows today.
+  await rail.getByRole("button", { name: "下一週" }).click();
+  await expect(page).toHaveURL(urlBefore);
+  await expect(page.getByText("今天最重要的三件事")).toBeVisible();
 
+  // Off today's week, the reset appears and brings the rail back home.
   await rail.getByRole("link", { name: "回今天" }).click();
   await expect(page.getByText("今天最重要的三件事")).toBeVisible();
 });

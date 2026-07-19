@@ -13,7 +13,6 @@ import { WeekRail } from "@/features/week/WeekRail";
 import { DayColumn } from "@/features/day/DayColumn";
 import { MonthDigest } from "@/features/month/MonthDigest";
 import { DayChip } from "@/features/week/DayChip";
-import { Link } from "@tanstack/react-router";
 import { weekOf, addDays } from "@/lib/date";
 import { DeleteUndoToast } from "@/features/day/DeleteUndoToast";
 import { useHoverCapable } from "@/lib/useHoverCapable";
@@ -42,7 +41,18 @@ export interface TodayLayoutProps {
 }
 
 export function TodayLayout({ allTasks, selectedDate, today, month }: TodayLayoutProps) {
-  const week = weekOf(selectedDate);
+  // The week the rail/chips display, decoupled from the focus day: paging the
+  // arrows moves only this anchor, leaving the center hero on `selectedDate`.
+  // It snaps back to the focus day's week whenever the focus day changes —
+  // done via the "adjust state during render on prop change" pattern (comparing
+  // against the previous focus day) rather than an effect, which would cascade.
+  const [weekAnchor, setWeekAnchor] = useState(selectedDate);
+  const [prevSelectedDate, setPrevSelectedDate] = useState(selectedDate);
+  if (selectedDate !== prevSelectedDate) {
+    setPrevSelectedDate(selectedDate);
+    setWeekAnchor(selectedDate);
+  }
+  const week = weekOf(weekAnchor);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   // Live in-column sortable preview: containerId -> previewed sortable-id order.
@@ -135,7 +145,15 @@ export function TodayLayout({ allTasks, selectedDate, today, month }: TodayLayou
     <main className={styles.page}>
       <div className={styles.grid}>
         <aside className={[styles.cell, styles.left].join(" ")}>
-          <WeekRail allTasks={allTasks} selectedDate={selectedDate} today={today} />
+          <WeekRail
+            allTasks={allTasks}
+            weekAnchor={weekAnchor}
+            selectedDate={selectedDate}
+            today={today}
+            onPrevWeek={() => setWeekAnchor((a) => addDays(a, -7))}
+            onNextWeek={() => setWeekAnchor((a) => addDays(a, 7))}
+            onResetToToday={() => setWeekAnchor(today)}
+          />
         </aside>
         <DndContext
           sensors={sensors}
@@ -166,14 +184,14 @@ export function TodayLayout({ allTasks, selectedDate, today, month }: TodayLayou
       </div>
 
       <nav className={styles.mobileChips} aria-label="日期切換">
-        <Link
-          to="/focus/$date"
-          params={{ date: addDays(selectedDate, -7) }}
+        <button
+          type="button"
+          onClick={() => setWeekAnchor((a) => addDays(a, -7))}
           className={styles.chipStep}
           aria-label="上一週"
         >
           ‹
-        </Link>
+        </button>
         {week.map((date) => (
           <DayChip
             key={date}
@@ -183,14 +201,14 @@ export function TodayLayout({ allTasks, selectedDate, today, month }: TodayLayou
             allTasks={allTasks}
           />
         ))}
-        <Link
-          to="/focus/$date"
-          params={{ date: addDays(selectedDate, 7) }}
+        <button
+          type="button"
+          onClick={() => setWeekAnchor((a) => addDays(a, 7))}
           className={styles.chipStep}
           aria-label="下一週"
         >
           ›
-        </Link>
+        </button>
       </nav>
 
       <DeleteUndoToast />
