@@ -4,6 +4,18 @@
 
 v1 的 Todo 工作流（三層漏斗：Backlog / Monthly / Daily，Plan 規劃 + Focus 專注兩個鏡頭）已實作到「可實際每天用」並先用一陣子再迭代；Calendar / Mail 為後續階段。排程語意全靠 WSPC todo 的 custom fields 表達，完整欄位語意與「用 wspc MCP 操作 Desk 帳號」的對照見 [docs/wspc-mcp-operations.md](docs/wspc-mcp-operations.md)。
 
+## Agent skills
+
+Matt Pocock 的 engineering skills（`/grill-with-docs`、`/to-tickets`、`/to-spec`、`/wayfinder` 等）從下列檔案讀取本 repo 的設定：
+
+### Issue tracker
+
+Tickets 一律記成 Desk 專案的 **wspc todos**（wspc MCP，**不是** GitHub Issues；別跑 `gh issue *`）。見 [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md)。
+
+### Domain docs
+
+Single-context：repo 根目錄一份 `CONTEXT.md` + `docs/adr/`。見 [docs/agents/domain.md](docs/agents/domain.md)。
+
 ## 撰寫 spec 時
 
 寫設計文件（`docs/superpowers/specs/**`）的「測試策略」時，除了自動化測試（vitest / Testing Library / e2e），**一律加入「手動測試（preview + AI agent）」一項**：
