@@ -25,6 +25,7 @@ import {
   reorderInPool as reorderInPoolOp,
 } from "./taskOps";
 import type { RemovedTask } from "./taskOps";
+import { deriveTodoPatch } from "./applyOp";
 import { todayISO, currentMonthISO } from "@/lib/date";
 
 const now = () => new Date().toISOString();
@@ -53,6 +54,7 @@ interface TasksState {
   synced: boolean;
   loadTasks: () => Promise<void>;
   reload: () => Promise<void>;
+  apply: (transform: (tasks: Task[]) => Task[]) => Promise<void>;
   toggleDone: (id: string) => Promise<void>;
   addTodayTask: (title: string, date: string, isAdhoc: boolean) => Promise<void>;
   editTitle: (id: string, title: string) => Promise<void>;
@@ -115,21 +117,42 @@ export const useTasksStore = create<TasksState>()(
     }
   },
 
-  async toggleDone(id) {
+  /**
+   * The single optimistic-write path for field-mutation ops. Runs a pure
+   * transform, commits it optimistically, and persists only the fields each
+   * touched task actually changed (derived via deriveTodoPatch — the op owns the
+   * state change, this owns "what to send"). On failure: a single-id change rolls
+   * back to `prev`; a multi-id change reloads from the server, because a partial
+   * Promise.all failure can't be un-done coherently one id at a time.
+   */
+  async apply(transform) {
     const prev = get().tasks;
-    const target = prev.find((t) => t.id === id);
-    if (!target) return;
-    const willBeDone = target.status !== "done";
-    const stamp = now();
-    set({ tasks: toggleDone(prev, id, stamp), error: null });
+    const next = transform(prev);
+    if (next === prev) return; // no-op transform: don't touch state or network
+    const prevById = new Map(prev.map((t) => [t.id, t]));
+    const patches = next
+      .filter((t) => prevById.has(t.id) && prevById.get(t.id) !== t)
+      .map((t) => ({ id: t.id, patch: deriveTodoPatch(prevById.get(t.id)!, t) }))
+      .filter(({ patch }) => Object.keys(patch).length > 0);
+    set({ tasks: next, error: null });
+    if (patches.length === 0) return; // reference changed but nothing persistable
     try {
-      await enqueuePatch(id, {
-        status: willBeDone ? "done" : "open",
-        done_on: willBeDone ? stamp : null,
-      });
+      await Promise.all(patches.map(({ id, patch }) => enqueuePatch(id, patch)));
     } catch {
-      set({ tasks: prev, error: "save_failed" });
+      if (patches.length > 1) {
+        try {
+          await get().reload();
+        } catch {
+          /* reload already set status:"error" */
+        }
+      } else {
+        set({ tasks: prev, error: "save_failed" });
+      }
     }
+  },
+
+  async toggleDone(id) {
+    await get().apply((prev) => toggleDone(prev, id, now()));
   },
 
   async addTodayTask(title, date, isAdhoc) {
@@ -160,26 +183,16 @@ export const useTasksStore = create<TasksState>()(
   async editTitle(id, title) {
     const trimmed = title.trim();
     if (!trimmed) return;
-    const prev = get().tasks;
-    set({ tasks: editTitle(prev, id, trimmed, now()), error: null });
-    try {
-      await enqueuePatch(id, { title: trimmed });
-    } catch {
-      set({ tasks: prev, error: "save_failed" });
-    }
+    await get().apply((prev) => editTitle(prev, id, trimmed, now()));
   },
 
   async editDescription(id, description) {
-    const prev = get().tasks;
-    set({
-      tasks: prev.map((t) => (t.id === id ? { ...t, description: description || undefined } : t)),
-      error: null,
-    });
-    try {
-      await enqueuePatch(id, { description });
-    } catch {
-      set({ tasks: prev, error: "save_failed" });
-    }
+    // Store the raw string (incl. "") so a cleared description derives a
+    // `description: ""` wire patch — the removed→null differ rule is for
+    // custom fields; the top-level description clears with an empty string.
+    await get().apply((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, description, updated_at: now() } : t)),
+    );
   },
 
   bumpSubtaskCount(id, delta, doneDelta = 0) {
@@ -231,79 +244,15 @@ export const useTasksStore = create<TasksState>()(
   },
 
   async setDailyPriority(id, n, date) {
-    const prev = get().tasks;
-    const next = setDailyPriority(prev, id, n, date);
-    set({ tasks: next, error: null });
-    const changed = next.filter((t) => {
-      const before = prev.find((p) => p.id === t.id);
-      return (
-        before &&
-        JSON.stringify(before.custom_fields.daily_ranks ?? []) !==
-          JSON.stringify(t.custom_fields.daily_ranks ?? [])
-      );
-    });
-    try {
-      await Promise.all(
-        changed.map((t) =>
-          enqueuePatch(t.id, {
-            daily_ranks: t.custom_fields.daily_ranks ?? [],
-            daily_priority: null,
-          }),
-        ),
-      );
-    } catch {
-      // Unlike other mutations we do NOT roll back to `prev` here: Promise.all
-      // may span multiple ids and some may have already been patched, so a
-      // per-call rollback would leave priorities inconsistent. Reload from the
-      // server to restore a coherent state instead. reload handles its own
-      // failures internally (sets status:"error"); the extra try makes that
-      // contract explicit at the call site and guards against future drift.
-      try {
-        await get().reload();
-      } catch {
-        /* reload already set status:"error" */
-      }
-    }
+    await get().apply((prev) => setDailyPriority(prev, id, n, date));
   },
 
   async setAdhoc(id, isAdhoc) {
-    const prev = get().tasks;
-    set({ tasks: setAdhocOp(prev, id, isAdhoc), error: null });
-    try {
-      await enqueuePatch(id, { is_adhoc: isAdhoc ? "true" : "false" });
-    } catch {
-      set({ tasks: prev, error: "save_failed" });
-    }
+    await get().apply((prev) => setAdhocOp(prev, id, isAdhoc));
   },
 
   async setMonthlyPriority(id, n, month) {
-    const prev = get().tasks;
-    const next = setMonthlyPriorityOp(prev, id, n, month);
-    set({ tasks: next, error: null });
-    const changed = next.filter((t) => {
-      const before = prev.find((p) => p.id === t.id);
-      return (
-        before &&
-        JSON.stringify(before.custom_fields.monthly_ranks ?? []) !==
-          JSON.stringify(t.custom_fields.monthly_ranks ?? [])
-      );
-    });
-    try {
-      await Promise.all(
-        changed.map((t) =>
-          enqueuePatch(t.id, {
-            monthly_ranks: t.custom_fields.monthly_ranks ?? [],
-            monthly_priority: null,
-          }),
-        ),
-      );
-    } catch {
-      try {
-        await get().reload();
-      } catch {
-        /* reload already set status:"error" */
-      }
-    }
+    await get().apply((prev) => setMonthlyPriorityOp(prev, id, n, month));
   },
 
   async addMonthTask(title, month, isAdhoc) {
@@ -343,170 +292,40 @@ export const useTasksStore = create<TasksState>()(
   },
 
   async promoteToMonth(id, month) {
-    const prev = get().tasks;
-    const next = promoteToMonthOp(prev, id, month);
-    if (next === prev) return;
-    set({ tasks: next, error: null });
-    const updated = next.find((t) => t.id === id)!;
-    try {
-      await enqueuePatch(id, { scheduled_months: updated.custom_fields.scheduled_months });
-    } catch {
-      set({ tasks: prev, error: "save_failed" });
-    }
+    await get().apply((prev) => promoteToMonthOp(prev, id, month));
   },
 
   async planScheduleDay(id, date) {
-    const prev = get().tasks;
-    const next = planScheduleDayOp(prev, id, date);
-    if (next === prev) return;
-    set({ tasks: next, error: null });
-    const updated = next.find((t) => t.id === id)!;
-    try {
-      await enqueuePatch(id, {
-        scheduled_dates: updated.custom_fields.scheduled_dates,
-        scheduled_months: updated.custom_fields.scheduled_months,
-      });
-    } catch {
-      set({ tasks: prev, error: "save_failed" });
-    }
+    await get().apply((prev) => planScheduleDayOp(prev, id, date));
   },
 
   async moveToToday(id) {
-    const prev = get().tasks;
-    const next = moveToTodayOp(prev, id, get().today);
-    if (next === prev) return;
-    set({ tasks: next, error: null });
-    const updated = next.find((t) => t.id === id)!;
-    try {
-      await enqueuePatch(id, {
-        scheduled_dates: updated.custom_fields.scheduled_dates,
-        daily_ranks: updated.custom_fields.daily_ranks ?? [],
-        daily_priority: null,
-      });
-    } catch {
-      set({ tasks: prev, error: "save_failed" });
-    }
+    await get().apply((prev) => moveToTodayOp(prev, id, get().today));
   },
 
   async demoteToMonth(id) {
-    const prev = get().tasks;
     const month = currentMonthISO(new Date(get().today + "T00:00:00"));
-    const next = demoteToMonthOp(prev, id, month);
-    if (next === prev) return;
-    set({ tasks: next, error: null });
-    const updated = next.find((t) => t.id === id)!;
-    try {
-      await enqueuePatch(id, {
-        unscheduled_at: updated.custom_fields.unscheduled_at,
-        scheduled_months: updated.custom_fields.scheduled_months,
-        daily_ranks: updated.custom_fields.daily_ranks ?? [],
-        daily_priority: null,
-      });
-    } catch {
-      set({ tasks: prev, error: "save_failed" });
-    }
+    await get().apply((prev) => demoteToMonthOp(prev, id, month));
   },
 
   async restoreToDay(id, date) {
-    const prev = get().tasks;
-    const next = restoreToDayOp(prev, id, date);
-    if (next === prev) return;
-    set({ tasks: next, error: null });
-    const updated = next.find((t) => t.id === id)!;
-    try {
-      await enqueuePatch(id, {
-        scheduled_dates: updated.custom_fields.scheduled_dates,
-        scheduled_months: updated.custom_fields.scheduled_months,
-        unscheduled_at: null,
-        daily_priority: null,
-      });
-    } catch {
-      set({ tasks: prev, error: "save_failed" });
-    }
+    await get().apply((prev) => restoreToDayOp(prev, id, date));
   },
 
   async moveToNextMonth(id) {
-    const prev = get().tasks;
-    const next = moveToNextMonthOp(prev, id);
-    if (next === prev) return;
-    set({ tasks: next, error: null });
-    const updated = next.find((t) => t.id === id)!;
-    try {
-      await enqueuePatch(id, {
-        scheduled_months: updated.custom_fields.scheduled_months,
-        monthly_priority: null,
-      });
-    } catch {
-      set({ tasks: prev, error: "save_failed" });
-    }
+    await get().apply((prev) => moveToNextMonthOp(prev, id));
   },
 
   async demoteToBacklog(id) {
-    const prev = get().tasks;
-    const next = demoteToBacklogOp(prev, id, get().today);
-    if (next === prev) return;
-    set({ tasks: next, error: null });
-    const updated = next.find((t) => t.id === id)!;
-    try {
-      await enqueuePatch(id, {
-        unscheduled_month: updated.custom_fields.unscheduled_month,
-        unscheduled_at: updated.custom_fields.unscheduled_at,
-        monthly_priority: null,
-        daily_priority: null,
-      });
-    } catch {
-      set({ tasks: prev, error: "save_failed" });
-    }
+    await get().apply((prev) => demoteToBacklogOp(prev, id, get().today));
   },
 
   async reorderPriority(id, targetRank, axis, scope) {
-    const prev = get().tasks;
-    const next = reorderPriorityOp(prev, id, targetRank, axis, scope);
-    if (next === prev) return;
-    set({ tasks: next, error: null });
-    const ranksField = axis === "daily" ? "daily_ranks" : "monthly_ranks";
-    const legacyField = axis === "daily" ? "daily_priority" : "monthly_priority";
-    const changed = next.filter((t) => {
-      const before = prev.find((p) => p.id === t.id);
-      if (!before) return false;
-      return (
-        JSON.stringify(before.custom_fields[ranksField] ?? []) !==
-          JSON.stringify(t.custom_fields[ranksField] ?? []) ||
-        before.custom_fields.position !== t.custom_fields.position
-      );
-    });
-    try {
-      await Promise.all(
-        changed.map((t) =>
-          enqueuePatch(t.id, {
-            [ranksField]: t.custom_fields[ranksField] ?? [],
-            [legacyField]: null,
-            ...(t.custom_fields.position !== prev.find((p) => p.id === t.id)?.custom_fields.position
-              ? { position: t.custom_fields.position ?? null }
-              : {}),
-          }),
-        ),
-      );
-    } catch {
-      try {
-        await get().reload();
-      } catch {
-        /* reload already set status:"error" */
-      }
-    }
+    await get().apply((prev) => reorderPriorityOp(prev, id, targetRank, axis, scope));
   },
 
   async reorderInPool(id, prevId, nextId) {
-    const prev = get().tasks;
-    const next = reorderInPoolOp(prev, id, prevId, nextId);
-    if (next === prev) return;
-    set({ tasks: next, error: null });
-    const updated = next.find((t) => t.id === id)!;
-    try {
-      await enqueuePatch(id, { position: updated.custom_fields.position });
-    } catch {
-      set({ tasks: prev, error: "save_failed" });
-    }
+    await get().apply((prev) => reorderInPoolOp(prev, id, prevId, nextId));
   },
 
   clearTasks() {

@@ -59,10 +59,11 @@ describe("useTasksStore (local behaviour)", () => {
     const temp = useTasksStore.getState().tasks.find((t) => t.title === "視窗內動作")!;
     expect(temp.id).toMatch(/^temp-/);
 
-    // User acts during the window. The patch is deferred (waits for the real
-    // id), so its promise must NOT be awaited before the create resolves.
+    // User acts during the window. The temp-id patch is deferred (coalesced onto
+    // the pending create), so no PATCH may target a temp id — that would 404 at
+    // WSPC. (A real collider evicted by the new rank may legitimately be patched.)
     const acting = useTasksStore.getState().setDailyPriority(temp.id, "1", today);
-    expect(patchSpy).not.toHaveBeenCalled();
+    expect(patchSpy.mock.calls.every((c) => !String(c[0]).startsWith("temp-"))).toBe(true);
 
     // Create resolves to a real id.
     resolveCreate({
@@ -81,9 +82,8 @@ describe("useTasksStore (local behaviour)", () => {
     expect(dailyRankOn(reconciled, today)).toBe("1");
     expect(useTasksStore.getState().tasks.some((t) => t.id === temp.id)).toBe(false);
 
-    // The deferred patch went out exactly once, against the real id.
-    expect(patchSpy).toHaveBeenCalledTimes(1);
-    expect(patchSpy.mock.calls[0][0]).toBe("srv-win");
+    // The deferred window patch flushed exactly once, against the reconciled real id.
+    expect(patchSpy.mock.calls.filter((c) => c[0] === "srv-win")).toHaveLength(1);
   });
 
   it("setDailyPriority scopes eviction to the passed date", async () => {
